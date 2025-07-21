@@ -1,0 +1,22 @@
+# Normalizar todos los archivos de texto a LF
+* text=auto
+
+# Forzar LF en archivos de código Dart, YAML, JSON, shell scripts…
+*.dart    text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.json    text eol=lf
+*.sh      text eol=lf
+
+# Forzar CRLF en scripts Windows .bat si los necesitas así
+*.bat     text eol=crlf
+
+# Marcar archivos binarios para que git no los trate como texto
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.zip     binary
+*.7z      binary
+*.pdf     binary

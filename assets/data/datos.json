@@ -1,0 +1,62 @@
+{
+  "reservas": [
+    {
+      "id": "1",
+      "nombreCliente": "Juan Pérez",
+      "estado": "confirmada",
+      "fecha": "2024-12-20",
+      "pax": 4,
+      "saldo": 1500.0,
+      "agenciaId": "1",
+      "observacion": "Cliente VIP, mesa preferencial",
+      "hotel": "Hotel Marriott"
+    },
+    {
+      "id": "2",
+      "nombreCliente": "María García",
+      "estado": "pendiente",
+      "fecha": "2024-12-20",
+      "pax": 2,
+      "saldo": 800.0,
+      "agenciaId": "2",
+      "observacion": "Solicita mesa cerca de la ventana",
+      "hotel": "Hotel Hilton"
+    },
+    {
+      "id": "3",
+      "nombreCliente": "Carlos López",
+      "estado": "cancelada",
+      "fecha": "2024-12-19",
+      "pax": 6,
+      "saldo": 0.0,
+      "agenciaId": "1",
+      "observacion": "Cancelación por motivos personales",
+      "hotel": "Hotel Sheraton"
+    },
+    {
+      "id": "4",
+      "nombreCliente": "Ana Martínez",
+      "estado": "confirmada",
+      "fecha": "2024-12-21",
+      "pax": 3,
+      "saldo": 1200.0,
+      "agenciaId": "3",
+      "observacion": "Celebración de cumpleaños",
+      "hotel": "Hotel Aixon"
+    }
+  ],
+  "agencias": [
+    {
+      "id": "1",
+      "nombre": "Viajes del Sol"
+    },
+    {
+      "id": "2",
+      "nombre": "Turismo Express"
+    },
+    {
+      "id": "3",
+      "nombre": "Aventuras Tropicales"
+    }
+  ]
+}
