@@ -14,6 +14,8 @@ class Reserva {
   final EstadoReserva estado; // es el estado de la reserva (pendiente, confirmada, cancelada)
   final double costoAsiento; // es el costo por asiento de la reserva
   final String telefono;
+  final bool whatsappContactado;
+
 
   Reserva({
     required this.id,
@@ -27,6 +29,7 @@ class Reserva {
     required this.estado,
     required this.costoAsiento,
     required this.telefono,
+    this.whatsappContactado = false,
   });
 
   //este constructor es para crear una reserva desde un mapa de datos
@@ -44,6 +47,7 @@ class Reserva {
       estado: _mapEstado(data['estado'] as String? ?? 'pendiente'),
       costoAsiento: (data['costoAsiento'] as num?)?.toDouble() ?? 0.0,
       telefono: data['telefono'] as String? ?? '',
+      whatsappContactado: data['whatsappContactado'] as bool? ?? false,
     );
   }
 
@@ -64,6 +68,7 @@ class Reserva {
       'estado': estado.toString().split('.').last,
       'costoAsiento': costoAsiento,
       'telefono': telefono,
+      'whatsappContactado': whatsappContactado,
     };
   }
 
@@ -93,6 +98,8 @@ class Reserva {
     EstadoReserva? estado,
     double? costoAsiento,
     String? telefono,
+    bool? whatsappContactado,
+
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -106,6 +113,7 @@ class Reserva {
       estado: estado ?? this.estado,
       costoAsiento: costoAsiento ?? this.costoAsiento,
       telefono: telefono ?? this.telefono,
+      whatsappContactado: whatsappContactado ?? this.whatsappContactado,
     );
   }
 }

@@ -26,12 +26,13 @@ class FirestoreService {
         .orderBy('fechaRegistro', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return Reserva.fromFirestore(doc.data(), doc.id);
-          }).toList();
-        });
+      return snapshot.docs.map((doc) {
+        return Reserva.fromFirestore(doc.data(), doc.id);
+      }).toList();
+    });
   }
 
+  // Versión Future existente
   Future<List<Reserva>> getReservasByFecha(DateTime fecha) async {
     final start = DateTime(fecha.year, fecha.month, fecha.day);
     final end = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
@@ -46,6 +47,21 @@ class FirestoreService {
     return snap.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
   }
 
+  // NUEVO: Versión Stream para reservas por fecha
+  Stream<List<Reserva>> getReservasByFechaStream(DateTime fecha) {
+    final start = DateTime(fecha.year, fecha.month, fecha.day);
+    final end = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
+    return _db
+        .collection('reservas')
+        .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .snapshots() // Usar snapshots para tiempo real
+        .map((snapshot) {
+      return snapshot.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
+    });
+  }
+
+  // Versión Future existente
   Future<List<Reserva>> getReservasByDateRange(
     DateTime start,
     DateTime end,
@@ -61,17 +77,32 @@ class FirestoreService {
     return snap.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
   }
 
+  // NUEVO: Versión Stream para reservas por rango de fechas
+  Stream<List<Reserva>> getReservasByDateRangeStream(
+      DateTime startDate, DateTime endDate) {
+    return _db
+        .collection('reservas')
+        .where(
+          'fechaReserva',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+        )
+        .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+        .snapshots() // Usar snapshots para tiempo real
+        .map((snapshot) {
+      return snapshot.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
+    });
+  }
+
+  // Versión Future existente
   Future<List<Reserva>> getReservasByAgencia(String agenciaId) async {
     try {
       final snap = await _db
           .collection('reservas')
           .where('agenciaId', isEqualTo: agenciaId)
           .get();
-
       final list = snap.docs
           .map((d) => Reserva.fromFirestore(d.data(), d.id))
           .toList();
-      // ordena aquí si lo necesitas
       list.sort((a, b) => b.fecha.compareTo(a.fecha));
       debugPrint('✅ Reservas obtenidas por agencia: ${list.length}');
       return list;
@@ -79,6 +110,21 @@ class FirestoreService {
       debugPrint('Error obteniendo reservas por agencia: $e');
       return [];
     }
+  }
+
+  // NUEVO: Versión Stream para reservas por agencia
+  Stream<List<Reserva>> getReservasByAgenciaStream(String agenciaId) {
+    return _db
+        .collection('reservas')
+        .where('agenciaId', isEqualTo: agenciaId)
+        .snapshots() // Usar snapshots para tiempo real
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map((d) => Reserva.fromFirestore(d.data(), d.id))
+          .toList();
+      list.sort((a, b) => b.fecha.compareTo(a.fecha)); // Mantener el orden
+      return list;
+    });
   }
 
   Future<void> addReserva(Reserva reserva) async {
@@ -166,26 +212,21 @@ class FirestoreService {
   }
 
   // ========== MÉTODOS DE UTILIDAD ==========
-
   Future<void> initializeDefaultData() async {
     try {
       // Verificar si ya hay agencias
       final agenciasSnapshot = await _db.collection('agencias').limit(1).get();
-
       if (agenciasSnapshot.docs.isEmpty) {
         debugPrint('🔄 Inicializando datos por defecto...');
-
         // Crear agencias por defecto
         final agenciasDefault = [
           Agencia(id: '', nombre: 'Viajes del Sol'),
           Agencia(id: '', nombre: 'Turismo Express'),
           Agencia(id: '', nombre: 'Aventuras Tropicales'),
         ];
-
         for (final agencia in agenciasDefault) {
           await addAgencia(agencia);
         }
-
         debugPrint('✅ Datos por defecto inicializados');
       }
     } catch (e) {

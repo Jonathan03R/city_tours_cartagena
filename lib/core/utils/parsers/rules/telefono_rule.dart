@@ -14,6 +14,7 @@ class TelefonoRule extends ParserRule {
           'tel',
           'telf',
           'contacto',
+          'tlf'
         ]) ||
         RegExp(r'\b\d{7,15}\b').hasMatch(cleanLine);
   }

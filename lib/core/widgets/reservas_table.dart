@@ -1,6 +1,8 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../mvvc/reservas_controller.dart';
 import '../utils/colors.dart';
@@ -8,7 +10,7 @@ import '../utils/formatters.dart';
 
 class ReservasTable extends StatefulWidget {
   final List<ReservaConAgencia> reservas;
-  final VoidCallback onUpdate;
+  final VoidCallback onUpdate; // Se mantiene para forzar recarga si es necesario (ej. después de editar/eliminar)
 
   const ReservasTable({
     super.key,
@@ -38,7 +40,6 @@ class _ReservasTableState extends State<ReservasTable> {
   void _startEditing(ReservaConAgencia reserva) {
     setState(() {
       _editingReservaId = reserva.id;
-
       // Inicializar controladores
       _controllers['${reserva.id}_cliente'] = TextEditingController(
         text: reserva.nombreCliente,
@@ -46,7 +47,6 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_telefono'] = TextEditingController(
         text: reserva.telefono,
       );
-
       _controllers['${reserva.id}_hotel'] = TextEditingController(
         text: reserva.hotel,
       );
@@ -59,7 +59,6 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_observacion'] = TextEditingController(
         text: reserva.observacion,
       );
-
       // Inicializar valores
       _estadoValues[reserva.id] = reserva.estado;
       _fechaValues[reserva.id] = reserva.fecha;
@@ -78,7 +77,6 @@ class _ReservasTableState extends State<ReservasTable> {
           }
           return false;
         });
-
         _estadoValues.remove(_editingReservaId);
         _fechaValues.remove(_editingReservaId);
         _agenciaValues.remove(_editingReservaId);
@@ -89,19 +87,16 @@ class _ReservasTableState extends State<ReservasTable> {
 
   Future<void> _saveChanges() async {
     if (_editingReservaId == null) return;
-
     try {
       final reserva = widget.reservas.firstWhere(
         (r) => r.id == _editingReservaId,
       );
-
       final updatedReserva = reserva.reserva.copyWith(
         nombreCliente:
             _controllers['${_editingReservaId}_cliente']?.text ??
             reserva.nombreCliente,
         hotel:
             _controllers['${_editingReservaId}_hotel']?.text ?? reserva.hotel,
-
         telefono:
             _controllers['${_editingReservaId}_telefono']?.text ??
             reserva.telefono,
@@ -122,14 +117,12 @@ class _ReservasTableState extends State<ReservasTable> {
             _controllers['${_editingReservaId}_observacion']?.text ??
             reserva.observacion,
       );
-
       await ReservasController.updateReserva(
         _editingReservaId!,
         updatedReserva,
       );
       _cancelEditing();
-      widget.onUpdate();
-
+      widget.onUpdate(); // Llama a onUpdate para que ReservasView recargue el stream
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -157,8 +150,7 @@ class _ReservasTableState extends State<ReservasTable> {
     try {
       final updatedReserva = reserva.reserva.copyWith(estado: newStatus);
       await ReservasController.updateReserva(reserva.id, updatedReserva);
-      widget.onUpdate();
-
+      widget.onUpdate(); // Llama a onUpdate para que ReservasView recargue el stream
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -181,84 +173,6 @@ class _ReservasTableState extends State<ReservasTable> {
     }
   }
 
-  // Future<void> _exportToExcel() async {
-  //   try {
-  //   // Pedir permiso
-  //   var status = await Permission.manageExternalStorage.request();
-
-  //   if (!status.isGranted) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Permiso denegado. No se puede guardar el archivo'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //     return;
-  //   }
-
-  //     // 2. Crear Excel
-  //     final excel = xls.Excel.createExcel();
-  //     final sheet = excel['Reservas'];
-
-  //     // Cabeceras
-  //     sheet.appendRow([
-  //       xls.TextCellValue('HOTEL'),
-  //       xls.TextCellValue('CLIENTE'),
-  //       xls.TextCellValue('FECHA'),
-  //       xls.TextCellValue('PAX'),
-  //       xls.TextCellValue('SALDO'),
-  //       xls.TextCellValue('AGENCIA'),
-  //       xls.TextCellValue('OBSERVACIONES'),
-  //       xls.TextCellValue('ESTADO'),
-  //     ]);
-
-  //     // Filas
-  //     for (var r in widget.reservas) {
-  //       sheet.appendRow([
-  //         xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
-  //         xls.TextCellValue(r.nombreCliente),
-  //         xls.TextCellValue(Formatters.formatDate(r.fecha)),
-  //         xls.IntCellValue(r.pax),
-  //         xls.DoubleCellValue(r.saldo),
-  //         xls.TextCellValue(r.nombreAgencia),
-  //         xls.TextCellValue(
-  //           r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
-  //         ),
-  //         xls.TextCellValue(Formatters.getEstadoText(r.estado)),
-  //       ]);
-  //     }
-
-  //     // 3. Codificar
-  //     final bytes = excel.encode();
-  //     if (bytes == null) return;
-
-  //     // 4. Ruta pública en Descargas
-  //     final directory = Directory('/storage/emulated/0/Download');
-  //     if (!directory.existsSync()) {
-  //       directory.createSync(recursive: true);
-  //     }
-
-  //     final filePath =
-  //         '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-
-  //     final file = File(filePath);
-  //     await file.writeAsBytes(bytes);
-
-  //     // 5. Confirmación
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Archivo guardado en Descargas')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
-  //     }
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
     // Cálculo de totales
@@ -274,7 +188,6 @@ class _ReservasTableState extends State<ReservasTable> {
       0.0,
       (sum, ra) => sum + ra.reserva.deuda,
     );
-
     if (widget.reservas.isEmpty) {
       return const Center(
         child: Column(
@@ -290,18 +203,8 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       );
     }
-
     return Column(
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        //   child: ElevatedButton.icon(
-        //     onPressed: _exportToExcel,
-        //     icon: const Icon(Icons.download),
-        //     label: const Text('Exportar a Excel'),
-        //     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-        //   ),
-        // ),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -329,7 +232,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   ...widget.reservas.map((reserva) => _buildDataRow(reserva)),
                   // Fila de totales integrada al final de la tabla
                   DataRow(
-                    color: MaterialStateProperty.all(Colors.grey.shade200),
+                    color: WidgetStateProperty.all(Colors.grey.shade200),
                     cells: [
                       const DataCell(Text('')), // Acción
                       const DataCell(Text('')), // Número
@@ -368,22 +271,57 @@ class _ReservasTableState extends State<ReservasTable> {
   }
 
   DataRow _buildDataRow(ReservaConAgencia ra) {
-    final r = ra.reserva;
+    var r = ra.reserva;
     final deuda = r.deuda; // = r.costoAsiento * r.pax - r.saldo
     final isEditing = _editingReservaId == r.id;
+    // Set<String> chatsAbiertos = {}; // Esta variable no se usa y puede eliminarse
 
     return DataRow(
       cells: [
-        // ACCIÓN: botón genérico
+        // ACCIÓN: botón de WhatsApp
         DataCell(
           IconButton(
-            icon: const Icon(Icons.message),
-            onPressed: () {
-              // tu función aquí
+            icon: Icon(
+              Icons.message,
+              color: r.whatsappContactado ? Colors.green : Colors.black54,
+            ),
+            tooltip: 'Chatear por WhatsApp',
+            onPressed: () async {
+              // Si ya estaba en verde (contactado), lo desmarcamos
+              if (r.whatsappContactado) {
+                await FirebaseFirestore.instance
+                    .collection('reservas')
+                    .doc(r.id)
+                    .update({'whatsappContactado': false});
+                // No es necesario setState aquí, el StreamBuilder en ReservasView lo actualizará
+                return;
+              }
+
+              // Si está gris, marcamos como contactado y abrimos WhatsApp
+              final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
+              final uri = Uri.parse('https://wa.me/$telefono');
+
+              if (await canLaunchUrl(uri)) {
+                // Guardamos en Firebase antes o después de abrir WhatsApp
+                await FirebaseFirestore.instance
+                    .collection('reservas')
+                    .doc(r.id)
+                    .update({'whatsappContactado': true});
+                // No es necesario setState aquí, el StreamBuilder en ReservasView lo actualizará
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No se pudo abrir WhatsApp'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ),
-
         // NÚMERO
         DataCell(
           isEditing
@@ -395,14 +333,13 @@ class _ReservasTableState extends State<ReservasTable> {
                   ),
                 ),
         ),
-
         // HOTEL
         DataCell(
           isEditing
               ? TextField(controller: _controllers['${r.id}_hotel'])
               : Text(r.hotel),
         ),
-        // Nombrew
+        // Nombre
         DataCell(
           isEditing
               ? TextField(controller: _controllers['${r.id}_cliente'])
@@ -417,7 +354,6 @@ class _ReservasTableState extends State<ReservasTable> {
                 )
               : Text('${r.pax}'),
         ),
-
         // SALDO
         DataCell(
           isEditing
@@ -427,7 +363,6 @@ class _ReservasTableState extends State<ReservasTable> {
                 )
               : Text(Formatters.formatCurrency(r.saldo)),
         ),
-
         // OBSERVACIONES
         DataCell(
           IconButton(
@@ -439,12 +374,10 @@ class _ReservasTableState extends State<ReservasTable> {
             onPressed: () => _showObservacionDialog(ra),
           ),
         ),
-
         // AGENCIA
         DataCell(
           isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia),
         ),
-
         // DEUDA (no editable; borde rojo si > 0)
         DataCell(
           Container(
@@ -464,7 +397,6 @@ class _ReservasTableState extends State<ReservasTable> {
             ),
           ),
         ),
-
         // EDITAR: entra o sale de modo edición
         DataCell(
           isEditing
@@ -499,7 +431,6 @@ class _ReservasTableState extends State<ReservasTable> {
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
     final agencias = ReservasController.getAllAgencias();
-
     return DropdownButtonFormField<String>(
       value: _agenciaValues[reserva.id],
       decoration: const InputDecoration(
@@ -581,14 +512,11 @@ class _ReservasTableState extends State<ReservasTable> {
             onPressed: () async {
               // Cierro el diálogo usando el mismo context del builder
               Navigator.of(ctx).pop();
-
               // Capturo el messenger **antes** de entrar al await
               final messenger = ScaffoldMessenger.of(context);
-
               try {
                 await ReservasController.deleteReserva(reserva.id);
                 widget.onUpdate();
-
                 // Muestro el SnackBar sin llamar a ScaffoldMessenger.of() dentro del async gap
                 messenger.showSnackBar(
                   const SnackBar(

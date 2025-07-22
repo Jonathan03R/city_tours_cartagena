@@ -150,10 +150,21 @@ class ParserUtils {
     }
   }
 
+  static double parseSaldo(String input) {
+    var normalized = input.trim();
+    // Si hay punto y coma, es formato “1.234,56”
+    if (normalized.contains('.') && normalized.contains(',')) {
+      normalized = normalized.replaceAll('.', '');
+    }
+    // pasa comas a punto
+    normalized = normalized.replaceAll(',', '.');
+    return double.tryParse(normalized) ?? 0.0;
+  }
+
   static String extractNumber(String line) {
-  final match = RegExp(r'([0-9]+[.,]?[0-9]*)').firstMatch(line);
-  return match?.group(0) ?? '';
-}
+    final match = RegExp(r'([0-9]+[.,]?[0-9]*)').firstMatch(line);
+    return match?.group(0) ?? '';
+  }
 
   /// Intenta encontrar el ID de la agencia en el texto completo.
   static String findAgenciaId(String text) {
