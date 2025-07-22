@@ -12,6 +12,7 @@ class ReservaConAgencia {
 
   String get id => reserva.id;
   String get nombreCliente => reserva.nombreCliente;
+  String get telefono => reserva.telefono;
   String get hotel => reserva.hotel;
   EstadoReserva get estado => reserva.estado;
   DateTime get fecha => reserva.fecha;

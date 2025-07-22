@@ -43,6 +43,10 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_cliente'] = TextEditingController(
         text: reserva.nombreCliente,
       );
+      _controllers['${reserva.id}_telefono'] = TextEditingController(
+        text: reserva.telefono,
+      );
+
       _controllers['${reserva.id}_hotel'] = TextEditingController(
         text: reserva.hotel,
       );
@@ -97,6 +101,10 @@ class _ReservasTableState extends State<ReservasTable> {
             reserva.nombreCliente,
         hotel:
             _controllers['${_editingReservaId}_hotel']?.text ?? reserva.hotel,
+
+        telefono:
+            _controllers['${_editingReservaId}_telefono']?.text ??
+            reserva.telefono,
         estado: _estadoValues[_editingReservaId] ?? reserva.estado,
         fecha: _fechaValues[_editingReservaId] ?? reserva.fecha,
         pax:
@@ -251,7 +259,6 @@ class _ReservasTableState extends State<ReservasTable> {
   //   }
   // }
 
-  
   @override
   Widget build(BuildContext context) {
     if (widget.reservas.isEmpty) {
@@ -293,60 +300,16 @@ class _ReservasTableState extends State<ReservasTable> {
                 horizontalMargin: 16,
                 headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
                 columns: const [
-                  DataColumn(
-                    label: Text(
-                      'HOTEL',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'CLIENTE',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  // DataColumn(
-                  //   label: Text(
-                  //     'FECHA',
-                  //     style: TextStyle(fontWeight: FontWeight.bold),
-                  //   ),
-                  // ),
-                  DataColumn(
-                    label: Text(
-                      'PAX',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'SALDO',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'AGENCIA',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'OBSERVACIONES',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'ESTADO',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'ACCIONES',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  DataColumn(label: Text('Acción')),
+                  DataColumn(label: Text('Número')),
+                  DataColumn(label: Text('Hotel')),
+                  DataColumn(label: Text('Nombre')),
+                  DataColumn(label: Text('Pax')),
+                  DataColumn(label: Text('Saldo')),
+                  DataColumn(label: Text('Observaciones')),
+                  DataColumn(label: Text('Agencia')),
+                  DataColumn(label: Text('Deuda')),
+                  DataColumn(label: Text('Editar')),
                 ],
                 rows: widget.reservas
                     .map((reserva) => _buildDataRow(reserva))
@@ -359,325 +322,125 @@ class _ReservasTableState extends State<ReservasTable> {
     );
   }
 
-  DataRow _buildDataRow(ReservaConAgencia reserva) {
-    final isEditing = _editingReservaId == reserva.id;
+  DataRow _buildDataRow(ReservaConAgencia ra) {
+    final r = ra.reserva;
+    final deuda = r.deuda; // = r.costoAsiento * r.pax - r.saldo
+    final isEditing = _editingReservaId == r.id;
 
     return DataRow(
       cells: [
+        // ACCIÓN: botón genérico
+        DataCell(
+          IconButton(
+            icon: const Icon(Icons.message),
+            onPressed: () {
+              // tu función aquí
+            },
+          ),
+        ),
+
+        // NÚMERO
+        DataCell(
+          isEditing
+              ? TextField(controller: _controllers['${r.id}_telefono'])
+              : Text(
+                  r.telefono.isNotEmpty ? r.telefono : 'Sin teléfono',
+                  style: TextStyle(
+                    color: r.telefono.isEmpty ? Colors.grey : Colors.black,
+                  ),
+                ),
+        ),
+
         // HOTEL
         DataCell(
           isEditing
-              ? SizedBox(
-                  width: 120,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_hotel'],
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                      hintText: 'Hotel...',
-                    ),
-                  ),
-                )
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 120),
-                  child: Text(
-                    reserva.hotel.isEmpty ? 'Sin hotel' : reserva.hotel,
-                    style: TextStyle(
-                      color: reserva.hotel.isEmpty ? Colors.grey : Colors.black,
-                      fontStyle: reserva.hotel.isEmpty
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                      fontSize: 13,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+              ? TextField(controller: _controllers['${r.id}_hotel'])
+              : Text(r.hotel),
         ),
-
-        // CLIENTE
+        // Nombrew
         DataCell(
           isEditing
-              ? SizedBox(
-                  width: 150,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_cliente'],
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                  ),
-                )
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 150),
-                  child: Text(
-                    reserva.nombreCliente,
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+              ? TextField(controller: _controllers['${r.id}_cliente'])
+              : Text(r.nombreCliente),
         ),
-
-        // // FECHA
-        // DataCell(
-        //   isEditing
-        //       ? SizedBox(
-        //           width: 120,
-        //           child: InkWell(
-        //             onTap: () async {
-        //               final DateTime? picked = await showDatePicker(
-        //                 context: context,
-        //                 initialDate: _fechaValues[reserva.id] ?? reserva.fecha,
-        //                 firstDate: DateTime(2020),
-        //                 lastDate: DateTime(2030),
-        //               );
-        //               if (picked != null) {
-        //                 setState(() {
-        //                   _fechaValues[reserva.id] = picked;
-        //                 });
-        //               }
-        //             },
-        //             child: Container(
-        //               padding: const EdgeInsets.all(8),
-        //               decoration: BoxDecoration(
-        //                 border: Border.all(color: Colors.grey.shade300),
-        //                 borderRadius: BorderRadius.circular(4),
-        //               ),
-        //               child: Row(
-        //                 mainAxisSize: MainAxisSize.min,
-        //                 children: [
-        //                   const Icon(Icons.calendar_today, size: 16),
-        //                   const SizedBox(width: 4),
-        //                   Text(
-        //                     Formatters.formatDate(
-        //                       _fechaValues[reserva.id] ?? reserva.fecha,
-        //                     ),
-        //                     style: const TextStyle(fontSize: 12),
-        //                   ),
-        //                 ],
-        //               ),
-        //             ),
-        //           ),
-        //         )
-        //       : Text(
-        //           Formatters.formatDate(reserva.fecha),
-        //           style: const TextStyle(fontSize: 13),
-        //         ),
-        // ),
-
         // PAX
         DataCell(
           isEditing
-              ? SizedBox(
-                  width: 60,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_pax'],
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                  ),
+              ? TextField(
+                  controller: _controllers['${r.id}_pax'],
+                  keyboardType: TextInputType.number,
                 )
-              : Text('${reserva.pax}', style: const TextStyle(fontSize: 13)),
+              : Text('${r.pax}'),
         ),
 
         // SALDO
         DataCell(
           isEditing
-              ? SizedBox(
-                  width: 100,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_saldo'],
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                  ),
+              ? TextField(
+                  controller: _controllers['${r.id}_saldo'],
+                  keyboardType: TextInputType.number,
                 )
-              : Text(
-                  Formatters.formatCurrency(reserva.saldo),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: reserva.saldo > 0
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
-                  ),
-                ),
-        ),
-
-        // AGENCIA
-        DataCell(
-          isEditing
-              ? SizedBox(width: 150, child: _buildAgenciaDropdown(reserva))
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 150),
-                  child: Text(
-                    reserva.nombreAgencia,
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+              : Text(Formatters.formatCurrency(r.saldo)),
         ),
 
         // OBSERVACIONES
         DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 200,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_observacion'],
-                    maxLines: 2,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                      hintText: 'Observaciones...',
-                    ),
-                  ),
+          r.observacion.isNotEmpty
+              ? Tooltip(
+                  message: r.observacion,
+                  child: const Icon(Icons.note, size: 20),
                 )
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: Text(
-                    reserva.observacion.isEmpty
-                        ? 'Sin observaciones'
-                        : reserva.observacion,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: reserva.observacion.isEmpty
-                          ? Colors.grey
-                          : Colors.black,
-                      fontStyle: reserva.observacion.isEmpty
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ),
+              : const Text('Sin obs.', style: TextStyle(color: Colors.grey)),
         ),
 
-        // ESTADO con botones rápidos
-        // ESTADO con popup
+        // AGENCIA
         DataCell(
-          GestureDetector(
-            onTapDown: (TapDownDetails details) async {
-              final position = details.globalPosition;
-              await showMenu(
-                context: context,
-                position: RelativeRect.fromLTRB(position.dx, position.dy, 0, 0),
-                items: [
-                  PopupMenuItem(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                      ),
-                      title: const Text('Confirmada'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _quickChangeStatus(reserva, EstadoReserva.confirmada);
-                      },
-                    ),
-                  ),
-                  PopupMenuItem(
-                    child: ListTile(
-                      leading: const Icon(Icons.schedule, color: Colors.orange),
-                      title: const Text('Pendiente'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _quickChangeStatus(reserva, EstadoReserva.pendiente);
-                      },
-                    ),
-                  ),
-                  PopupMenuItem(
-                    child: ListTile(
-                      leading: const Icon(Icons.cancel, color: Colors.red),
-                      title: const Text('Cancelada'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _quickChangeStatus(reserva, EstadoReserva.cancelada);
-                      },
-                    ),
-                  ),
-                ],
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.getEstadoBackgroundColor(reserva.estado),
-                borderRadius: BorderRadius.circular(12),
+          isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia),
+        ),
+
+        // DEUDA (no editable; borde rojo si > 0)
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: deuda > 0 ? Colors.red : Colors.transparent,
               ),
-              child: Text(
-                Formatters.getEstadoText(reserva.estado),
-                style: TextStyle(
-                  color: AppColors.getEstadoColor(reserva.estado),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              Formatters.formatCurrency(deuda),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: deuda > 0 ? Colors.red.shade700 : Colors.green.shade700,
               ),
             ),
           ),
         ),
 
-        // ACCIONES
+        // EDITAR: entra o sale de modo edición
         DataCell(
           isEditing
               ? Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.check, color: Colors.green),
                       onPressed: _saveChanges,
-                      tooltip: 'Guardar',
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: _cancelEditing,
-                      tooltip: 'Cancelar',
                     ),
                   ],
                 )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit,
-                        color: Colors.blue,
-                        size: 20,
-                      ),
-                      onPressed: () => _startEditing(reserva),
-                      tooltip: 'Editar',
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                      onPressed: () => _showDeleteDialog(reserva),
-                      tooltip: 'Eliminar',
-                    ),
-                  ],
+              : IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => _startEditing(ra),
                 ),
         ),
       ],
     );
   }
-  
-
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
     final agencias = ReservasController.getAllAgencias();

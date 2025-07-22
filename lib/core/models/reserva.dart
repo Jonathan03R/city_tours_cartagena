@@ -47,6 +47,8 @@ class Reserva {
     );
   }
 
+  double get deuda => costoAsiento * pax - saldo;
+
   //este metodo convierte la reserva a un mapa de datos
   //usado para guardar datos en Firestore
   Map<String, dynamic> toFirestore() {
