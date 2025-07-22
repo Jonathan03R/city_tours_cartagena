@@ -261,6 +261,20 @@ class _ReservasTableState extends State<ReservasTable> {
 
   @override
   Widget build(BuildContext context) {
+    // Cálculo de totales
+    final totalPax = widget.reservas.fold<int>(
+      0,
+      (sum, ra) => sum + ra.reserva.pax,
+    );
+    final totalSaldo = widget.reservas.fold<double>(
+      0.0,
+      (sum, ra) => sum + ra.reserva.saldo,
+    );
+    final totalDeuda = widget.reservas.fold<double>(
+      0.0,
+      (sum, ra) => sum + ra.reserva.deuda,
+    );
+
     if (widget.reservas.isEmpty) {
       return const Center(
         child: Column(
@@ -293,7 +307,7 @@ class _ReservasTableState extends State<ReservasTable> {
             scrollDirection: Axis.horizontal,
             child: SizedBox(
               width: MediaQuery.of(context).size.width < 800
-                  ? 1400 // Ancho mínimo aumentado para más columnas
+                  ? 1400
                   : MediaQuery.of(context).size.width,
               child: DataTable(
                 columnSpacing: 12,
@@ -311,9 +325,40 @@ class _ReservasTableState extends State<ReservasTable> {
                   DataColumn(label: Text('Deuda')),
                   DataColumn(label: Text('Editar')),
                 ],
-                rows: widget.reservas
-                    .map((reserva) => _buildDataRow(reserva))
-                    .toList(),
+                rows: [
+                  ...widget.reservas.map((reserva) => _buildDataRow(reserva)),
+                  // Fila de totales integrada al final de la tabla
+                  DataRow(
+                    color: MaterialStateProperty.all(Colors.grey.shade200),
+                    cells: [
+                      const DataCell(Text('')), // Acción
+                      const DataCell(Text('')), // Número
+                      const DataCell(Text('')), // Hotel
+                      const DataCell(Text('')), // Nombre
+                      DataCell(
+                        Text(
+                          '$totalPax',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ), // Total PAX
+                      DataCell(
+                        Text(
+                          Formatters.formatCurrency(totalSaldo),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ), // Total Saldo
+                      const DataCell(Text('')), // Observaciones
+                      const DataCell(Text('')), // Agencia
+                      DataCell(
+                        Text(
+                          Formatters.formatCurrency(totalDeuda),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ), // Total Deuda
+                      const DataCell(Text('')), // Editar
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -385,12 +430,14 @@ class _ReservasTableState extends State<ReservasTable> {
 
         // OBSERVACIONES
         DataCell(
-          r.observacion.isNotEmpty
-              ? Tooltip(
-                  message: r.observacion,
-                  child: const Icon(Icons.note, size: 20),
-                )
-              : const Text('Sin obs.', style: TextStyle(color: Colors.grey)),
+          IconButton(
+            icon: Icon(
+              r.observacion.isNotEmpty ? Icons.note : Icons.note_add,
+              color: r.observacion.isNotEmpty ? Colors.blue : Colors.grey,
+              size: 20,
+            ),
+            onPressed: () => _showObservacionDialog(ra),
+          ),
         ),
 
         // AGENCIA
@@ -433,9 +480,17 @@ class _ReservasTableState extends State<ReservasTable> {
                     ),
                   ],
                 )
-              : IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () => _startEditing(ra),
+              : Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _startEditing(ra),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _showDeleteDialog(ra),
+                    ),
+                  ],
                 ),
         ),
       ],
@@ -472,42 +527,82 @@ class _ReservasTableState extends State<ReservasTable> {
     );
   }
 
+  void _showObservacionDialog(ReservaConAgencia ra) {
+    final controller = TextEditingController(text: ra.reserva.observacion);
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Editar Observaciones'),
+          content: TextField(
+            controller: controller,
+            maxLines: null,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Observaciones',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final updated = ra.reserva.copyWith(
+                  observacion: controller.text,
+                );
+                await ReservasController.updateReserva(ra.id, updated);
+                widget.onUpdate();
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showDeleteDialog(ReservaConAgencia reserva) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Eliminar Reserva'),
         content: Text(
           '¿Estás seguro de que quieres eliminar la reserva de ${reserva.nombreCliente}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              // Cierro el diálogo usando el mismo context del builder
+              Navigator.of(ctx).pop();
+
+              // Capturo el messenger **antes** de entrar al await
+              final messenger = ScaffoldMessenger.of(context);
+
               try {
                 await ReservasController.deleteReserva(reserva.id);
                 widget.onUpdate();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Reserva eliminada exitosamente'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+
+                // Muestro el SnackBar sin llamar a ScaffoldMessenger.of() dentro del async gap
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Reserva eliminada exitosamente'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error eliminando reserva: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error eliminando reserva: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

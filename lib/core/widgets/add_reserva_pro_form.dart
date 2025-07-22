@@ -32,7 +32,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   void initState() {
     super.initState();
     // Cargar ejemplo por defecto
-    _textController.text = TextParser.getExampleText();
+    // _textController.text = TextParser.getExampleText();
     _parseText();
     final config = context.read<ConfiguracionController>().configuracion;
     _precioPorAsiento = config?.precioPorAsiento ?? 0.0;
