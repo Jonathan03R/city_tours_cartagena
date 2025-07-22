@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
-import 'package:excel/excel.dart' as xls; // ← alias
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../mvvc/reservas_controller.dart';
 import '../utils/colors.dart';
@@ -177,84 +173,85 @@ class _ReservasTableState extends State<ReservasTable> {
     }
   }
 
-  Future<void> _exportToExcel() async {
-    try {
-    // Pedir permiso
-    var status = await Permission.manageExternalStorage.request();
+  // Future<void> _exportToExcel() async {
+  //   try {
+  //   // Pedir permiso
+  //   var status = await Permission.manageExternalStorage.request();
 
-    if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permiso denegado. No se puede guardar el archivo'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  //   if (!status.isGranted) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Permiso denegado. No se puede guardar el archivo'),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //     return;
+  //   }
 
-      // 2. Crear Excel
-      final excel = xls.Excel.createExcel();
-      final sheet = excel['Reservas'];
+  //     // 2. Crear Excel
+  //     final excel = xls.Excel.createExcel();
+  //     final sheet = excel['Reservas'];
 
-      // Cabeceras
-      sheet.appendRow([
-        xls.TextCellValue('HOTEL'),
-        xls.TextCellValue('CLIENTE'),
-        xls.TextCellValue('FECHA'),
-        xls.TextCellValue('PAX'),
-        xls.TextCellValue('SALDO'),
-        xls.TextCellValue('AGENCIA'),
-        xls.TextCellValue('OBSERVACIONES'),
-        xls.TextCellValue('ESTADO'),
-      ]);
+  //     // Cabeceras
+  //     sheet.appendRow([
+  //       xls.TextCellValue('HOTEL'),
+  //       xls.TextCellValue('CLIENTE'),
+  //       xls.TextCellValue('FECHA'),
+  //       xls.TextCellValue('PAX'),
+  //       xls.TextCellValue('SALDO'),
+  //       xls.TextCellValue('AGENCIA'),
+  //       xls.TextCellValue('OBSERVACIONES'),
+  //       xls.TextCellValue('ESTADO'),
+  //     ]);
 
-      // Filas
-      for (var r in widget.reservas) {
-        sheet.appendRow([
-          xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
-          xls.TextCellValue(r.nombreCliente),
-          xls.TextCellValue(Formatters.formatDate(r.fecha)),
-          xls.IntCellValue(r.pax),
-          xls.DoubleCellValue(r.saldo),
-          xls.TextCellValue(r.nombreAgencia),
-          xls.TextCellValue(
-            r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
-          ),
-          xls.TextCellValue(Formatters.getEstadoText(r.estado)),
-        ]);
-      }
+  //     // Filas
+  //     for (var r in widget.reservas) {
+  //       sheet.appendRow([
+  //         xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
+  //         xls.TextCellValue(r.nombreCliente),
+  //         xls.TextCellValue(Formatters.formatDate(r.fecha)),
+  //         xls.IntCellValue(r.pax),
+  //         xls.DoubleCellValue(r.saldo),
+  //         xls.TextCellValue(r.nombreAgencia),
+  //         xls.TextCellValue(
+  //           r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
+  //         ),
+  //         xls.TextCellValue(Formatters.getEstadoText(r.estado)),
+  //       ]);
+  //     }
 
-      // 3. Codificar
-      final bytes = excel.encode();
-      if (bytes == null) return;
+  //     // 3. Codificar
+  //     final bytes = excel.encode();
+  //     if (bytes == null) return;
 
-      // 4. Ruta pública en Descargas
-      final directory = Directory('/storage/emulated/0/Download');
-      if (!directory.existsSync()) {
-        directory.createSync(recursive: true);
-      }
+  //     // 4. Ruta pública en Descargas
+  //     final directory = Directory('/storage/emulated/0/Download');
+  //     if (!directory.existsSync()) {
+  //       directory.createSync(recursive: true);
+  //     }
 
-      final filePath =
-          '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+  //     final filePath =
+  //         '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
 
-      final file = File(filePath);
-      await file.writeAsBytes(bytes);
+  //     final file = File(filePath);
+  //     await file.writeAsBytes(bytes);
 
-      // 5. Confirmación
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Archivo guardado en Descargas')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
-      }
-    }
-  }
+  //     // 5. Confirmación
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Archivo guardado en Descargas')),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
+  //     }
+  //   }
+  // }
 
+  
   @override
   Widget build(BuildContext context) {
     if (widget.reservas.isEmpty) {
@@ -275,15 +272,15 @@ class _ReservasTableState extends State<ReservasTable> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ElevatedButton.icon(
-            onPressed: _exportToExcel,
-            icon: const Icon(Icons.download),
-            label: const Text('Exportar a Excel'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-          ),
-        ),
+        // Padding(
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        //   child: ElevatedButton.icon(
+        //     onPressed: _exportToExcel,
+        //     icon: const Icon(Icons.download),
+        //     label: const Text('Exportar a Excel'),
+        //     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+        //   ),
+        // ),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -308,12 +305,12 @@ class _ReservasTableState extends State<ReservasTable> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  DataColumn(
-                    label: Text(
-                      'FECHA',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  // DataColumn(
+                  //   label: Text(
+                  //     'FECHA',
+                  //     style: TextStyle(fontWeight: FontWeight.bold),
+                  //   ),
+                  // ),
                   DataColumn(
                     label: Text(
                       'PAX',
@@ -424,52 +421,52 @@ class _ReservasTableState extends State<ReservasTable> {
                 ),
         ),
 
-        // FECHA
-        DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 120,
-                  child: InkWell(
-                    onTap: () async {
-                      final DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: _fechaValues[reserva.id] ?? reserva.fecha,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _fechaValues[reserva.id] = picked;
-                        });
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.calendar_today, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            Formatters.formatDate(
-                              _fechaValues[reserva.id] ?? reserva.fecha,
-                            ),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              : Text(
-                  Formatters.formatDate(reserva.fecha),
-                  style: const TextStyle(fontSize: 13),
-                ),
-        ),
+        // // FECHA
+        // DataCell(
+        //   isEditing
+        //       ? SizedBox(
+        //           width: 120,
+        //           child: InkWell(
+        //             onTap: () async {
+        //               final DateTime? picked = await showDatePicker(
+        //                 context: context,
+        //                 initialDate: _fechaValues[reserva.id] ?? reserva.fecha,
+        //                 firstDate: DateTime(2020),
+        //                 lastDate: DateTime(2030),
+        //               );
+        //               if (picked != null) {
+        //                 setState(() {
+        //                   _fechaValues[reserva.id] = picked;
+        //                 });
+        //               }
+        //             },
+        //             child: Container(
+        //               padding: const EdgeInsets.all(8),
+        //               decoration: BoxDecoration(
+        //                 border: Border.all(color: Colors.grey.shade300),
+        //                 borderRadius: BorderRadius.circular(4),
+        //               ),
+        //               child: Row(
+        //                 mainAxisSize: MainAxisSize.min,
+        //                 children: [
+        //                   const Icon(Icons.calendar_today, size: 16),
+        //                   const SizedBox(width: 4),
+        //                   Text(
+        //                     Formatters.formatDate(
+        //                       _fechaValues[reserva.id] ?? reserva.fecha,
+        //                     ),
+        //                     style: const TextStyle(fontSize: 12),
+        //                   ),
+        //                 ],
+        //               ),
+        //             ),
+        //           ),
+        //         )
+        //       : Text(
+        //           Formatters.formatDate(reserva.fecha),
+        //           style: const TextStyle(fontSize: 13),
+        //         ),
+        // ),
 
         // PAX
         DataCell(
@@ -679,36 +676,8 @@ class _ReservasTableState extends State<ReservasTable> {
       ],
     );
   }
+  
 
-  Widget _buildQuickStatusButton(
-    ReservaConAgencia reserva,
-    EstadoReserva status,
-    IconData icon,
-    Color color,
-    String tooltip,
-  ) {
-    final isActive = reserva.estado == status;
-
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: isActive ? null : () => _quickChangeStatus(reserva, status),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 1),
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: isActive ? color : Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            icon,
-            size: 12,
-            color: isActive ? Colors.white : Colors.grey.shade600,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
     final agencias = ReservasController.getAllAgencias();

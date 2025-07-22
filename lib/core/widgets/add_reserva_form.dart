@@ -1,4 +1,5 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
+import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:flutter/material.dart';
 
 import '../mvvc/reservas_controller.dart';
@@ -21,10 +22,13 @@ class _AddReservaFormState extends State<AddReservaForm> {
   final _paxController = TextEditingController(text: '1');
   final _saldoController = TextEditingController(text: '0');
   final _observacionController = TextEditingController();
+  final _telefonoController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   EstadoReserva _selectedEstado = EstadoReserva.pendiente;
   String? _selectedAgenciaId;
   bool _isLoading = false;
+
+  double _precioPorAsiento = 0.0;
 
   @override
   void dispose() {
@@ -33,8 +37,28 @@ class _AddReservaFormState extends State<AddReservaForm> {
     _paxController.dispose();
     _saldoController.dispose();
     _observacionController.dispose();
+    _telefonoController.dispose();
     super.dispose();
   }
+
+  @override
+/// The initState function in Dart is used to initialize the state of a widget and in this case, it
+/// calls the _cargarPrecioPorAsiento function.
+  void initState() {
+    super.initState();
+    _cargarPrecioPorAsiento();
+  }
+
+  /// 1) Carga el precio por asiento desde Firestore
+  Future<void> _cargarPrecioPorAsiento() async {
+    final config = await ConfiguracionService.getConfiguracion();
+    if (config != null) {
+      setState(() {
+        _precioPorAsiento = config.precioPorAsiento;
+      });
+    }
+  }
+
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate() && _selectedAgenciaId != null) {
@@ -53,6 +77,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
           saldo: double.parse(_saldoController.text),
           agenciaId: _selectedAgenciaId!,
           observacion: _observacionController.text,
+          costoAsiento: _precioPorAsiento,
+          telefono: _telefonoController.text.trim(), 
         );
 
         await ReservasController.addReserva(newReserva);
@@ -132,6 +158,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
                     const SizedBox(height: 16),
                     _buildTextField('Saldo', _saldoController, Icons.attach_money, keyboardType: TextInputType.number),
                     const SizedBox(height: 16),
+                    const SizedBox(height: 16),
+                    _buildTextField('Teléfono',_telefonoController,Icons.phone,keyboardType: TextInputType.phone,required: false,),
                     Row(
                       children: [
                         Icon(Icons.business, size: 16, color: Colors.blue.shade600),
