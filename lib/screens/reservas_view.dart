@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:excel/excel.dart' as xls;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -27,17 +28,12 @@ class ReservasView extends StatefulWidget {
 }
 
 class _ReservasViewState extends State<ReservasView> {
-  // Esta lista ahora se usará para almacenar los datos más recientes del stream
-  // para cálculos y exportación, no para la UI directa.
   List<ReservaConAgencia> _currentReservas = [];
-  // Este es el stream al que el StreamBuilder escuchará
   Stream<List<ReservaConAgencia>>? _reservasStream;
 
   DateFilterType _selectedFilter = DateFilterType.today;
   DateTime? _customDate;
   bool _isTableView = true;
-  // Eliminamos _isLoading porque StreamBuilder maneja el estado de carga
-  // bool _isLoading = true;
   bool _editandoPrecio = false;
   final TextEditingController _precioController = TextEditingController();
   Configuracion? _configuracion;
@@ -46,7 +42,7 @@ class _ReservasViewState extends State<ReservasView> {
   void initState() {
     super.initState();
     ReservasController.printDebugInfo();
-    _loadReservas(); // Este método ahora configurará el stream
+    _loadReservas();
     _loadConfiguracion();
   }
 
@@ -59,11 +55,8 @@ class _ReservasViewState extends State<ReservasView> {
     }
   }
 
-  // Este método ahora asigna el stream correcto a _reservasStream
-  // y ya no es Future<void> ni usa setState para _isLoading.
   void _loadReservas() {
     setState(() {
-      // No es necesario setState(() => _isLoading = true); aquí
       switch (_selectedFilter) {
         case DateFilterType.all:
           _reservasStream = ReservasController.getReservasStream();
@@ -87,16 +80,14 @@ class _ReservasViewState extends State<ReservasView> {
               _customDate!,
             );
           } else {
-            _reservasStream = Stream.value([]); // Stream vacío si no hay fecha
+            _reservasStream = Stream.value([]);
           }
           break;
       }
-      // Aplicar filtro de agencia si existe
       if (widget.agenciaId != null) {
         _reservasStream = _reservasStream!.map((list) =>
             list.where((r) => r.agencia.id == widget.agenciaId).toList());
       }
-      // No es necesario setState para _reservas ni _isLoading = false aquí
     });
   }
 
@@ -107,7 +98,20 @@ class _ReservasViewState extends State<ReservasView> {
         _customDate = date;
       }
     });
-    _loadReservas(); // Recargar el stream con el nuevo filtro
+    _loadReservas();
+  }
+
+  void _showTableOnlyView() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TableOnlyViewScreen(
+          selectedFilter: _selectedFilter,
+          customDate: _customDate,
+          agenciaId: widget.agenciaId,
+          onUpdate: _loadReservas,
+        ),
+      ),
+    );
   }
 
   @override
@@ -132,21 +136,25 @@ class _ReservasViewState extends State<ReservasView> {
             tooltip: _isTableView ? 'Vista de lista' : 'Vista de tabla',
           ),
           IconButton(
+            icon: const Icon(Icons.visibility),
+            onPressed: _showTableOnlyView,
+            tooltip: 'Ver tabla completa',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadReservas, // Ahora recarga el stream
+            onPressed: _loadReservas,
             tooltip: 'Recargar',
           ),
         ],
       ),
-      body: Column( // Cambiado de ListView a Column para permitir Expanded
+      body: Column(
+        //aqu se agregan los filtros de fecha
         children: [
-          // Filtros de fecha (solo si no es vista de agencia específica)
           DateFilterButtons(
             selectedFilter: _selectedFilter,
             customDate: _customDate,
             onFilterChanged: _onFilterChanged,
           ),
-          // Contador de reservas y controles
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: LayoutBuilder(
@@ -185,8 +193,7 @@ class _ReservasViewState extends State<ReservasView> {
               },
             ),
           ),
-          // Vista de contenido con StreamBuilder
-          Expanded( // Usar Expanded para que el StreamBuilder ocupe el espacio restante
+          Expanded(
             child: StreamBuilder<List<ReservaConAgencia>>(
               stream: _reservasStream,
               builder: (context, snapshot) {
@@ -197,7 +204,7 @@ class _ReservasViewState extends State<ReservasView> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  _currentReservas = []; // Asegurarse de que la lista esté vacía para cálculos
+                  _currentReservas = [];
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -213,14 +220,14 @@ class _ReservasViewState extends State<ReservasView> {
                   );
                 }
 
-                // Actualizar la lista de reservas para cálculos y exportación
                 _currentReservas = snapshot.data!;
                 debugPrint('🔄 Reservas cargadas en vista: ${_currentReservas.length}');
 
                 return _isTableView
                     ? ReservasTable(
                         reservas: _currentReservas,
-                        onUpdate: _loadReservas, // Pasar el método para re-configurar el stream
+                        onUpdate: _loadReservas,
+                        currentFilter: _selectedFilter, // Pasa el filtro actual
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
@@ -241,7 +248,6 @@ class _ReservasViewState extends State<ReservasView> {
           ? Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Botón Modo Pro
                 FloatingActionButton.extended(
                   onPressed: _showAddReservaProForm,
                   backgroundColor: Colors.purple.shade600,
@@ -251,7 +257,6 @@ class _ReservasViewState extends State<ReservasView> {
                   heroTag: "pro_button",
                 ),
                 const SizedBox(height: 16),
-                // Botón normal
                 FloatingActionButton(
                   onPressed: _showAddReservaForm,
                   backgroundColor: Colors.blue.shade600,
@@ -304,7 +309,7 @@ class _ReservasViewState extends State<ReservasView> {
       context: context,
       isScrollControlled: true,
       builder: (context) =>
-          ReservaDetails(reserva: reserva, onUpdate: _loadReservas), // onUpdate llama a _loadReservas
+          ReservaDetails(reserva: reserva, onUpdate: _loadReservas),
     );
   }
 
@@ -312,7 +317,7 @@ class _ReservasViewState extends State<ReservasView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddReservaForm(onAdd: _loadReservas), // onAdd llama a _loadReservas
+      builder: (context) => AddReservaForm(onAdd: _loadReservas),
     );
   }
 
@@ -320,13 +325,12 @@ class _ReservasViewState extends State<ReservasView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddReservaProForm(onAdd: _loadReservas), // onAdd llama a _loadReservas
+      builder: (context) => AddReservaProForm(onAdd: _loadReservas),
     );
   }
 
   Future<void> _exportToExcel(List<ReservaConAgencia> reservas) async {
     try {
-      // Pedir permiso
       var status = await Permission.manageExternalStorage.request();
       if (!status.isGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -337,10 +341,8 @@ class _ReservasViewState extends State<ReservasView> {
         );
         return;
       }
-      // 2. Crear Excel
       final excel = xls.Excel.createExcel();
       final sheet = excel['Reservas'];
-      // Cabeceras
       sheet.appendRow([
         xls.TextCellValue('HOTEL'),
         xls.TextCellValue('CLIENTE'),
@@ -351,7 +353,6 @@ class _ReservasViewState extends State<ReservasView> {
         xls.TextCellValue('OBSERVACIONES'),
         xls.TextCellValue('ESTADO'),
       ]);
-      // Filas
       for (var r in reservas) {
         sheet.appendRow([
           xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
@@ -366,10 +367,8 @@ class _ReservasViewState extends State<ReservasView> {
           xls.TextCellValue(Formatters.getEstadoText(r.estado)),
         ]);
       }
-      // 3. Codificar
       final bytes = excel.encode();
       if (bytes == null) return;
-      // 4. Ruta pública en Descargas
       final directory = Directory('/storage/emulated/0/Download');
       if (!directory.existsSync()) {
         directory.createSync(recursive: true);
@@ -378,7 +377,6 @@ class _ReservasViewState extends State<ReservasView> {
           '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
       final file = File(filePath);
       await file.writeAsBytes(bytes);
-      // 5. Confirmación
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Archivo guardado en Descargas')),
@@ -429,20 +427,19 @@ class _ReservasViewState extends State<ReservasView> {
   }
 
   Widget _buildRightControls() {
-    // configuation extraída con Provider.watch ya en build()
     final configuracion = context.watch<ConfiguracionController>().configuracion;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 12,
       runSpacing: 8,
       children: [
-        // contador
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.blue.shade50,
             borderRadius: BorderRadius.circular(16),
           ),
+          ///aqui muestra el numero de reservas
           child: Text(
             '${_currentReservas.length} reserva${_currentReservas.length != 1 ? 's' : ''}',
             style: TextStyle(
@@ -451,9 +448,9 @@ class _ReservasViewState extends State<ReservasView> {
             ),
           ),
         ),
-        // exportar Excel
+        // Botón para exportar a Excel
         ElevatedButton(
-          onPressed: () => _exportToExcel(_currentReservas), // Pasa _currentReservas
+          onPressed: () => _exportToExcel(_currentReservas),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.indigo,
             padding: const EdgeInsets.all(12),
@@ -464,7 +461,7 @@ class _ReservasViewState extends State<ReservasView> {
           ),
           child: const Icon(Icons.file_download, color: Colors.white, size: 24),
         ),
-        // costo + edit
+        /// Botón para editar el precio
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -492,7 +489,6 @@ class _ReservasViewState extends State<ReservasView> {
                   _guardarNuevoPrecio();
                 } else {
                   setState(() {
-                    // Aquí metemos el value con dos decimales, no entero:
                     _precioController.text =
                         (configuracion?.precioPorAsiento.toStringAsFixed(2) ??
                             '0.00');

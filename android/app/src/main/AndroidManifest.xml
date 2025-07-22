@@ -8,8 +8,20 @@
         tools:ignore="ScopedStorage"/>
 
     <queries>
-        <package android:name="com.whatsapp" />
-        <!-- Otros handlers opcionales -->
+        <!-- WhatsApp “normal” -->
+        <package android:name="com.whatsapp"/>
+        <!-- WhatsApp Business -->
+        <package android:name="com.whatsapp.w4b"/>
+
+        <!-- Permitir URIs HTTP/HTTPS para el web fallback -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
     </queries>
 
     <application

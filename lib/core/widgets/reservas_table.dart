@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Importar DateFilterType
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,12 +11,14 @@ import '../utils/formatters.dart';
 
 class ReservasTable extends StatefulWidget {
   final List<ReservaConAgencia> reservas;
-  final VoidCallback onUpdate; // Se mantiene para forzar recarga si es necesario (ej. después de editar/eliminar)
+  final VoidCallback onUpdate;
+  final DateFilterType currentFilter; // Nuevo: para saber el filtro actual
 
   const ReservasTable({
     super.key,
     required this.reservas,
     required this.onUpdate,
+    required this.currentFilter, // Requerir el filtro actual
   });
 
   @override
@@ -40,7 +43,6 @@ class _ReservasTableState extends State<ReservasTable> {
   void _startEditing(ReservaConAgencia reserva) {
     setState(() {
       _editingReservaId = reserva.id;
-      // Inicializar controladores
       _controllers['${reserva.id}_cliente'] = TextEditingController(
         text: reserva.nombreCliente,
       );
@@ -59,7 +61,6 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_observacion'] = TextEditingController(
         text: reserva.observacion,
       );
-      // Inicializar valores
       _estadoValues[reserva.id] = reserva.estado;
       _fechaValues[reserva.id] = reserva.fecha;
       _agenciaValues[reserva.id] = reserva.agenciaId;
@@ -69,7 +70,6 @@ class _ReservasTableState extends State<ReservasTable> {
   void _cancelEditing() {
     setState(() {
       if (_editingReservaId != null) {
-        // Limpiar controladores
         _controllers.removeWhere((key, value) {
           if (key.startsWith('${_editingReservaId}_')) {
             value.dispose();
@@ -122,7 +122,7 @@ class _ReservasTableState extends State<ReservasTable> {
         updatedReserva,
       );
       _cancelEditing();
-      widget.onUpdate(); // Llama a onUpdate para que ReservasView recargue el stream
+      widget.onUpdate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -150,7 +150,7 @@ class _ReservasTableState extends State<ReservasTable> {
     try {
       final updatedReserva = reserva.reserva.copyWith(estado: newStatus);
       await ReservasController.updateReserva(reserva.id, updatedReserva);
-      widget.onUpdate(); // Llama a onUpdate para que ReservasView recargue el stream
+      widget.onUpdate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -175,7 +175,6 @@ class _ReservasTableState extends State<ReservasTable> {
 
   @override
   Widget build(BuildContext context) {
-    // Cálculo de totales
     final totalPax = widget.reservas.fold<int>(
       0,
       (sum, ra) => sum + ra.reserva.pax,
@@ -188,6 +187,7 @@ class _ReservasTableState extends State<ReservasTable> {
       0.0,
       (sum, ra) => sum + ra.reserva.deuda,
     );
+
     if (widget.reservas.isEmpty) {
       return const Center(
         child: Column(
@@ -203,6 +203,28 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       );
     }
+
+    // Determinar si la columna de fecha debe mostrarse
+    final showFechaColumn =
+        widget.currentFilter == DateFilterType.all ||
+        widget.currentFilter == DateFilterType.lastWeek;
+
+    // Construir las columnas dinámicamente
+    final List<DataColumn> columns = [
+      const DataColumn(label: Text('Acción')),
+      const DataColumn(label: Text('Número')),
+      const DataColumn(label: Text('Hotel')),
+      const DataColumn(label: Text('Nombre')),
+      if (showFechaColumn)
+        const DataColumn(label: Text('Fecha')), // Columna de Fecha condicional
+      const DataColumn(label: Text('Pax')),
+      const DataColumn(label: Text('Saldo')),
+      const DataColumn(label: Text('Observaciones')),
+      const DataColumn(label: Text('Agencia')),
+      const DataColumn(label: Text('Deuda')),
+      const DataColumn(label: Text('Editar')),
+    ];
+
     return Column(
       children: [
         Expanded(
@@ -210,55 +232,51 @@ class _ReservasTableState extends State<ReservasTable> {
             scrollDirection: Axis.horizontal,
             child: SizedBox(
               width: MediaQuery.of(context).size.width < 800
-                  ? 1400
+                  ? (showFechaColumn
+                        ? 1550
+                        : 1400) // Ajustar ancho si la columna de fecha está presente
                   : MediaQuery.of(context).size.width,
               child: DataTable(
                 columnSpacing: 12,
                 horizontalMargin: 16,
                 headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
-                columns: const [
-                  DataColumn(label: Text('Acción')),
-                  DataColumn(label: Text('Número')),
-                  DataColumn(label: Text('Hotel')),
-                  DataColumn(label: Text('Nombre')),
-                  DataColumn(label: Text('Pax')),
-                  DataColumn(label: Text('Saldo')),
-                  DataColumn(label: Text('Observaciones')),
-                  DataColumn(label: Text('Agencia')),
-                  DataColumn(label: Text('Deuda')),
-                  DataColumn(label: Text('Editar')),
-                ],
+                columns: columns, // Usar las columnas dinámicas
                 rows: [
-                  ...widget.reservas.map((reserva) => _buildDataRow(reserva)),
-                  // Fila de totales integrada al final de la tabla
+                  ...widget.reservas.map(
+                    (reserva) => _buildDataRow(reserva, showFechaColumn),
+                  ), // Pasar showFechaColumn
                   DataRow(
                     color: WidgetStateProperty.all(Colors.grey.shade200),
                     cells: [
-                      const DataCell(Text('')), // Acción
-                      const DataCell(Text('')), // Número
-                      const DataCell(Text('')), // Hotel
-                      const DataCell(Text('')), // Nombre
+                      const DataCell(Text('')),
+                      const DataCell(Text('')),
+                      const DataCell(Text('')),
+                      const DataCell(Text('')),
+                      if (showFechaColumn)
+                        const DataCell(
+                          Text(''),
+                        ), // Celda vacía para Fecha si está presente
                       DataCell(
                         Text(
                           '$totalPax',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                      ), // Total PAX
+                      ),
                       DataCell(
                         Text(
                           Formatters.formatCurrency(totalSaldo),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                      ), // Total Saldo
-                      const DataCell(Text('')), // Observaciones
-                      const DataCell(Text('')), // Agencia
+                      ),
+                      const DataCell(Text('')),
+                      const DataCell(Text('')),
                       DataCell(
                         Text(
                           Formatters.formatCurrency(totalDeuda),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                      ), // Total Deuda
-                      const DataCell(Text('')), // Editar
+                      ),
+                      const DataCell(Text('')),
                     ],
                   ),
                 ],
@@ -270,163 +288,207 @@ class _ReservasTableState extends State<ReservasTable> {
     );
   }
 
-  DataRow _buildDataRow(ReservaConAgencia ra) {
+  DataRow _buildDataRow(ReservaConAgencia ra, bool showFechaColumn) {
+    // Recibir showFechaColumn
     var r = ra.reserva;
-    final deuda = r.deuda; // = r.costoAsiento * r.pax - r.saldo
+    final deuda = r.deuda;
     final isEditing = _editingReservaId == r.id;
-    // Set<String> chatsAbiertos = {}; // Esta variable no se usa y puede eliminarse
 
-    return DataRow(
-      cells: [
-        // ACCIÓN: botón de WhatsApp
-        DataCell(
-          IconButton(
-            icon: Icon(
-              Icons.message,
-              color: r.whatsappContactado ? Colors.green : Colors.black54,
-            ),
-            tooltip: 'Chatear por WhatsApp',
-            onPressed: () async {
-              // Si ya estaba en verde (contactado), lo desmarcamos
-              if (r.whatsappContactado) {
-                await FirebaseFirestore.instance
-                    .collection('reservas')
-                    .doc(r.id)
-                    .update({'whatsappContactado': false});
-                // No es necesario setState aquí, el StreamBuilder en ReservasView lo actualizará
-                return;
-              }
-
-              // Si está gris, marcamos como contactado y abrimos WhatsApp
-              final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
-              final uri = Uri.parse('https://wa.me/$telefono');
-
-              if (await canLaunchUrl(uri)) {
-                // Guardamos en Firebase antes o después de abrir WhatsApp
-                await FirebaseFirestore.instance
-                    .collection('reservas')
-                    .doc(r.id)
-                    .update({'whatsappContactado': true});
-                // No es necesario setState aquí, el StreamBuilder en ReservasView lo actualizará
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No se pudo abrir WhatsApp'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
+    final List<DataCell> cells = [
+      DataCell(
+        IconButton(
+          icon: Icon(
+            Icons.message,
+            color: r.whatsappContactado ? Colors.green : Colors.black54,
           ),
+          tooltip: 'Chatear por WhatsApp',
+          onPressed: () async {
+            final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
+            final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
+            final uriWeb = Uri.parse('https://wa.me/$telefono');
+
+            // Si ya estaba marcado, desmárcalo directamente
+            if (r.whatsappContactado) {
+              await FirebaseFirestore.instance
+                  .collection('reservas')
+                  .doc(r.id)
+                  .update({'whatsappContactado': false});
+              setState(() => r = r.copyWith(whatsappContactado: false));
+              return;
+            }
+
+            // 1️⃣ Intentar el esquema nativo
+            if (await canLaunchUrl(uriApp)) {
+              // Marcamos antes de lanzar para que quede verde inmediatamente
+              await FirebaseFirestore.instance
+                  .collection('reservas')
+                  .doc(r.id)
+                  .update({'whatsappContactado': true});
+              setState(() => r = r.copyWith(whatsappContactado: true));
+              await launchUrl(uriApp, mode: LaunchMode.externalApplication);
+              return;
+            }
+
+            // 2️⃣ Fallback a web
+            if (await canLaunchUrl(uriWeb)) {
+              await FirebaseFirestore.instance
+                  .collection('reservas')
+                  .doc(r.id)
+                  .update({'whatsappContactado': true});
+              setState(() => r = r.copyWith(whatsappContactado: true));
+              await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
+              return;
+            }
+
+            // 3️⃣ Ni app ni web disponibles
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No se pudo abrir WhatsApp'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
         ),
-        // NÚMERO
+      ),
+      DataCell(
+        isEditing
+            ? TextField(controller: _controllers['${r.id}_telefono'])
+            : Text(
+                r.telefono.isNotEmpty ? r.telefono : 'Sin teléfono',
+                style: TextStyle(
+                  color: r.telefono.isEmpty ? Colors.grey : Colors.black,
+                ),
+              ),
+      ),
+      DataCell(
+        isEditing
+            ? TextField(controller: _controllers['${r.id}_hotel'])
+            : Text(r.hotel),
+      ),
+      DataCell(
+        isEditing
+            ? TextField(controller: _controllers['${r.id}_cliente'])
+            : Text(r.nombreCliente),
+      ),
+    ];
+
+    // Añadir la celda de Fecha condicionalmente
+    if (showFechaColumn) {
+      cells.add(
         DataCell(
           isEditing
-              ? TextField(controller: _controllers['${r.id}_telefono'])
-              : Text(
-                  r.telefono.isNotEmpty ? r.telefono : 'Sin teléfono',
-                  style: TextStyle(
-                    color: r.telefono.isEmpty ? Colors.grey : Colors.black,
+              ? GestureDetector(
+                  onTap: () async {
+                    final selectedDate = await showDatePicker(
+                      context: context,
+                      initialDate: _fechaValues[r.id] ?? r.fecha,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (selectedDate != null) {
+                      setState(() {
+                        _fechaValues[r.id] = selectedDate;
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: TextField(
+                      controller: TextEditingController(
+                        text: Formatters.formatDate(
+                          _fechaValues[r.id] ?? r.fecha,
+                        ),
+                      ),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: EdgeInsets.all(8),
+                      ),
+                    ),
                   ),
-                ),
-        ),
-        // HOTEL
-        DataCell(
-          isEditing
-              ? TextField(controller: _controllers['${r.id}_hotel'])
-              : Text(r.hotel),
-        ),
-        // Nombre
-        DataCell(
-          isEditing
-              ? TextField(controller: _controllers['${r.id}_cliente'])
-              : Text(r.nombreCliente),
-        ),
-        // PAX
-        DataCell(
-          isEditing
-              ? TextField(
-                  controller: _controllers['${r.id}_pax'],
-                  keyboardType: TextInputType.number,
                 )
-              : Text('${r.pax}'),
+              : Text(Formatters.formatDate(r.fecha)),
         ),
-        // SALDO
-        DataCell(
-          isEditing
-              ? TextField(
-                  controller: _controllers['${r.id}_saldo'],
-                  keyboardType: TextInputType.number,
-                )
-              : Text(Formatters.formatCurrency(r.saldo)),
-        ),
-        // OBSERVACIONES
-        DataCell(
-          IconButton(
-            icon: Icon(
-              r.observacion.isNotEmpty ? Icons.note : Icons.note_add,
-              color: r.observacion.isNotEmpty ? Colors.blue : Colors.grey,
-              size: 20,
-            ),
-            onPressed: () => _showObservacionDialog(ra),
+      );
+    }
+
+    cells.addAll([
+      DataCell(
+        isEditing
+            ? TextField(
+                controller: _controllers['${r.id}_pax'],
+                keyboardType: TextInputType.number,
+              )
+            : Text('${r.pax}'),
+      ),
+      DataCell(
+        isEditing
+            ? TextField(
+                controller: _controllers['${r.id}_saldo'],
+                keyboardType: TextInputType.number,
+              )
+            : Text(Formatters.formatCurrency(r.saldo)),
+      ),
+      DataCell(
+        IconButton(
+          icon: Icon(
+            r.observacion.isNotEmpty ? Icons.note : Icons.note_add,
+            color: r.observacion.isNotEmpty ? Colors.blue : Colors.grey,
+            size: 20,
           ),
+          onPressed: () => _showObservacionDialog(ra),
         ),
-        // AGENCIA
-        DataCell(
-          isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia),
-        ),
-        // DEUDA (no editable; borde rojo si > 0)
-        DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: deuda > 0 ? Colors.red : Colors.transparent,
-              ),
-              borderRadius: BorderRadius.circular(4),
+      ),
+      DataCell(isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
+      DataCell(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: deuda > 0 ? Colors.red : Colors.transparent,
             ),
-            child: Text(
-              Formatters.formatCurrency(deuda),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: deuda > 0 ? Colors.red.shade700 : Colors.green.shade700,
-              ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            Formatters.formatCurrency(deuda),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: deuda > 0 ? Colors.red.shade700 : Colors.green.shade700,
             ),
           ),
         ),
-        // EDITAR: entra o sale de modo edición
-        DataCell(
-          isEditing
-              ? Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: _saveChanges,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: _cancelEditing,
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _startEditing(ra),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _showDeleteDialog(ra),
-                    ),
-                  ],
-                ),
-        ),
-      ],
-    );
+      ),
+      DataCell(
+        isEditing
+            ? Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.check, color: Colors.green),
+                    onPressed: _saveChanges,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: _cancelEditing,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => _startEditing(ra),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _showDeleteDialog(ra),
+                  ),
+                ],
+              ),
+      ),
+    ]);
+
+    return DataRow(cells: cells);
   }
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
@@ -510,14 +572,11 @@ class _ReservasTableState extends State<ReservasTable> {
           ),
           TextButton(
             onPressed: () async {
-              // Cierro el diálogo usando el mismo context del builder
               Navigator.of(ctx).pop();
-              // Capturo el messenger **antes** de entrar al await
               final messenger = ScaffoldMessenger.of(context);
               try {
                 await ReservasController.deleteReserva(reserva.id);
                 widget.onUpdate();
-                // Muestro el SnackBar sin llamar a ScaffoldMessenger.of() dentro del async gap
                 messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Reserva eliminada exitosamente'),
