@@ -147,54 +147,53 @@ class _ReservasViewState extends State<ReservasView> {
           ),
         ],
       ),
-      body: Column(
-        //aqu se agregan los filtros de fecha
-        children: [
-          DateFilterButtons(
-            selectedFilter: _selectedFilter,
-            customDate: _customDate,
-            onFilterChanged: _onFilterChanged,
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: LayoutBuilder(
-              builder: (ctx, constraints) {
-                final isWide = constraints.maxWidth >= 600;
-                return isWide
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
+      body: SingleChildScrollView( // Envuelve todo el contenido del body para permitir el scroll vertical
+        child: Column(
+          children: [
+            DateFilterButtons(
+              selectedFilter: _selectedFilter,
+              customDate: _customDate,
+              onFilterChanged: _onFilterChanged,
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: LayoutBuilder(
+                builder: (ctx, constraints) {
+                  final isWide = constraints.maxWidth >= 600;
+                  return isWide
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _getFilterTitle(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                            _buildRightControls(),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                               _getFilterTitle(),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
                             ),
-                          ),
-                          _buildRightControls(),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getFilterTitle(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildRightControls(),
-                        ],
-                      );
-              },
+                            const SizedBox(height: 8),
+                            _buildRightControls(),
+                          ],
+                        );
+                },
+              ),
             ),
-          ),
-          Expanded(
-            child: StreamBuilder<List<ReservaConAgencia>>(
+            StreamBuilder<List<ReservaConAgencia>>(
               stream: _reservasStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -230,6 +229,8 @@ class _ReservasViewState extends State<ReservasView> {
                         currentFilter: _selectedFilter, // Pasa el filtro actual
                       )
                     : ListView.builder(
+                        shrinkWrap: true, // Importante para ListView dentro de SingleChildScrollView
+                        physics: const NeverScrollableScrollPhysics(), // Deshabilita el scroll propio del ListView
                         padding: const EdgeInsets.all(16),
                         itemCount: _currentReservas.length,
                         itemBuilder: (ctx, i) {
@@ -241,8 +242,10 @@ class _ReservasViewState extends State<ReservasView> {
                       );
               },
             ),
-          ),
-        ],
+
+            const SizedBox(height: 100),
+          ],
+        ),
       ),
       floatingActionButton: widget.agenciaId == null
           ? Column(
@@ -257,12 +260,12 @@ class _ReservasViewState extends State<ReservasView> {
                   heroTag: "pro_button",
                 ),
                 const SizedBox(height: 16),
-                FloatingActionButton(
-                  onPressed: _showAddReservaForm,
-                  backgroundColor: Colors.blue.shade600,
-                  heroTag: "normal_button",
-                  child: const Icon(Icons.add, color: Colors.white),
-                ),
+                // FloatingActionButton(
+                //   onPressed: _showAddReservaForm,
+                //   backgroundColor: Colors.blue.shade600,
+                //   heroTag: "normal_button",
+                //   child: const Icon(Icons.add, color: Colors.white),
+                // ),
               ],
             )
           : null,

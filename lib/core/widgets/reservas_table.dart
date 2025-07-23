@@ -227,63 +227,133 @@ class _ReservasTableState extends State<ReservasTable> {
 
     return Column(
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width < 800
-                  ? (showFechaColumn
-                        ? 1550
-                        : 1400) // Ajustar ancho si la columna de fecha está presente
-                  : MediaQuery.of(context).size.width,
-              child: DataTable(
-                columnSpacing: 12,
-                horizontalMargin: 16,
-                headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
-                columns: columns, // Usar las columnas dinámicas
-                rows: [
-                  ...widget.reservas.map(
-                    (reserva) => _buildDataRow(reserva, showFechaColumn),
-                  ), // Pasar showFechaColumn
-                  DataRow(
-                    color: WidgetStateProperty.all(Colors.grey.shade200),
-                    cells: [
-                      const DataCell(Text('')),
-                      const DataCell(Text('')),
-                      const DataCell(Text('')),
-                      const DataCell(Text('')),
-                      if (showFechaColumn)
-                        const DataCell(
-                          Text(''),
-                        ), // Celda vacía para Fecha si está presente
-                      DataCell(
-                        Text(
-                          '$totalPax',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          // child: SizedBox(
+          // width: MediaQuery.of(context).size.width < 800
+          //     ? (showFechaColumn
+          //             ? 1550
+          //             : 1400) // Ajustar ancho si la columna de fecha está presente
+          //     : MediaQuery.of(context).size.width,
+          child: DataTable(
+            columnSpacing: 12,
+            horizontalMargin: 16,
+            headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
+            columns: columns, // Usar las columnas dinámicas
+            rows: [
+              ...widget.reservas.map(
+                (reserva) => _buildDataRow(reserva, showFechaColumn),
+              ), // Pasar showFechaColumn
+              DataRow(
+                color: WidgetStateProperty.all(Colors.grey.shade200),
+                cells: [
+                  const DataCell(Text('')),
+                  const DataCell(Text('')),
+                  const DataCell(Text('')),
+                  if (!showFechaColumn)
+                    DataCell(
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              color: Colors.blue.shade100,
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'TOTAL',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF01060A),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (showFechaColumn)
+                    DataCell(
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              color: Colors.blue.shade100,
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'TOTAL',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF01060A),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ), 
+                  DataCell(Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.blue.shade100,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$totalPax',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                      DataCell(
-                        Text(
-                          Formatters.formatCurrency(totalSaldo),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const DataCell(Text('')),
-                      const DataCell(Text('')),
-                      DataCell(
-                        Text(
-                          Formatters.formatCurrency(totalDeuda),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const DataCell(Text('')),
                     ],
-                  ),
+                  )),
+                  DataCell(Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.blue.shade100,
+                          alignment: Alignment.center,
+                          child: Text(
+                            Formatters.formatCurrency(totalSaldo),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )),
+                  
+                  const DataCell(Text('')),
+                  const DataCell(Text('')),
+                  DataCell(Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.blue.shade100,
+                          alignment: Alignment.center,
+                          child: Text(
+                            Formatters.formatCurrency(totalDeuda),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )),
+                  // DataCell(
+                  //   Text(
+                  //     Formatters.formatCurrency(totalDeuda),
+                  //     style: const TextStyle(fontWeight: FontWeight.bold),
+                  //   ),
+                  // ),
+                  const DataCell(Text('')),
                 ],
               ),
-            ),
+            ],
           ),
         ),
+
+        // ),
       ],
     );
   }
@@ -299,14 +369,13 @@ class _ReservasTableState extends State<ReservasTable> {
         IconButton(
           icon: Icon(
             Icons.message,
-            color: r.whatsappContactado ? Colors.green : Colors.black54,
+            color: r.whatsappContactado ? Colors.redAccent : Colors.black54,
           ),
           tooltip: 'Chatear por WhatsApp',
           onPressed: () async {
             final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
             final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
             final uriWeb = Uri.parse('https://wa.me/$telefono');
-
             // Si ya estaba marcado, desmárcalo directamente
             if (r.whatsappContactado) {
               await FirebaseFirestore.instance
@@ -316,7 +385,6 @@ class _ReservasTableState extends State<ReservasTable> {
               setState(() => r = r.copyWith(whatsappContactado: false));
               return;
             }
-
             // 1️⃣ Intentar el esquema nativo
             if (await canLaunchUrl(uriApp)) {
               // Marcamos antes de lanzar para que quede verde inmediatamente
@@ -328,7 +396,6 @@ class _ReservasTableState extends State<ReservasTable> {
               await launchUrl(uriApp, mode: LaunchMode.externalApplication);
               return;
             }
-
             // 2️⃣ Fallback a web
             if (await canLaunchUrl(uriWeb)) {
               await FirebaseFirestore.instance
@@ -339,7 +406,6 @@ class _ReservasTableState extends State<ReservasTable> {
               await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
               return;
             }
-
             // 3️⃣ Ni app ni web disponibles
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
