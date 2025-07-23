@@ -14,7 +14,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await initializeDateFormatting('es_ES', null);
-  await ReservasController.initialize();
+  // await ReservasController.initialize();
   // <-- Aquí imprimes el debug tras inicializar todo
   // ejecutar una vesta la configuración de Firebase y los controladores
   await ConfiguracionService.inicializarConfiguracion();

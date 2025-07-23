@@ -16,7 +16,15 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+# esta es la version de la aplicacion
+version: 1.1.4+2
+# MAJOR = versión principal (1): cambia cuando hay cambios grandes o incompatibles.
+
+# MINOR = nueva funcionalidad sin romper nada.
+
+# PATCH = corrección de bugs o mejoras internas.
+
+# +BUILD = número de compilación interna (lo usa Android para actualizar el APK).
 
 environment:
   sdk: ^3.9.0-196.1.beta
@@ -47,6 +55,7 @@ dependencies:
   url_launcher: ^6.3.2
   http: ^1.4.0
   image_picker: ^1.1.2
+  rxdart: ^0.28.0
   # flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:

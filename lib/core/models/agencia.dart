@@ -2,11 +2,13 @@ class Agencia {
   final String id;
   final String nombre;
   final String? imagenUrl;
+  final bool eliminada;
 
   Agencia({
     required this.id,
     required this.nombre,
     this.imagenUrl,
+    this.eliminada = false,
   });
 
   factory Agencia.fromFirestore(Map<String, dynamic> data, String id) {
@@ -14,6 +16,7 @@ class Agencia {
       id: id,
       nombre: data['nombre'] ?? '',
       imagenUrl: data['imagenUrl'],
+      eliminada: data['eliminada'] ?? false, 
     );
   }
 
@@ -21,6 +24,7 @@ class Agencia {
     return {
       'nombre': nombre,
       'imagenUrl': imagenUrl,
+      'eliminada': eliminada,
       'fechaRegistro': DateTime.now().toIso8601String(),
     };
   }

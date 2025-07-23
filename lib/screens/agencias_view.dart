@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/services/cloudinaryService.dart';
 import 'package:citytourscartagena/core/services/firestore_service.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/screens/reservas_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class AgenciasView extends StatefulWidget {
@@ -15,6 +16,8 @@ class AgenciasView extends StatefulWidget {
 
 class _AgenciasViewState extends State<AgenciasView> {
   List<AgenciaConReservas> _agencias = [];
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -28,11 +31,56 @@ class _AgenciasViewState extends State<AgenciasView> {
     });
   }
 
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+      _selectionMode = _selectedIds.isNotEmpty;
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    for (var id in _selectedIds) {
+      await FirebaseFirestore.instance.collection('agencias').doc(id).update({
+        'eliminada': true,
+      });
+    }
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agencias'),
+        leading: _selectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _selectionMode = false;
+                    _selectedIds.clear();
+                  });
+                },
+              )
+            : null,
+        title: Text(
+          _selectionMode
+              ? '${_selectedIds.length} seleccionada(s)'
+              : 'Agencias',
+        ),
+        actions: [
+          if (_selectionMode)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _deleteSelected,
+            ),
+        ],
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
       ),
@@ -56,12 +104,18 @@ class _AgenciasViewState extends State<AgenciasView> {
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(
-                    '${_agencias.length} agencia${_agencias.length != 1 ? 's' : ''}',
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: StreamBuilder<List<AgenciaConReservas>>(
+                    stream: ReservasController.getAgenciasStream(),
+                    builder: (context, snapshot) {
+                      final agencias = snapshot.data ?? [];
+                      return Text(
+                        '${agencias.length} agencia${agencias.length != 1 ? 's' : ''}',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -73,6 +127,9 @@ class _AgenciasViewState extends State<AgenciasView> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final agencias = snapshot.data ?? [];
                 if (agencias.isEmpty) {
@@ -90,74 +147,113 @@ class _AgenciasViewState extends State<AgenciasView> {
                     ),
                   );
                 }
-                print('🔍 Agencia ${agencias.first.nombre} imagenUrl: ${agencias.first.imagenUrl}');
+
                 return GridView.builder(
-                  
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: 1.01,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio:
+                        0.83, // Mantenemos el aspecto para consistencia
                   ),
                   itemCount: agencias.length,
                   itemBuilder: (context, index) {
                     final agencia = agencias[index];
-                    return Card(
-                      elevation: 2,
-                      child: InkWell(
-                        onTap: () => _navigateToAgenciaReservas(agencia),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              agencia.imagenUrl != null &&
-                                      agencia.imagenUrl!.isNotEmpty
-                                      
-                                  ? CircleAvatar(
-                                      radius: 50,
-                                      backgroundImage:
-                                          NetworkImage(agencia.imagenUrl!),
-                                    )
-                                  : Icon(
-                                      Icons.business,
-                                      size: 40,
-                                      color: Colors.green.shade600,
+                    final selected = _selectedIds.contains(agencia.id);
+                    return GestureDetector(
+                      onLongPress: () => _toggleSelection(agencia.id),
+                      onTap: () {
+                        if (_selectionMode) {
+                          _toggleSelection(agencia.id);
+                        } else {
+                          _navigateToAgenciaReservas(agencia);
+                        }
+                      },
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: selected
+                              ? BorderSide(
+                                  color: Colors.blue.shade400,
+                                  width: 2,
+                                )
+                              : BorderSide.none,
+                        ),
+                        color: selected ? Colors.blue.shade50 : Colors.white,
+                        child: Stack(
+                          children: [
+                            // Rejilla centrada con avatar, nombre y total de reservas
+                            Positioned.fill(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (agencia.imagenUrl != null &&
+                                        agencia.imagenUrl!.isNotEmpty)
+                                      CircleAvatar(
+                                        radius: 50,
+                                        backgroundColor: Colors.grey.shade200,
+                                        backgroundImage: NetworkImage(
+                                          agencia.imagenUrl!,
+                                        ),
+                                      )
+                                    else
+                                      CircleAvatar(
+                                        radius: 50,
+                                        backgroundColor: Colors.green.shade100,
+                                        child: Icon(
+                                          Icons.business,
+                                          size: 50,
+                                          color: Colors.green.shade600,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      agencia.nombre,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                              const SizedBox(height: 8),
-                              Text(
-                                agencia.nombre,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${agencia.totalReservas} reservas',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        '${agencia.totalReservas} reservas',
+                                        style: const TextStyle(
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            if (selected)
+                              const Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: Colors.blue,
+                                  size: 24,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     );
@@ -170,6 +266,8 @@ class _AgenciasViewState extends State<AgenciasView> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _mostrarFormularioAgregarAgencia,
+        backgroundColor: Colors.green.shade600,
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );
@@ -184,9 +282,11 @@ class _AgenciasViewState extends State<AgenciasView> {
           if (imagen != null) {
             imagenUrl = await CloudinaryService.uploadImage(imagen);
           }
-
-          final nuevaAgencia =
-              Agencia(id: '', nombre: nombre, imagenUrl: imagenUrl);
+          final nuevaAgencia = Agencia(
+            id: '',
+            nombre: nombre,
+            imagenUrl: imagenUrl,
+          );
           await FirestoreService().addAgencia(nuevaAgencia);
         },
       ),
@@ -194,10 +294,8 @@ class _AgenciasViewState extends State<AgenciasView> {
   }
 
   void _navigateToAgenciaReservas(AgenciaConReservas agencia) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ReservasView(agencia: agencia),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ReservasView(agencia: agencia)));
   }
 }

@@ -1,12 +1,35 @@
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
+import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:rxdart/rxdart.dart';
 
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
 
   // ========== RESERVAS ==========
+  
+
+
+/// Nuevo: combina reservas + agencias activas y descarta las que no tengan agencia válida
+  Stream<List<ReservaConAgencia>> getReservasConAgenciasStream() {
+    final reservas$ = getReservasStream();        // Stream<List<Reserva>>
+    final agencias$ = getAgenciasStream();        // Stream<List<Agencia>>
+    return Rx.combineLatest2<List<Reserva>, List<Agencia>, List<ReservaConAgencia>>(
+      reservas$,
+      agencias$,
+      (reservas, agencias) {
+        return reservas
+            .where((r) => agencias.any((a) => a.id == r.agenciaId))
+            .map((r) {
+              final ag = agencias.firstWhere((a) => a.id == r.agenciaId);
+              return ReservaConAgencia(reserva: r, agencia: ag);
+            })
+            .toList();
+      },
+    );
+  }
 
   Future<List<Reserva>> getAllReservas() async {
     try {
@@ -112,6 +135,8 @@ class FirestoreService {
     }
   }
 
+  
+
   // NUEVO: Versión Stream para reservas por agencia
   Stream<List<Reserva>> getReservasByAgenciaStream(String agenciaId) {
     return _db
@@ -160,21 +185,28 @@ class FirestoreService {
   // ========== AGENCIAS ==========
 
   Stream<List<Agencia>> getAgenciasStream() {
-    return _db.collection('agencias').orderBy('nombre').snapshots().map((
-      snapshot,
-    ) {
-      return snapshot.docs.map((doc) {
-        return Agencia.fromFirestore(doc.data(), doc.id);
-      }).toList();
-    });
+    return _db
+      .collection('agencias')
+      .orderBy('nombre')
+      .snapshots()
+      .map((snapshot) {
+        return snapshot.docs
+          .map((doc) => Agencia.fromFirestore(doc.data(), doc.id))
+          .where((ag) => ag.eliminada == false)  // filtrado en Dart
+          .toList();
+      });
   }
 
   Future<List<Agencia>> getAllAgencias() async {
     try {
-      final snapshot = await _db.collection('agencias').get();
-      return snapshot.docs.map((doc) {
-        return Agencia.fromFirestore(doc.data(), doc.id);
-      }).toList();
+      final snapshot = await _db
+        .collection('agencias')
+        .orderBy('nombre')
+        .get();
+      return snapshot.docs
+        .map((doc) => Agencia.fromFirestore(doc.data(), doc.id))
+        .where((ag) => ag.eliminada == false)  // filtrado en Dart
+        .toList();
     } catch (e) {
       debugPrint('Error obteniendo agencias: $e');
       return [];
@@ -212,25 +244,48 @@ class FirestoreService {
   }
 
   // ========== MÉTODOS DE UTILIDAD ==========
+
+  Future<void> migrateAgenciasEliminadas() async {
+    final snap = await _db.collection('agencias').get();
+    final batch = _db.batch();
+    for (var doc in snap.docs) {
+      final data = doc.data();
+      if (!data.containsKey('eliminada')) {
+        batch.update(doc.reference, {'eliminada': false});
+      }
+    }
+    await batch.commit();
+    debugPrint('✅ Migración de campo "eliminada" completada.');
+  }
+
   Future<void> initializeDefaultData() async {
     try {
-      // Verificar si ya hay agencias
-      final agenciasSnapshot = await _db.collection('agencias').limit(1).get();
-      if (agenciasSnapshot.docs.isEmpty) {
-        debugPrint('🔄 Inicializando datos por defecto...');
-        // Crear agencias por defecto
-        final agenciasDefault = [
-          Agencia(id: '', nombre: 'Viajes del Sol'),
-          Agencia(id: '', nombre: 'Turismo Express'),
-          Agencia(id: '', nombre: 'Aventuras Tropicales'),
-        ];
-        for (final agencia in agenciasDefault) {
-          await addAgencia(agencia);
-        }
-        debugPrint('✅ Datos por defecto inicializados');
-      }
+      // …tu inicialización de datos por defecto…
+      // Ejecuta la migración solo una vez:
+      await migrateAgenciasEliminadas();
     } catch (e) {
-      debugPrint('❌ Error inicializando datos por defecto: $e');
+      debugPrint('❌ Error inicializando datos: $e');
     }
   }
+  // Future<void> initializeDefaultData() async {
+  //   try {
+  //     // Verificar si ya hay agencias
+  //     final agenciasSnapshot = await _db.collection('agencias').limit(1).get();
+  //     if (agenciasSnapshot.docs.isEmpty) {
+  //       debugPrint('🔄 Inicializando datos por defecto...');
+  //       // Crear agencias por defecto
+  //       final agenciasDefault = [
+  //         Agencia(id: '', nombre: 'Viajes del Sol'),
+  //         Agencia(id: '', nombre: 'Turismo Express'),
+  //         Agencia(id: '', nombre: 'Aventuras Tropicales'),
+  //       ];
+  //       for (final agencia in agenciasDefault) {
+  //         await addAgencia(agencia);
+  //       }
+  //       debugPrint('✅ Datos por defecto inicializados');
+  //     }
+  //   } catch (e) {
+  //     debugPrint('❌ Error inicializando datos por defecto: $e');
+  //   }
+  // }
 }

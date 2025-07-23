@@ -12,7 +12,8 @@ class ReservasController {
   static List<Reserva> _reservasCache = [];
   static List<Agencia> _agenciasCache = [];
   static bool _initialized = false;
-  static StreamSubscription? _agenciasSubscription; // Para escuchar cambios en agencias
+  static StreamSubscription?
+  _agenciasSubscription; // Para escuchar cambios en agencias
 
   static Future<void> initialize() async {
     if (_initialized) return;
@@ -21,19 +22,26 @@ class ReservasController {
       await _firestoreService.initializeDefaultData();
 
       // Suscribirse al stream de agencias para mantener la caché actualizada en tiempo real
-      _agenciasSubscription = _firestoreService.getAgenciasStream().listen((agencias) {
-        _agenciasCache = agencias;
-        debugPrint('✅ ${_agenciasCache.length} agencias actualizadas en cache (via stream)');
-      }, onError: (e) {
-        debugPrint('❌ Error en el stream de agencias: $e');
-      });
+      _agenciasSubscription = _firestoreService.getAgenciasStream().listen(
+        (agencias) {
+          _agenciasCache = agencias;
+          debugPrint(
+            '✅ ${_agenciasCache.length} agencias actualizadas en cache (via stream)',
+          );
+        },
+        onError: (e) {
+          debugPrint('❌ Error en el stream de agencias: $e');
+        },
+      );
 
       // Cargar agencias una vez al inicio para asegurar que la caché no esté vacía
       // antes de que el stream entregue el primer evento.
       // Esto es un fallback, el stream debería mantenerla actualizada.
       if (_agenciasCache.isEmpty) {
         _agenciasCache = await _firestoreService.getAllAgencias();
-        debugPrint('✅ ${_agenciasCache.length} agencias cargadas inicialmente en cache (fallback)');
+        debugPrint(
+          '✅ ${_agenciasCache.length} agencias cargadas inicialmente en cache (fallback)',
+        );
       }
 
       _initialized = true;
@@ -58,12 +66,13 @@ class ReservasController {
     return await _combineReservasWithAgencias(raw);
   }
 
+  static Stream<List<ReservaConAgencia>> getReservasConAgenciasStream() {
+    return _firestoreService.getReservasConAgenciasStream();
+  }
+
   // Método Stream existente (no modificado)
   static Stream<List<ReservaConAgencia>> getReservasStream() {
-    return _firestoreService.getReservasStream().asyncMap((reservas) async {
-      _reservasCache = reservas; // Actualiza la caché de reservas
-      return await _combineReservasWithAgencias(reservas);
-    });
+    return getReservasConAgenciasStream();
   }
 
   // Método Future existente (no modificado)
@@ -83,7 +92,9 @@ class ReservasController {
   static Stream<List<ReservaConAgencia>> getReservasByFechaStream(
     DateTime fecha,
   ) {
-    return _firestoreService.getReservasByFechaStream(fecha).asyncMap((reservas) async {
+    return _firestoreService.getReservasByFechaStream(fecha).asyncMap((
+      reservas,
+    ) async {
       // No actualizamos _reservasCache aquí para evitar sobrescribir el stream principal
       return await _combineReservasWithAgencias(reservas);
     });
@@ -111,9 +122,11 @@ class ReservasController {
     DateTime startDate,
     DateTime endDate,
   ) {
-    return _firestoreService.getReservasByDateRangeStream(startDate, endDate).asyncMap((reservas) async {
-      return await _combineReservasWithAgencias(reservas);
-    });
+    return _firestoreService
+        .getReservasByDateRangeStream(startDate, endDate)
+        .asyncMap((reservas) async {
+          return await _combineReservasWithAgencias(reservas);
+        });
   }
 
   // Método Future existente (no modificado)
@@ -147,7 +160,9 @@ class ReservasController {
   static Stream<List<ReservaConAgencia>> getReservasByAgenciaStream(
     String agenciaId,
   ) {
-    return _firestoreService.getReservasByAgenciaStream(agenciaId).asyncMap((reservas) async {
+    return _firestoreService.getReservasByAgenciaStream(agenciaId).asyncMap((
+      reservas,
+    ) async {
       return await _combineReservasWithAgencias(reservas);
     });
   }
@@ -270,7 +285,9 @@ class ReservasController {
     // Asegurar que tenemos las agencias en cache
     if (_agenciasCache.isEmpty) {
       _agenciasCache = await _firestoreService.getAllAgencias();
-      debugPrint('⚠️ Caché de agencias cargada por fallback en _combineReservasWithAgencias.');
+      debugPrint(
+        '⚠️ Caché de agencias cargada por fallback en _combineReservasWithAgencias.',
+      );
     }
     return reservas.map((reserva) {
       final agencia = _agenciasCache.firstWhere(
