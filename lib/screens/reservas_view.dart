@@ -1,10 +1,14 @@
 import 'dart:io';
 
+import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
+import 'package:citytourscartagena/core/services/cloudinaryService.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
+import 'package:citytourscartagena/core/services/firestore_service.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:excel/excel.dart' as xls;
 import 'package:flutter/material.dart';
@@ -20,8 +24,8 @@ import '../core/widgets/reserva_details.dart';
 import '../core/widgets/reservas_table.dart';
 
 class ReservasView extends StatefulWidget {
-  final String? agenciaId;
-  const ReservasView({super.key, this.agenciaId});
+  final AgenciaConReservas? agencia;
+  const ReservasView({super.key, this.agencia});
 
   @override
   State<ReservasView> createState() => _ReservasViewState();
@@ -84,9 +88,11 @@ class _ReservasViewState extends State<ReservasView> {
           }
           break;
       }
-      if (widget.agenciaId != null) {
-        _reservasStream = _reservasStream!.map((list) =>
-            list.where((r) => r.agencia.id == widget.agenciaId).toList());
+      if (widget.agencia != null) {
+        _reservasStream = _reservasStream!.map(
+          (list) =>
+              list.where((r) => r.agencia.id == widget.agencia!.id).toList(),
+        );
       }
     });
   }
@@ -107,12 +113,39 @@ class _ReservasViewState extends State<ReservasView> {
         builder: (context) => TableOnlyViewScreen(
           selectedFilter: _selectedFilter,
           customDate: _customDate,
-          agenciaId: widget.agenciaId,
+          agenciaId: widget.agencia?.id,
           onUpdate: _loadReservas,
         ),
       ),
     );
   }
+
+  void _editarAgencia() {
+  final agencia = widget.agencia!;
+  showDialog(
+    context: context,
+    builder: (_) => CrearAgenciaForm(
+      initialNombre: agencia.nombre,          // PASAMOS datos iniciales
+      initialImagenFile: null,                // opcional: podrías descargarla y convertir a File
+      onCrear: (nuevoNombre, nuevaImagenFile) async {
+        String? nuevaUrl = agencia.imagenUrl;
+        if (nuevaImagenFile != null) {
+          // sube foto nueva
+          nuevaUrl = await CloudinaryService.uploadImage(nuevaImagenFile);
+        }
+        // Llama a updateAgencia en lugar de addAgencia
+        final updated = Agencia(
+          id: agencia.id,
+          nombre: nuevoNombre,
+          imagenUrl: nuevaUrl,
+        );
+        await FirestoreService().updateAgencia(agencia.id, updated);
+        Navigator.of(context).pop();          // cierra diálogo
+      },
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +154,7 @@ class _ReservasViewState extends State<ReservasView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.agenciaId != null ? 'Reservas de Agencia' : 'Reservas',
+          widget.agencia != null ? 'Reservas de Agencia' : 'Reservas',
         ),
         backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
@@ -135,6 +168,13 @@ class _ReservasViewState extends State<ReservasView> {
             },
             tooltip: _isTableView ? 'Vista de lista' : 'Vista de tabla',
           ),
+          if (widget.agencia != null) ...[
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: _editarAgencia, // nuevo método
+              tooltip: 'Editar agencia',
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.visibility),
             onPressed: _showTableOnlyView,
@@ -147,7 +187,8 @@ class _ReservasViewState extends State<ReservasView> {
           ),
         ],
       ),
-      body: SingleChildScrollView( // Envuelve todo el contenido del body para permitir el scroll vertical
+      body: SingleChildScrollView(
+        // Envuelve todo el contenido del body para permitir el scroll vertical
         child: Column(
           children: [
             DateFilterButtons(
@@ -220,7 +261,9 @@ class _ReservasViewState extends State<ReservasView> {
                 }
 
                 _currentReservas = snapshot.data!;
-                debugPrint('🔄 Reservas cargadas en vista: ${_currentReservas.length}');
+                debugPrint(
+                  '🔄 Reservas cargadas en vista: ${_currentReservas.length}',
+                );
 
                 return _isTableView
                     ? ReservasTable(
@@ -229,14 +272,17 @@ class _ReservasViewState extends State<ReservasView> {
                         currentFilter: _selectedFilter, // Pasa el filtro actual
                       )
                     : ListView.builder(
-                        shrinkWrap: true, // Importante para ListView dentro de SingleChildScrollView
-                        physics: const NeverScrollableScrollPhysics(), // Deshabilita el scroll propio del ListView
+                        shrinkWrap:
+                            true, // Importante para ListView dentro de SingleChildScrollView
+                        physics:
+                            const NeverScrollableScrollPhysics(), // Deshabilita el scroll propio del ListView
                         padding: const EdgeInsets.all(16),
                         itemCount: _currentReservas.length,
                         itemBuilder: (ctx, i) {
                           return ReservaCardItem(
                             reserva: _currentReservas[i],
-                            onTap: () => _showReservaDetails(_currentReservas[i]),
+                            onTap: () =>
+                                _showReservaDetails(_currentReservas[i]),
                           );
                         },
                       );
@@ -247,7 +293,7 @@ class _ReservasViewState extends State<ReservasView> {
           ],
         ),
       ),
-      floatingActionButton: widget.agenciaId == null
+      floatingActionButton: widget.agencia == null
           ? Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -408,8 +454,8 @@ class _ReservasViewState extends State<ReservasView> {
     }
     try {
       await context.read<ConfiguracionController>().actualizarPrecio(
-            nuevoPrecio,
-          );
+        nuevoPrecio,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Precio actualizado correctamente'),
@@ -430,7 +476,9 @@ class _ReservasViewState extends State<ReservasView> {
   }
 
   Widget _buildRightControls() {
-    final configuracion = context.watch<ConfiguracionController>().configuracion;
+    final configuracion = context
+        .watch<ConfiguracionController>()
+        .configuracion;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 12,
@@ -442,6 +490,7 @@ class _ReservasViewState extends State<ReservasView> {
             color: Colors.blue.shade50,
             borderRadius: BorderRadius.circular(16),
           ),
+
           ///aqui muestra el numero de reservas
           child: Text(
             '${_currentReservas.length} reserva${_currentReservas.length != 1 ? 's' : ''}',
@@ -464,6 +513,7 @@ class _ReservasViewState extends State<ReservasView> {
           ),
           child: const Icon(Icons.file_download, color: Colors.white, size: 24),
         ),
+
         /// Botón para editar el precio
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -494,7 +544,7 @@ class _ReservasViewState extends State<ReservasView> {
                   setState(() {
                     _precioController.text =
                         (configuracion?.precioPorAsiento.toStringAsFixed(2) ??
-                            '0.00');
+                        '0.00');
                     _editandoPrecio = true;
                   });
                 }

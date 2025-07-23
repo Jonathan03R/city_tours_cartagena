@@ -1,5 +1,8 @@
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
+import 'package:citytourscartagena/core/services/cloudinaryService.dart';
+import 'package:citytourscartagena/core/services/firestore_service.dart';
+import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/screens/reservas_view.dart';
 import 'package:flutter/material.dart';
 
@@ -73,10 +76,10 @@ class _AgenciasViewState extends State<AgenciasView> {
                 }
                 final agencias = snapshot.data ?? [];
                 if (agencias.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+                      children: const [
                         Icon(Icons.business, size: 64, color: Colors.grey),
                         SizedBox(height: 16),
                         Text(
@@ -87,7 +90,9 @@ class _AgenciasViewState extends State<AgenciasView> {
                     ),
                   );
                 }
+                print('🔍 Agencia ${agencias.first.nombre} imagenUrl: ${agencias.first.imagenUrl}');
                 return GridView.builder(
+                  
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -108,17 +113,25 @@ class _AgenciasViewState extends State<AgenciasView> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.business,
-                                size: 40,
-                                color: Colors.green.shade600,
-                              ),
-                              const SizedBox(height: 12),
+                              agencia.imagenUrl != null &&
+                                      agencia.imagenUrl!.isNotEmpty
+                                      
+                                  ? CircleAvatar(
+                                      radius: 50,
+                                      backgroundImage:
+                                          NetworkImage(agencia.imagenUrl!),
+                                    )
+                                  : Icon(
+                                      Icons.business,
+                                      size: 40,
+                                      color: Colors.green.shade600,
+                                    ),
+                              const SizedBox(height: 8),
                               Text(
                                 agencia.nombre,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 12,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
@@ -155,12 +168,36 @@ class _AgenciasViewState extends State<AgenciasView> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _mostrarFormularioAgregarAgencia,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _mostrarFormularioAgregarAgencia() {
+    showDialog(
+      context: context,
+      builder: (_) => CrearAgenciaForm(
+        onCrear: (nombre, imagen) async {
+          String? imagenUrl;
+          if (imagen != null) {
+            imagenUrl = await CloudinaryService.uploadImage(imagen);
+          }
+
+          final nuevaAgencia =
+              Agencia(id: '', nombre: nombre, imagenUrl: imagenUrl);
+          await FirestoreService().addAgencia(nuevaAgencia);
+        },
+      ),
     );
   }
 
   void _navigateToAgenciaReservas(AgenciaConReservas agencia) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ReservasView(agenciaId: agencia.id)),
+      MaterialPageRoute(
+        builder: (_) => ReservasView(agencia: agencia),
+      ),
     );
   }
 }

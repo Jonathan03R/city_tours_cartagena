@@ -200,6 +200,7 @@ class ReservasController {
           AgenciaConReservas(
             id: agencia.id,
             nombre: agencia.nombre,
+            imagenUrl: agencia.imagenUrl,
             totalReservas: totalReservas,
           ),
         );
@@ -217,6 +218,7 @@ class ReservasController {
       return AgenciaConReservas(
         id: agencia.id,
         nombre: agencia.nombre,
+        imagenUrl: agencia.imagenUrl,
         totalReservas: totalReservas,
       );
     }).toList();

@@ -8,10 +8,10 @@ class AgenciaSelector extends StatefulWidget {
   final Function(String) onAgenciaSelected;
 
   const AgenciaSelector({
-    Key? key,
+    super.key,
     this.selectedAgenciaId,
     required this.onAgenciaSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<AgenciaSelector> createState() => _AgenciaSelectorState();
@@ -47,7 +47,7 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     try {
       _allAgencias = ReservasController.getAllAgencias();
       _filteredAgencias = List.from(_allAgencias);
-      
+
       setState(() {
         _isLoading = false;
       });
@@ -65,8 +65,10 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
         _filteredAgencias = List.from(_allAgencias);
       } else {
         _filteredAgencias = _allAgencias
-            .where((agencia) => 
-                agencia.nombre.toLowerCase().contains(query.toLowerCase()))
+            .where(
+              (agencia) =>
+                  agencia.nombre.toLowerCase().contains(query.toLowerCase()),
+            )
             .toList();
       }
     });
@@ -80,23 +82,27 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     });
 
     try {
-      final newAgencia = await ReservasController.addAgencia(_newAgenciaController.text.trim());
+      final newAgencia = await ReservasController.addAgencia(
+        _newAgenciaController.text.trim(),
+      );
       widget.onAgenciaSelected(newAgencia.id);
       _newAgenciaController.clear();
-      
+
       // Recargar agencias
       await _loadAgencias();
-      
+
       setState(() {
         _showAddForm = false;
         _isAddingAgencia = false;
       });
-      
+
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Agencia "${newAgencia.nombre}" agregada exitosamente'),
+            content: Text(
+              'Agencia "${newAgencia.nombre}" agregada exitosamente',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -105,7 +111,7 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
       setState(() {
         _isAddingAgencia = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -122,7 +128,12 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     final selectedAgencia = widget.selectedAgenciaId != null
         ? _allAgencias.firstWhere(
             (a) => a.id == widget.selectedAgenciaId,
-            orElse: () => AgenciaConReservas(id: '', nombre: 'Agencia no encontrada', totalReservas: 0),
+            orElse: () => AgenciaConReservas(
+              id: '',
+              nombre: 'Agencia no encontrada',
+              totalReservas: 0,
+              imagenUrl: null,
+            ), // Manejo de caso no encontrado
           )
         : null;
 
@@ -143,7 +154,9 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                   Icon(
                     Icons.business,
                     size: 20,
-                    color: selectedAgencia != null ? Colors.blue.shade600 : Colors.grey.shade600,
+                    color: selectedAgencia != null
+                        ? Colors.blue.shade600
+                        : Colors.grey.shade600,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -154,11 +167,16 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                         Text(
                           selectedAgencia?.nombre ?? 'Seleccionar agencia...',
                           style: TextStyle(
-                            color: selectedAgencia != null ? Colors.black : Colors.grey.shade600,
-                            fontWeight: selectedAgencia != null ? FontWeight.w500 : FontWeight.normal,
+                            color: selectedAgencia != null
+                                ? Colors.black
+                                : Colors.grey.shade600,
+                            fontWeight: selectedAgencia != null
+                                ? FontWeight.w500
+                                : FontWeight.normal,
                           ),
                         ),
-                        if (selectedAgencia != null && selectedAgencia.totalReservas > 0)
+                        if (selectedAgencia != null &&
+                            selectedAgencia.totalReservas > 0)
                           Text(
                             '${selectedAgencia.totalReservas} reserva${selectedAgencia.totalReservas != 1 ? 's' : ''}',
                             style: TextStyle(
@@ -172,10 +190,7 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_drop_down,
-              color: Colors.grey.shade600,
-            ),
+            Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
           ],
         ),
       ),
@@ -187,7 +202,7 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     _searchController.clear();
     _filteredAgencias = List.from(_allAgencias);
     _showAddForm = false;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -228,7 +243,7 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Formulario para agregar nueva agencia
                 if (_showAddForm) ...[
                   Container(
@@ -243,7 +258,11 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.add_business, color: Colors.blue.shade600, size: 20),
+                            Icon(
+                              Icons.add_business,
+                              color: Colors.blue.shade600,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Nueva Agencia',
@@ -269,15 +288,21 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: _isAddingAgencia ? null : _addNewAgencia,
+                                onPressed: _isAddingAgencia
+                                    ? null
+                                    : _addNewAgencia,
                                 icon: _isAddingAgencia
                                     ? const SizedBox(
                                         width: 16,
                                         height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
                                       )
                                     : const Icon(Icons.add, size: 16),
-                                label: Text(_isAddingAgencia ? 'Agregando...' : 'Agregar'),
+                                label: Text(
+                                  _isAddingAgencia ? 'Agregando...' : 'Agregar',
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
@@ -287,12 +312,14 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: _isAddingAgencia ? null : () {
-                                  setDialogState(() {
-                                    _showAddForm = false;
-                                    _newAgenciaController.clear();
-                                  });
-                                },
+                                onPressed: _isAddingAgencia
+                                    ? null
+                                    : () {
+                                        setDialogState(() {
+                                          _showAddForm = false;
+                                          _newAgenciaController.clear();
+                                        });
+                                      },
                                 icon: const Icon(Icons.close, size: 16),
                                 label: const Text('Cancelar'),
                               ),
@@ -304,57 +331,75 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                
+
                 // Lista de agencias
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredAgencias.isEmpty
-                          ? _buildEmptyState(setDialogState)
-                          : ListView.builder(
-                              itemCount: _filteredAgencias.length,
-                              itemBuilder: (context, index) {
-                                final agencia = _filteredAgencias[index];
-                                final isSelected = agencia.id == widget.selectedAgenciaId;
-                                
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  color: isSelected ? Colors.blue.shade50 : null,
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: isSelected 
-                                          ? Colors.blue.shade600 
-                                          : Colors.grey.shade300,
-                                      child: Icon(
-                                        Icons.business,
-                                        color: isSelected ? Colors.white : Colors.grey.shade600,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      agencia.nombre,
-                                      style: TextStyle(
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      '${agencia.totalReservas} reserva${agencia.totalReservas != 1 ? 's' : ''}',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    trailing: isSelected 
-                                        ? Icon(Icons.check_circle, color: Colors.blue.shade600)
-                                        : null,
-                                    onTap: () {
-                                      widget.onAgenciaSelected(agencia.id);
-                                      Navigator.of(context).pop();
-                                    },
+                      ? _buildEmptyState(setDialogState)
+                      : ListView.builder(
+                          itemCount: _filteredAgencias.length,
+                          itemBuilder: (context, index) {
+                            final agencia = _filteredAgencias[index];
+                            final isSelected =
+                                agencia.id == widget.selectedAgenciaId;
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              color: isSelected ? Colors.blue.shade50 : null,
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: isSelected
+                                      ? Colors.blue.shade600
+                                      : Colors.grey.shade300,
+                                  backgroundImage:
+                                      agencia.imagenUrl != null &&
+                                          agencia.imagenUrl!.isNotEmpty
+                                      ? NetworkImage(agencia.imagenUrl!)
+                                      : null,
+                                  child:
+                                      agencia.imagenUrl == null ||
+                                          agencia.imagenUrl!.isEmpty
+                                      ? Icon(
+                                          Icons.business,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : Colors.grey.shade600,
+                                          size: 20,
+                                        )
+                                      : null,
+                                ),
+                                title: Text(
+                                  agencia.nombre,
+                                  style: TextStyle(
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                                subtitle: Text(
+                                  '${agencia.totalReservas} reserva${agencia.totalReservas != 1 ? 's' : ''}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                trailing: isSelected
+                                    ? Icon(
+                                        Icons.check_circle,
+                                        color: Colors.blue.shade600,
+                                      )
+                                    : null,
+                                onTap: () {
+                                  widget.onAgenciaSelected(agencia.id);
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
@@ -374,20 +419,13 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.search_off,
-          size: 64,
-          color: Colors.grey.shade400,
-        ),
+        Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
         const SizedBox(height: 16),
         Text(
           _searchController.text.isNotEmpty
               ? 'No se encontró "${_searchController.text}"'
               : 'No hay agencias registradas',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),

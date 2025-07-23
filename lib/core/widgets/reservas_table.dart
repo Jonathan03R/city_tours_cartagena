@@ -247,30 +247,26 @@ class _ReservasTableState extends State<ReservasTable> {
               DataRow(
                 color: WidgetStateProperty.all(Colors.grey.shade200),
                 cells: [
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
+                  const DataCell(Text('')), // Celda de acción vacía
+                  const DataCell(Text('')), // Celda de número vacía
+                  const DataCell(Text('')), // Celda de hotel vacía
                   if (!showFechaColumn)
                     DataCell(
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              color: Colors.blue.shade100,
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'TOTAL',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF01060A),
-                                ),
-                              ),
-                            ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        color: Colors.blue.shade100,
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'TOTAL',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    )
+                  else
+                    const DataCell(Text('')),
                   if (showFechaColumn)
                     DataCell(
                       Row(
@@ -291,55 +287,67 @@ class _ReservasTableState extends State<ReservasTable> {
                           ),
                         ],
                       ),
-                    ), 
-                  DataCell(Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.blue.shade100,
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$totalPax',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  DataCell(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blue.shade100,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$totalPax',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )),
-                  DataCell(Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.blue.shade100,
-                          alignment: Alignment.center,
-                          child: Text(
-                            Formatters.formatCurrency(totalSaldo),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blue.shade100,
+                            alignment: Alignment.center,
+                            child: Text(
+                              Formatters.formatCurrency(totalSaldo),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )),
-                  
+                      ],
+                    ),
+                  ),
+
                   const DataCell(Text('')),
                   const DataCell(Text('')),
-                  DataCell(Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.blue.shade100,
-                          alignment: Alignment.center,
-                          child: Text(
-                            Formatters.formatCurrency(totalDeuda),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                  DataCell(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blue.shade100,
+                            alignment: Alignment.center,
+                            child: Text(
+                              Formatters.formatCurrency(totalDeuda),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )),
+                      ],
+                    ),
+                  ),
                   // DataCell(
                   //   Text(
                   //     Formatters.formatCurrency(totalDeuda),
@@ -365,11 +373,12 @@ class _ReservasTableState extends State<ReservasTable> {
     final isEditing = _editingReservaId == r.id;
 
     final List<DataCell> cells = [
+      // Celda de acción
       DataCell(
         IconButton(
           icon: Icon(
             Icons.message,
-            color: r.whatsappContactado ? Colors.redAccent : Colors.black54,
+            color: r.whatsappContactado ? Colors.green : Colors.redAccent,
           ),
           tooltip: 'Chatear por WhatsApp',
           onPressed: () async {
@@ -418,6 +427,7 @@ class _ReservasTableState extends State<ReservasTable> {
           },
         ),
       ),
+      // Celda de número
       DataCell(
         isEditing
             ? TextField(controller: _controllers['${r.id}_telefono'])
@@ -428,11 +438,13 @@ class _ReservasTableState extends State<ReservasTable> {
                 ),
               ),
       ),
+      // Celda de hotel
       DataCell(
         isEditing
             ? TextField(controller: _controllers['${r.id}_hotel'])
             : Text(r.hotel),
       ),
+      // Celda de nombre
       DataCell(
         isEditing
             ? TextField(controller: _controllers['${r.id}_cliente'])
@@ -480,6 +492,7 @@ class _ReservasTableState extends State<ReservasTable> {
     }
 
     cells.addAll([
+      // Celda de Pax
       DataCell(
         isEditing
             ? TextField(
@@ -488,6 +501,7 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text('${r.pax}'),
       ),
+      // Celda de Saldo
       DataCell(
         isEditing
             ? TextField(
@@ -496,6 +510,7 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
+      // Celda de Observaciones
       DataCell(
         IconButton(
           icon: Icon(
@@ -506,7 +521,9 @@ class _ReservasTableState extends State<ReservasTable> {
           onPressed: () => _showObservacionDialog(ra),
         ),
       ),
+      // Celda de Agencia
       DataCell(isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
+      // Celda de Deuda
       DataCell(
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -525,6 +542,7 @@ class _ReservasTableState extends State<ReservasTable> {
           ),
         ),
       ),
+      // Celda de Editar
       DataCell(
         isEditing
             ? Row(
