@@ -32,7 +32,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   void initState() {
     super.initState();
     // Cargar ejemplo por defecto
-    _textController.text = TextParser.getExampleText();
+    // _textController.text = TextParser.getExampleText();
     _parseText();
     final config = context.read<ConfiguracionController>().configuracion;
     _precioPorAsiento = config?.precioPorAsiento ?? 0.0;
@@ -81,8 +81,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     setState(() => _isLoading = true);
 
     // Asegúrate de que 'saldo' y 'telefono' se extraen correctamente
-    final saldoText = _parsedData!['saldo']?.toString() ?? '0';
-    final saldo = parseSaldo(saldoText);
+    final saldo = _parsedData!['saldo'] as double? ?? 0.0;
     final estado = saldo > 0
         ? EstadoReserva.confirmada
         : EstadoReserva.pendiente;
@@ -128,27 +127,27 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     }
   }
 
-  double parseSaldo(String input) {
-    try {
-      // Normalizar: reemplaza coma por punto si hay decimales
-      String normalized = input.trim();
+  // double parseSaldo(String input) {
+  //   try {
+  //     // Normalizar: reemplaza coma por punto si hay decimales
+  //     String normalized = input.trim();
 
-      // Si el usuario usa formato con separador de miles (puntos), elimínalos
-      if (normalized.contains('.') && normalized.contains(',')) {
-        // Ej: "1.234,56" → "1234,56"
-        normalized = normalized.replaceAll('.', '');
-      }
+  //     // Si el usuario usa formato con separador de miles (puntos), elimínalos
+  //     if (normalized.contains('.') && normalized.contains(',')) {
+  //       // Ej: "1.234,56" → "1234,56"
+  //       normalized = normalized.replaceAll('.', '');
+  //     }
 
-      // Detectar decimales con coma y cambiarlos a punto
-      normalized = normalized.replaceAll(',', '.');
+  //     // Detectar decimales con coma y cambiarlos a punto
+  //     normalized = normalized.replaceAll(',', '.');
 
-      // Usa NumberFormat según locale
-      final formatter = NumberFormat.decimalPattern('es'); // español
-      return formatter.parse(normalized).toDouble();
-    } catch (_) {
-      return 0.0; // Si falla, devuelve 0
-    }
-  }
+  //     // Usa NumberFormat según locale
+  //     final formatter = NumberFormat.decimalPattern('es'); // español
+  //     return formatter.parse(normalized).toDouble();
+  //   } catch (_) {
+  //     return 0.0; // Si falla, devuelve 0
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {

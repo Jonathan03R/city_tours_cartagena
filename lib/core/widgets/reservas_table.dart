@@ -1,6 +1,9 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Importar DateFilterType
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../mvvc/reservas_controller.dart';
 import '../utils/colors.dart';
@@ -9,11 +12,13 @@ import '../utils/formatters.dart';
 class ReservasTable extends StatefulWidget {
   final List<ReservaConAgencia> reservas;
   final VoidCallback onUpdate;
+  final DateFilterType currentFilter; // Nuevo: para saber el filtro actual
 
   const ReservasTable({
     super.key,
     required this.reservas,
     required this.onUpdate,
+    required this.currentFilter, // Requerir el filtro actual
   });
 
   @override
@@ -38,10 +43,11 @@ class _ReservasTableState extends State<ReservasTable> {
   void _startEditing(ReservaConAgencia reserva) {
     setState(() {
       _editingReservaId = reserva.id;
-
-      // Inicializar controladores
       _controllers['${reserva.id}_cliente'] = TextEditingController(
         text: reserva.nombreCliente,
+      );
+      _controllers['${reserva.id}_telefono'] = TextEditingController(
+        text: reserva.telefono,
       );
       _controllers['${reserva.id}_hotel'] = TextEditingController(
         text: reserva.hotel,
@@ -55,8 +61,6 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_observacion'] = TextEditingController(
         text: reserva.observacion,
       );
-
-      // Inicializar valores
       _estadoValues[reserva.id] = reserva.estado;
       _fechaValues[reserva.id] = reserva.fecha;
       _agenciaValues[reserva.id] = reserva.agenciaId;
@@ -66,7 +70,6 @@ class _ReservasTableState extends State<ReservasTable> {
   void _cancelEditing() {
     setState(() {
       if (_editingReservaId != null) {
-        // Limpiar controladores
         _controllers.removeWhere((key, value) {
           if (key.startsWith('${_editingReservaId}_')) {
             value.dispose();
@@ -74,7 +77,6 @@ class _ReservasTableState extends State<ReservasTable> {
           }
           return false;
         });
-
         _estadoValues.remove(_editingReservaId);
         _fechaValues.remove(_editingReservaId);
         _agenciaValues.remove(_editingReservaId);
@@ -85,18 +87,19 @@ class _ReservasTableState extends State<ReservasTable> {
 
   Future<void> _saveChanges() async {
     if (_editingReservaId == null) return;
-
     try {
       final reserva = widget.reservas.firstWhere(
         (r) => r.id == _editingReservaId,
       );
-
       final updatedReserva = reserva.reserva.copyWith(
         nombreCliente:
             _controllers['${_editingReservaId}_cliente']?.text ??
             reserva.nombreCliente,
         hotel:
             _controllers['${_editingReservaId}_hotel']?.text ?? reserva.hotel,
+        telefono:
+            _controllers['${_editingReservaId}_telefono']?.text ??
+            reserva.telefono,
         estado: _estadoValues[_editingReservaId] ?? reserva.estado,
         fecha: _fechaValues[_editingReservaId] ?? reserva.fecha,
         pax:
@@ -114,14 +117,12 @@ class _ReservasTableState extends State<ReservasTable> {
             _controllers['${_editingReservaId}_observacion']?.text ??
             reserva.observacion,
       );
-
       await ReservasController.updateReserva(
         _editingReservaId!,
         updatedReserva,
       );
       _cancelEditing();
       widget.onUpdate();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -150,7 +151,6 @@ class _ReservasTableState extends State<ReservasTable> {
       final updatedReserva = reserva.reserva.copyWith(estado: newStatus);
       await ReservasController.updateReserva(reserva.id, updatedReserva);
       widget.onUpdate();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -173,87 +173,21 @@ class _ReservasTableState extends State<ReservasTable> {
     }
   }
 
-  // Future<void> _exportToExcel() async {
-  //   try {
-  //   // Pedir permiso
-  //   var status = await Permission.manageExternalStorage.request();
-
-  //   if (!status.isGranted) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Permiso denegado. No se puede guardar el archivo'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //     return;
-  //   }
-
-  //     // 2. Crear Excel
-  //     final excel = xls.Excel.createExcel();
-  //     final sheet = excel['Reservas'];
-
-  //     // Cabeceras
-  //     sheet.appendRow([
-  //       xls.TextCellValue('HOTEL'),
-  //       xls.TextCellValue('CLIENTE'),
-  //       xls.TextCellValue('FECHA'),
-  //       xls.TextCellValue('PAX'),
-  //       xls.TextCellValue('SALDO'),
-  //       xls.TextCellValue('AGENCIA'),
-  //       xls.TextCellValue('OBSERVACIONES'),
-  //       xls.TextCellValue('ESTADO'),
-  //     ]);
-
-  //     // Filas
-  //     for (var r in widget.reservas) {
-  //       sheet.appendRow([
-  //         xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
-  //         xls.TextCellValue(r.nombreCliente),
-  //         xls.TextCellValue(Formatters.formatDate(r.fecha)),
-  //         xls.IntCellValue(r.pax),
-  //         xls.DoubleCellValue(r.saldo),
-  //         xls.TextCellValue(r.nombreAgencia),
-  //         xls.TextCellValue(
-  //           r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
-  //         ),
-  //         xls.TextCellValue(Formatters.getEstadoText(r.estado)),
-  //       ]);
-  //     }
-
-  //     // 3. Codificar
-  //     final bytes = excel.encode();
-  //     if (bytes == null) return;
-
-  //     // 4. Ruta pública en Descargas
-  //     final directory = Directory('/storage/emulated/0/Download');
-  //     if (!directory.existsSync()) {
-  //       directory.createSync(recursive: true);
-  //     }
-
-  //     final filePath =
-  //         '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-
-  //     final file = File(filePath);
-  //     await file.writeAsBytes(bytes);
-
-  //     // 5. Confirmación
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Archivo guardado en Descargas')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
-  //     }
-  //   }
-  // }
-
-  
   @override
   Widget build(BuildContext context) {
+    final totalPax = widget.reservas.fold<int>(
+      0,
+      (sum, ra) => sum + ra.reserva.pax,
+    );
+    final totalSaldo = widget.reservas.fold<double>(
+      0.0,
+      (sum, ra) => sum + ra.reserva.saldo,
+    );
+    final totalDeuda = widget.reservas.fold<double>(
+      0.0,
+      (sum, ra) => sum + ra.reserva.deuda,
+    );
+
     if (widget.reservas.isEmpty) {
       return const Center(
         child: Column(
@@ -270,418 +204,379 @@ class _ReservasTableState extends State<ReservasTable> {
       );
     }
 
+    // Determinar si la columna de fecha debe mostrarse
+    final showFechaColumn =
+        widget.currentFilter == DateFilterType.all ||
+        widget.currentFilter == DateFilterType.lastWeek;
+
+    // Construir las columnas dinámicamente
+    final List<DataColumn> columns = [
+      const DataColumn(label: Text('Acción')),
+      const DataColumn(label: Text('Número')),
+      const DataColumn(label: Text('Hotel')),
+      const DataColumn(label: Text('Nombre')),
+      if (showFechaColumn)
+        const DataColumn(label: Text('Fecha')), // Columna de Fecha condicional
+      const DataColumn(label: Text('Pax')),
+      const DataColumn(label: Text('Saldo')),
+      const DataColumn(label: Text('Observaciones')),
+      const DataColumn(label: Text('Agencia')),
+      const DataColumn(label: Text('Deuda')),
+      const DataColumn(label: Text('Editar')),
+    ];
+
     return Column(
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        //   child: ElevatedButton.icon(
-        //     onPressed: _exportToExcel,
-        //     icon: const Icon(Icons.download),
-        //     label: const Text('Exportar a Excel'),
-        //     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-        //   ),
-        // ),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width < 800
-                  ? 1400 // Ancho mínimo aumentado para más columnas
-                  : MediaQuery.of(context).size.width,
-              child: DataTable(
-                columnSpacing: 12,
-                horizontalMargin: 16,
-                headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
-                columns: const [
-                  DataColumn(
-                    label: Text(
-                      'HOTEL',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          // child: SizedBox(
+          // width: MediaQuery.of(context).size.width < 800
+          //     ? (showFechaColumn
+          //             ? 1550
+          //             : 1400) // Ajustar ancho si la columna de fecha está presente
+          //     : MediaQuery.of(context).size.width,
+          child: DataTable(
+            columnSpacing: 12,
+            horizontalMargin: 16,
+            headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
+            columns: columns, // Usar las columnas dinámicas
+            rows: [
+              ...widget.reservas.map(
+                (reserva) => _buildDataRow(reserva, showFechaColumn),
+              ), // Pasar showFechaColumn
+              DataRow(
+                color: WidgetStateProperty.all(Colors.grey.shade200),
+                cells: [
+                  const DataCell(Text('')), // Celda de acción vacía
+                  const DataCell(Text('')), // Celda de número vacía
+                  const DataCell(Text('')), // Celda de hotel vacía
+                  if (!showFechaColumn)
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        color: Colors.blue.shade100,
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'TOTAL',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const DataCell(Text('')),
+                  if (showFechaColumn)
+                    DataCell(
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              color: Colors.blue.shade100,
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'TOTAL',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF01060A),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  DataCell(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blue.shade100,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$totalPax',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  DataColumn(
-                    label: Text(
-                      'CLIENTE',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                  DataCell(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blue.shade100,
+                            alignment: Alignment.center,
+                            child: Text(
+                              Formatters.formatCurrency(totalSaldo),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  // DataColumn(
-                  //   label: Text(
-                  //     'FECHA',
-                  //     style: TextStyle(fontWeight: FontWeight.bold),
+
+                  const DataCell(Text('')),
+                  const DataCell(Text('')),
+                  DataCell(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blue.shade100,
+                            alignment: Alignment.center,
+                            child: Text(
+                              Formatters.formatCurrency(totalDeuda),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // DataCell(
+                  //   Text(
+                  //     Formatters.formatCurrency(totalDeuda),
+                  //     style: const TextStyle(fontWeight: FontWeight.bold),
                   //   ),
                   // ),
-                  DataColumn(
-                    label: Text(
-                      'PAX',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'SALDO',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'AGENCIA',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'OBSERVACIONES',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'ESTADO',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'ACCIONES',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  const DataCell(Text('')),
                 ],
-                rows: widget.reservas
-                    .map((reserva) => _buildDataRow(reserva))
-                    .toList(),
               ),
-            ),
+            ],
           ),
         ),
-      ],
-    );
-  }
 
-  DataRow _buildDataRow(ReservaConAgencia reserva) {
-    final isEditing = _editingReservaId == reserva.id;
-
-    return DataRow(
-      cells: [
-        // HOTEL
-        DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 120,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_hotel'],
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                      hintText: 'Hotel...',
-                    ),
-                  ),
-                )
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 120),
-                  child: Text(
-                    reserva.hotel.isEmpty ? 'Sin hotel' : reserva.hotel,
-                    style: TextStyle(
-                      color: reserva.hotel.isEmpty ? Colors.grey : Colors.black,
-                      fontStyle: reserva.hotel.isEmpty
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                      fontSize: 13,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-        ),
-
-        // CLIENTE
-        DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 150,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_cliente'],
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                  ),
-                )
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 150),
-                  child: Text(
-                    reserva.nombreCliente,
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-        ),
-
-        // // FECHA
-        // DataCell(
-        //   isEditing
-        //       ? SizedBox(
-        //           width: 120,
-        //           child: InkWell(
-        //             onTap: () async {
-        //               final DateTime? picked = await showDatePicker(
-        //                 context: context,
-        //                 initialDate: _fechaValues[reserva.id] ?? reserva.fecha,
-        //                 firstDate: DateTime(2020),
-        //                 lastDate: DateTime(2030),
-        //               );
-        //               if (picked != null) {
-        //                 setState(() {
-        //                   _fechaValues[reserva.id] = picked;
-        //                 });
-        //               }
-        //             },
-        //             child: Container(
-        //               padding: const EdgeInsets.all(8),
-        //               decoration: BoxDecoration(
-        //                 border: Border.all(color: Colors.grey.shade300),
-        //                 borderRadius: BorderRadius.circular(4),
-        //               ),
-        //               child: Row(
-        //                 mainAxisSize: MainAxisSize.min,
-        //                 children: [
-        //                   const Icon(Icons.calendar_today, size: 16),
-        //                   const SizedBox(width: 4),
-        //                   Text(
-        //                     Formatters.formatDate(
-        //                       _fechaValues[reserva.id] ?? reserva.fecha,
-        //                     ),
-        //                     style: const TextStyle(fontSize: 12),
-        //                   ),
-        //                 ],
-        //               ),
-        //             ),
-        //           ),
-        //         )
-        //       : Text(
-        //           Formatters.formatDate(reserva.fecha),
-        //           style: const TextStyle(fontSize: 13),
-        //         ),
         // ),
-
-        // PAX
-        DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 60,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_pax'],
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                  ),
-                )
-              : Text('${reserva.pax}', style: const TextStyle(fontSize: 13)),
-        ),
-
-        // SALDO
-        DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 100,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_saldo'],
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                  ),
-                )
-              : Text(
-                  Formatters.formatCurrency(reserva.saldo),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: reserva.saldo > 0
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
-                  ),
-                ),
-        ),
-
-        // AGENCIA
-        DataCell(
-          isEditing
-              ? SizedBox(width: 150, child: _buildAgenciaDropdown(reserva))
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 150),
-                  child: Text(
-                    reserva.nombreAgencia,
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-        ),
-
-        // OBSERVACIONES
-        DataCell(
-          isEditing
-              ? SizedBox(
-                  width: 200,
-                  child: TextField(
-                    controller: _controllers['${reserva.id}_observacion'],
-                    maxLines: 2,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(8),
-                      hintText: 'Observaciones...',
-                    ),
-                  ),
-                )
-              : Container(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: Text(
-                    reserva.observacion.isEmpty
-                        ? 'Sin observaciones'
-                        : reserva.observacion,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: reserva.observacion.isEmpty
-                          ? Colors.grey
-                          : Colors.black,
-                      fontStyle: reserva.observacion.isEmpty
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ),
-        ),
-
-        // ESTADO con botones rápidos
-        // ESTADO con popup
-        DataCell(
-          GestureDetector(
-            onTapDown: (TapDownDetails details) async {
-              final position = details.globalPosition;
-              await showMenu(
-                context: context,
-                position: RelativeRect.fromLTRB(position.dx, position.dy, 0, 0),
-                items: [
-                  PopupMenuItem(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                      ),
-                      title: const Text('Confirmada'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _quickChangeStatus(reserva, EstadoReserva.confirmada);
-                      },
-                    ),
-                  ),
-                  PopupMenuItem(
-                    child: ListTile(
-                      leading: const Icon(Icons.schedule, color: Colors.orange),
-                      title: const Text('Pendiente'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _quickChangeStatus(reserva, EstadoReserva.pendiente);
-                      },
-                    ),
-                  ),
-                  PopupMenuItem(
-                    child: ListTile(
-                      leading: const Icon(Icons.cancel, color: Colors.red),
-                      title: const Text('Cancelada'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _quickChangeStatus(reserva, EstadoReserva.cancelada);
-                      },
-                    ),
-                  ),
-                ],
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.getEstadoBackgroundColor(reserva.estado),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                Formatters.getEstadoText(reserva.estado),
-                style: TextStyle(
-                  color: AppColors.getEstadoColor(reserva.estado),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // ACCIONES
-        DataCell(
-          isEditing
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: _saveChanges,
-                      tooltip: 'Guardar',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: _cancelEditing,
-                      tooltip: 'Cancelar',
-                    ),
-                  ],
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit,
-                        color: Colors.blue,
-                        size: 20,
-                      ),
-                      onPressed: () => _startEditing(reserva),
-                      tooltip: 'Editar',
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                      onPressed: () => _showDeleteDialog(reserva),
-                      tooltip: 'Eliminar',
-                    ),
-                  ],
-                ),
-        ),
       ],
     );
   }
-  
 
+  DataRow _buildDataRow(ReservaConAgencia ra, bool showFechaColumn) {
+    // Recibir showFechaColumn
+    var r = ra.reserva;
+    final deuda = r.deuda;
+    final isEditing = _editingReservaId == r.id;
+
+    final List<DataCell> cells = [
+      // Celda de acción
+      DataCell(
+        IconButton(
+          icon: Icon(
+            Icons.message,
+            color: r.whatsappContactado ? Colors.green : Colors.redAccent,
+          ),
+          tooltip: 'Chatear por WhatsApp',
+          onPressed: () async {
+            final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
+            final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
+            final uriWeb = Uri.parse('https://wa.me/$telefono');
+            // Si ya estaba marcado, desmárcalo directamente
+            if (r.whatsappContactado) {
+              await FirebaseFirestore.instance
+                  .collection('reservas')
+                  .doc(r.id)
+                  .update({'whatsappContactado': false});
+              setState(() => r = r.copyWith(whatsappContactado: false));
+              return;
+            }
+            // 1️⃣ Intentar el esquema nativo
+            if (await canLaunchUrl(uriApp)) {
+              // Marcamos antes de lanzar para que quede verde inmediatamente
+              await FirebaseFirestore.instance
+                  .collection('reservas')
+                  .doc(r.id)
+                  .update({'whatsappContactado': true});
+              setState(() => r = r.copyWith(whatsappContactado: true));
+              await launchUrl(uriApp, mode: LaunchMode.externalApplication);
+              return;
+            }
+            // 2️⃣ Fallback a web
+            if (await canLaunchUrl(uriWeb)) {
+              await FirebaseFirestore.instance
+                  .collection('reservas')
+                  .doc(r.id)
+                  .update({'whatsappContactado': true});
+              setState(() => r = r.copyWith(whatsappContactado: true));
+              await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
+              return;
+            }
+            // 3️⃣ Ni app ni web disponibles
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No se pudo abrir WhatsApp'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+      ),
+      // Celda de número
+      DataCell(
+        isEditing
+            ? TextField(controller: _controllers['${r.id}_telefono'])
+            : Text(
+                r.telefono.isNotEmpty ? r.telefono : 'Sin teléfono',
+                style: TextStyle(
+                  color: r.telefono.isEmpty ? Colors.grey : Colors.black,
+                ),
+              ),
+      ),
+      // Celda de hotel
+      DataCell(
+        isEditing
+            ? TextField(controller: _controllers['${r.id}_hotel'])
+            : Text(r.hotel),
+      ),
+      // Celda de nombre
+      DataCell(
+        isEditing
+            ? TextField(controller: _controllers['${r.id}_cliente'])
+            : Text(r.nombreCliente),
+      ),
+    ];
+
+    // Añadir la celda de Fecha condicionalmente
+    if (showFechaColumn) {
+      cells.add(
+        DataCell(
+          isEditing
+              ? GestureDetector(
+                  onTap: () async {
+                    final selectedDate = await showDatePicker(
+                      context: context,
+                      initialDate: _fechaValues[r.id] ?? r.fecha,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (selectedDate != null) {
+                      setState(() {
+                        _fechaValues[r.id] = selectedDate;
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: TextField(
+                      controller: TextEditingController(
+                        text: Formatters.formatDate(
+                          _fechaValues[r.id] ?? r.fecha,
+                        ),
+                      ),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: EdgeInsets.all(8),
+                      ),
+                    ),
+                  ),
+                )
+              : Text(Formatters.formatDate(r.fecha)),
+        ),
+      );
+    }
+
+    cells.addAll([
+      // Celda de Pax
+      DataCell(
+        isEditing
+            ? TextField(
+                controller: _controllers['${r.id}_pax'],
+                keyboardType: TextInputType.number,
+              )
+            : Text('${r.pax}'),
+      ),
+      // Celda de Saldo
+      DataCell(
+        isEditing
+            ? TextField(
+                controller: _controllers['${r.id}_saldo'],
+                keyboardType: TextInputType.number,
+              )
+            : Text(Formatters.formatCurrency(r.saldo)),
+      ),
+      // Celda de Observaciones
+      DataCell(
+        IconButton(
+          icon: Icon(
+            r.observacion.isNotEmpty ? Icons.note : Icons.note_add,
+            color: r.observacion.isNotEmpty ? Colors.blue : Colors.grey,
+            size: 20,
+          ),
+          onPressed: () => _showObservacionDialog(ra),
+        ),
+      ),
+      // Celda de Agencia
+      DataCell(isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
+      // Celda de Deuda
+      DataCell(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: deuda > 0 ? Colors.red : Colors.transparent,
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            Formatters.formatCurrency(deuda),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: deuda > 0 ? Colors.red.shade700 : Colors.green.shade700,
+            ),
+          ),
+        ),
+      ),
+      // Celda de Editar
+      DataCell(
+        isEditing
+            ? Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.check, color: Colors.green),
+                    onPressed: _saveChanges,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: _cancelEditing,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => _startEditing(ra),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _showDeleteDialog(ra),
+                  ),
+                ],
+              ),
+      ),
+    ]);
+
+    return DataRow(cells: cells);
+  }
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
     final agencias = ReservasController.getAllAgencias();
-
     return DropdownButtonFormField<String>(
       value: _agenciaValues[reserva.id],
       decoration: const InputDecoration(
@@ -709,42 +604,76 @@ class _ReservasTableState extends State<ReservasTable> {
     );
   }
 
+  void _showObservacionDialog(ReservaConAgencia ra) {
+    final controller = TextEditingController(text: ra.reserva.observacion);
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Editar Observaciones'),
+          content: TextField(
+            controller: controller,
+            maxLines: null,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Observaciones',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final updated = ra.reserva.copyWith(
+                  observacion: controller.text,
+                );
+                await ReservasController.updateReserva(ra.id, updated);
+                widget.onUpdate();
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showDeleteDialog(ReservaConAgencia reserva) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Eliminar Reserva'),
         content: Text(
           '¿Estás seguro de que quieres eliminar la reserva de ${reserva.nombreCliente}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              Navigator.of(ctx).pop();
+              final messenger = ScaffoldMessenger.of(context);
               try {
                 await ReservasController.deleteReserva(reserva.id);
                 widget.onUpdate();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Reserva eliminada exitosamente'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Reserva eliminada exitosamente'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error eliminando reserva: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error eliminando reserva: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
