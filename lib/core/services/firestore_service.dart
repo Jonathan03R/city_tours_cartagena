@@ -1,5 +1,7 @@
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -7,6 +9,79 @@ class FirestoreService {
   final _db = FirebaseFirestore.instance;
 
   // ========== RESERVAS ==========
+  Stream<List<Reserva>> getReservasFiltered({
+    TurnoType? turno,
+    DateFilterType filter = DateFilterType.all,
+    DateTime? customDate,
+    String? agenciaId,
+  }) {
+    // 1) Parto de la colección sin límite
+    var query = _db
+      .collection('reservas')
+      .withConverter<Reserva>(
+        fromFirestore: (snap, _) => Reserva.fromFirestore(snap.data()!, snap.id),
+        toFirestore: (res, _) => res.toFirestore(),
+      ) as Query<Reserva>;
+
+    // 2) Filtro por turno si viene
+    if (turno != null) {
+      final t = turno.toString().split('.').last;
+      query = query.where('turno', isEqualTo: t);
+    }
+
+    // 3) Filtro por agencia
+    if (agenciaId != null && agenciaId.isNotEmpty) {
+      query = query.where('agenciaId', isEqualTo: agenciaId);
+    }
+
+    // 4) Filtro por fecha
+    final now = DateTime.now();
+    switch (filter) {
+      case DateFilterType.today:
+        final ini = DateTime(now.year, now.month, now.day);
+        query = query
+          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(ini))
+          .where('fechaReserva', isLessThan: Timestamp.fromDate(ini.add(const Duration(days: 1))));
+        break;
+      case DateFilterType.yesterday:
+        final ayer = now.subtract(const Duration(days: 1));
+        final iniY = DateTime(ayer.year, ayer.month, ayer.day);
+        query = query
+          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniY))
+          .where('fechaReserva', isLessThan: Timestamp.fromDate(iniY.add(const Duration(days: 1))));
+        break;
+      case DateFilterType.tomorrow:
+        final man = now.add(const Duration(days: 1));
+        final iniM = DateTime(man.year, man.month, man.day);
+        query = query
+          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniM))
+          .where('fechaReserva', isLessThan: Timestamp.fromDate(iniM.add(const Duration(days: 1))));
+        break;
+      case DateFilterType.lastWeek:
+        final iniW = now.subtract(const Duration(days: 7));
+        query = query.where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniW));
+        break;
+      case DateFilterType.custom:
+        if (customDate != null) {
+          final iniC = DateTime(customDate.year, customDate.month, customDate.day);
+          query = query
+            .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniC))
+            .where('fechaReserva', isLessThan: Timestamp.fromDate(iniC.add(const Duration(days: 1))));
+        }
+        break;
+      case DateFilterType.all:
+        break;
+    }
+
+    // 5) Ordeno por fecha (opcional)
+    query = query.orderBy('fechaReserva', descending: true);
+
+    // 6) Retorno el stream mapeado
+    return query.snapshots().map((snap) => snap.docs.map((d) => d.data()).toList());
+  }
+
+
+
 
   Future<List<Reserva>> getAllReservas() async {
     try {

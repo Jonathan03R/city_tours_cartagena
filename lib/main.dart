@@ -19,6 +19,7 @@ void main() async {
   // <-- Aquí imprimes el debug tras inicializar todo
   // ejecutar una vesta la configuración de Firebase y los controladores
   await ConfiguracionService.inicializarConfiguracion();
+  // await _assignDefaultTurno();
   ReservasController.printDebugInfo();
   runApp(
     MultiProvider(
@@ -37,3 +38,20 @@ void main() async {
     ),
   );
 }
+
+// /// Recorre todas las reservas y asigna "tarde" si no existía el campo turno.
+// Future<void> _assignDefaultTurno() async {
+//   final db = FirebaseFirestore.instance;
+//   final snapshot = await db.collection('reservas').get();
+//   var updated = 0;
+//   for (final doc in snapshot.docs) {
+//     final data = doc.data();
+//     // Sólo si no tiene campo turno
+//     if (data['turno'] == null) {
+//       // guardamos exactamente el string que espera tu modelo
+//       await doc.reference.update({'turno': TurnoType.tarde.toString().split('.').last});
+//       updated++;
+//     }
+//   }
+//   debugPrint('✅ Turnos por defecto asignados en $updated reservas');
+// }

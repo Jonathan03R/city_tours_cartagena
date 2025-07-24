@@ -4,7 +4,7 @@ import 'package:citytourscartagena/core/mvvc/agencias_controller.dart'; // Impor
 import 'package:citytourscartagena/core/mvvc/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/core/utils/formatters.dart'; // Importar Formatters
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
-import 'package:citytourscartagena/screens/reservas_view.dart';
+import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Necesario para consumir el controlador
 

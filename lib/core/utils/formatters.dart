@@ -19,8 +19,8 @@ class Formatters {
 
   static String getEstadoText(EstadoReserva estado) {
     switch (estado) {
-      case EstadoReserva.confirmada:
-        return 'Confirmada';
+      case EstadoReserva.pagada:
+        return 'pagada';
       case EstadoReserva.pendiente:
         return 'Pendiente';
       case EstadoReserva.cancelada:

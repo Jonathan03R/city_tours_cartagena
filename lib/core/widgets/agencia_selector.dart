@@ -55,7 +55,7 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     final agenciasController = Provider.of<AgenciasController>(context, listen: false);
 
     // Escuchar el stream de agencias del controlador
-    _agenciasSubscription = agenciasController.agenciasConReservasStream?.listen((data) {
+    _agenciasSubscription = agenciasController.agenciasConReservasStream.listen((data) {
       setState(() {
         _allAgencias = data;
         _filterAgencias(_searchController.text); // Reaplicar filtro con los nuevos datos

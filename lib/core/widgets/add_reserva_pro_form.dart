@@ -2,6 +2,7 @@ import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
+import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,8 +11,11 @@ import '../mvvc/agencias_controller.dart';
 import '../mvvc/reservas_controller.dart';
 
 class AddReservaProForm extends StatefulWidget {
+
+
+  final TurnoType? turno;
   final VoidCallback onAdd;
-  const AddReservaProForm({super.key, required this.onAdd});
+  const AddReservaProForm({super.key, required this.onAdd, this.turno});
 
   @override
   State<AddReservaProForm> createState() => _AddReservaProFormState();
@@ -94,7 +98,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
 
     final saldo = _parsedData!['saldo'] as double? ?? 0.0;
     final estado = saldo > 0
-        ? EstadoReserva.confirmada
+        ? EstadoReserva.pagada
         : EstadoReserva.pendiente;
     final telefono = (_parsedData!['telefono'] as String?)?.trim() ?? '';
 
@@ -113,6 +117,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       estado: estado,
       costoAsiento: costoAsiento, // Usar el costoAsiento determinado
       telefono: telefono,
+      turno: widget.turno,
     );
 
     try {

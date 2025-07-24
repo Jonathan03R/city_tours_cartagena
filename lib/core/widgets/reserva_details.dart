@@ -413,7 +413,7 @@ class _ReservaDetailsState extends State<ReservaDetails> {
 
   IconData _getEstadoIcon(EstadoReserva estado) {
     switch (estado) {
-      case EstadoReserva.confirmada:
+      case EstadoReserva.pagada:
         return Icons.check_circle;
       case EstadoReserva.pendiente:
         return Icons.schedule;

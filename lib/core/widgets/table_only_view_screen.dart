@@ -2,6 +2,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Necesario para DateFilterType
 import 'package:citytourscartagena/core/widgets/reservas_table.dart';
+import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart'; // Importar Provider
@@ -13,6 +14,8 @@ class TableOnlyViewScreen extends StatefulWidget {
   final DateTime? customDate;
   final String? agenciaId;
   final VoidCallback onUpdate; // Este callback ahora debería forzar la actualización del controlador
+  final TurnoType? turno; // Turno seleccionado, si aplica
+
 
   const TableOnlyViewScreen({
     super.key,
@@ -20,6 +23,7 @@ class TableOnlyViewScreen extends StatefulWidget {
     this.customDate,
     this.agenciaId,
     required this.onUpdate,
+    this.turno,
   });
 
   @override
@@ -151,6 +155,7 @@ class _TableOnlyViewScreenState extends State<TableOnlyViewScreen> {
                 }
                 return ReservasTable(
                   reservas: snapshot.data!, // Pasar la lista del snapshot
+                  turno: widget.turno, // Pasar el turno si aplica
                   onUpdate: () {
                     // Al actualizar desde la tabla, forzar una recarga en el controlador
                     reservasController.updateFilter(

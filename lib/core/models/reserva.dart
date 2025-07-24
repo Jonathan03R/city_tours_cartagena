@@ -1,6 +1,7 @@
+import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum EstadoReserva { pendiente, confirmada, cancelada }
+enum EstadoReserva { pendiente, pagada, cancelada }
 
 class Reserva {
   final String id;
@@ -15,6 +16,7 @@ class Reserva {
   final double costoAsiento; // es el costo por asiento de la reserva
   final String telefono;
   final bool whatsappContactado;
+  final TurnoType? turno;
 
 
   Reserva({
@@ -30,6 +32,7 @@ class Reserva {
     required this.costoAsiento,
     required this.telefono,
     this.whatsappContactado = false,
+    required this.turno,
   });
 
   //este constructor es para crear una reserva desde un mapa de datos
@@ -48,6 +51,7 @@ class Reserva {
       costoAsiento: (data['costoAsiento'] as num?)?.toDouble() ?? 0.0,
       telefono: data['telefono'] as String? ?? '',
       whatsappContactado: data['whatsappContactado'] as bool? ?? false,
+      turno: _mapTurno(data['turno'] as String? ?? 'normal'),
     );
   }
 
@@ -69,13 +73,25 @@ class Reserva {
       'costoAsiento': costoAsiento,
       'telefono': telefono,
       'whatsappContactado': whatsappContactado,
+      'turno': turno?.toString().split('.').last, // Convertir TurnoType a String
     };
+  }
+
+  static TurnoType? _mapTurno(String turno) {
+    switch (turno) {
+      case 'manana':
+        return TurnoType.manana;
+      case 'tarde':
+        return TurnoType.tarde;
+      default:
+        return null; // o puedes lanzar una excepción si es un turno desconocido
+    }
   }
 
   static EstadoReserva _mapEstado(String estado) {
     switch (estado) {
-      case 'confirmada':
-        return EstadoReserva.confirmada;
+      case 'pagada':
+        return EstadoReserva.pagada;
       case 'cancelada':
         return EstadoReserva.cancelada;
       default:
@@ -99,6 +115,7 @@ class Reserva {
     double? costoAsiento,
     String? telefono,
     bool? whatsappContactado,
+    TurnoType? turno,
 
   }) {
     return Reserva(
@@ -114,6 +131,7 @@ class Reserva {
       costoAsiento: costoAsiento ?? this.costoAsiento,
       telefono: telefono ?? this.telefono,
       whatsappContactado: whatsappContactado ?? this.whatsappContactado,
+      turno: turno ?? this.turno,
     );
   }
 }

@@ -79,6 +79,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
           observacion: _observacionController.text,
           costoAsiento: _precioPorAsiento,
           telefono: _telefonoController.text.trim(), 
+          turno: null, // Aquí puedes asignar el turno si es necesario
         );
 
         final reservasController = ReservasController();

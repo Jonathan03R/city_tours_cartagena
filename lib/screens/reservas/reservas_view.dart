@@ -8,24 +8,26 @@ import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 // import 'package:citytourscartagena/core/services/configuracion_service.dart'; // Ya no es necesario importar directamente
 // import 'package:citytourscartagena/core/services/firestore_service.dart'; // Ya no es necesario importar directamente
 import 'package:citytourscartagena/core/utils/formatters.dart';
-import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
+import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:excel/excel.dart' as xls;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
-import '../core/mvvc/reservas_controller.dart';
-import '../core/widgets/add_reserva_pro_form.dart';
-import '../core/widgets/date_filter_buttons.dart';
-import '../core/widgets/reserva_card_item.dart';
-import '../core/widgets/reserva_details.dart';
-import '../core/widgets/reservas_table.dart';
+import '../../core/mvvc/reservas_controller.dart';
+import '../../core/widgets/add_reserva_pro_form.dart';
+import '../../core/widgets/date_filter_buttons.dart';
+import '../../core/widgets/reserva_card_item.dart';
+import '../../core/widgets/reserva_details.dart';
+import '../../core/widgets/reservas_table.dart';
 
 class ReservasView extends StatefulWidget {
+  final TurnoType? turno;
   final AgenciaConReservas? agencia;
-  const ReservasView({super.key, this.agencia});
+  final VoidCallback? onBack;
+  const ReservasView({super.key, this.turno, this.agencia, this.onBack});
 
   @override
   State<ReservasView> createState() => _ReservasViewState();
@@ -45,6 +47,7 @@ class _ReservasViewState extends State<ReservasView> {
 
   @override
   void initState() {
+    print('🔄 Iniciando ReservasView con turno: ${widget.turno}');
     super.initState();
     // Inicializar el filtro del controlador al inicio
     // Usamos addPostFrameCallback para asegurar que el contexto esté disponible
@@ -74,6 +77,7 @@ class _ReservasViewState extends State<ReservasView> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TableOnlyViewScreen(
+          turno: widget.turno, 
           selectedFilter: reservasController.selectedFilter, // Obtener del controlador
           customDate: reservasController.customDate, // Obtener del controlador
           agenciaId: widget.agencia?.id,
@@ -122,6 +126,13 @@ class _ReservasViewState extends State<ReservasView> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: widget.onBack != null && widget.agencia == null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onBack,
+              )
+            : null,
+        automaticallyImplyLeading: widget.onBack == null,
         title: Text(
           widget.agencia != null ? 'Reservas de Agencia' : 'Reservas',
         ),
@@ -240,6 +251,7 @@ class _ReservasViewState extends State<ReservasView> {
 
                 return _isTableView
                     ? ReservasTable(
+                        turno: widget.turno, // Pasar el turno si aplica
                         reservas: currentReservas, // Pasar la lista del snapshot
                         onUpdate: () {
                           // Al actualizar desde la tabla, recargar las reservas a través del controlador
@@ -335,28 +347,40 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  void _showAddReservaForm() {
-    final reservasController = Provider.of<ReservasController>(context, listen: false);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => AddReservaForm(onAdd: () {
-        // Al añadir una reserva, recargar las reservas a través del controlador
-        reservasController.updateFilter(
-          reservasController.selectedFilter,
-          date: reservasController.customDate,
-          agenciaId: widget.agencia?.id,
-        );
-      }),
-    );
-  }
+  // void _showAddReservaForm() {
+  //   final reservasController = Provider.of<ReservasController>(context, listen: false);
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     builder: (context) => AddReservaForm(onAdd: () {
+  //       // Al añadir una reserva, recargar las reservas a través del controlador
+  //       reservasController.updateFilter(
+  //         reservasController.selectedFilter,
+  //         date: reservasController.customDate,
+  //         agenciaId: widget.agencia?.id,
+  //       );
+  //     }),
+  //   );
+  // }
+
+  /// este metodo muestra el formulario de reserva rápida
+  /// y actualiza las reservas al añadir una nueva reserva
+  /// a través del controlador de reservas
 
   void _showAddReservaProForm() {
+    // Usar el controlador de reservas para manejar la lógica de añadir reservas
+    // Esto asegura que la lógica de negocio esté centralizada y evita duplicación de código
     final reservasController = Provider.of<ReservasController>(context, listen: false);
+    /// showModalBottomSheet es una función que muestra un modal en la parte inferior de la pantalla
+    /// context es el contexto actual de la aplicación
+    /// isScrollControlled permite que el modal ocupe todo el espacio disponible
+    /// builder es una función que construye el contenido del modal
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddReservaProForm(onAdd: () {
+      /// AddReservaProForm es un widget que muestra el formulario de reserva rápida
+      /// onAdd es una función que se llama cuando se añade una nueva reserva
+      builder: (context) => AddReservaProForm(turno: widget.turno!, onAdd: () {
         // Al añadir una reserva, recargar las reservas a través del controlador
         reservasController.updateFilter(
           reservasController.selectedFilter,

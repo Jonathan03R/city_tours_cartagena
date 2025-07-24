@@ -1,24 +1,26 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Importar DateFilterType
+import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../mvvc/reservas_controller.dart';
-import '../utils/colors.dart';
 import '../utils/formatters.dart';
 
 class ReservasTable extends StatefulWidget {
   final List<ReservaConAgencia> reservas;
   final VoidCallback onUpdate;
-  final DateFilterType currentFilter; // Nuevo: para saber el filtro actual
+  final DateFilterType currentFilter;
+  final TurnoType? turno;
 
   const ReservasTable({
     super.key,
     required this.reservas,
     required this.onUpdate,
     required this.currentFilter, // Requerir el filtro actual
+    required this.turno,
   });
 
   @override
@@ -40,6 +42,7 @@ class _ReservasTableState extends State<ReservasTable> {
     super.dispose();
   }
 
+  /// Inicia la edición de una reserva
   void _startEditing(ReservaConAgencia reserva) {
     setState(() {
       _editingReservaId = reserva.id;
@@ -85,6 +88,7 @@ class _ReservasTableState extends State<ReservasTable> {
     });
   }
 
+  /// Guarda los cambios realizados en la reserva editada
   Future<void> _saveChanges() async {
     if (_editingReservaId == null) return;
     try {
@@ -143,52 +147,52 @@ class _ReservasTableState extends State<ReservasTable> {
     }
   }
 
-  Future<void> _quickChangeStatus(
-    ReservaConAgencia reserva,
-    EstadoReserva newStatus,
-  ) async {
-    try {
-      final updatedReserva = reserva.reserva.copyWith(estado: newStatus);
-      await ReservasController().updateReserva(reserva.id, updatedReserva);
-      widget.onUpdate();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Estado cambiado a ${Formatters.getEstadoText(newStatus)}',
-            ),
-            backgroundColor: AppColors.getEstadoColor(newStatus),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error cambiando estado: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // Future<void> _quickChangeStatus(
+  //   ReservaConAgencia reserva,
+  //   EstadoReserva newStatus,
+  // ) async {
+  //   try {
+  //     final updatedReserva = reserva.reserva.copyWith(estado: newStatus);
+  //     await ReservasController().updateReserva(reserva.id, updatedReserva);
+  //     widget.onUpdate();
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text(
+  //             'Estado cambiado a ${Formatters.getEstadoText(newStatus)}',
+  //           ),
+  //           backgroundColor: AppColors.getEstadoColor(newStatus),
+  //         ),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Error cambiando estado: $e'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
-    final totalPax = widget.reservas.fold<int>(
-      0,
-      (sum, ra) => sum + ra.reserva.pax,
-    );
-    final totalSaldo = widget.reservas.fold<double>(
-      0.0,
-      (sum, ra) => sum + ra.reserva.saldo,
-    );
-    final totalDeuda = widget.reservas.fold<double>(
-      0.0,
-      (sum, ra) => sum + ra.reserva.deuda,
-    );
+    final reservasFiltradas = widget.turno != null
+        ? widget.reservas
+              .where((rca) => rca.reserva.turno == widget.turno)
+              .toList()
+        : widget.reservas;
 
-    if (widget.reservas.isEmpty) {
+    final unpaid = reservasFiltradas
+        .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
+        .toList();
+    final totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
+    final totalSaldo = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
+    final totalDeuda = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
+
+    if (reservasFiltradas.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -241,7 +245,7 @@ class _ReservasTableState extends State<ReservasTable> {
             headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
             columns: columns, // Usar las columnas dinámicas
             rows: [
-              ...widget.reservas.map(
+              ...reservasFiltradas.map(
                 (reserva) => _buildDataRow(reserva, showFechaColumn),
               ), // Pasar showFechaColumn
               DataRow(
@@ -307,6 +311,7 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
+
                   ///esto es para mostrar el total de saldo
                   DataCell(
                     Row(
@@ -330,6 +335,7 @@ class _ReservasTableState extends State<ReservasTable> {
 
                   const DataCell(Text('')),
                   const DataCell(Text('')),
+
                   /// esto es para mostrar el total de deuda
                   DataCell(
                     Row(
@@ -371,7 +377,7 @@ class _ReservasTableState extends State<ReservasTable> {
   DataRow _buildDataRow(ReservaConAgencia ra, bool showFechaColumn) {
     // Recibir showFechaColumn
     var r = ra.reserva;
-    final deuda = r.deuda;
+    // final deuda = r.deuda;
     final isEditing = _editingReservaId == r.id;
 
     final List<DataCell> cells = [
@@ -527,20 +533,92 @@ class _ReservasTableState extends State<ReservasTable> {
       DataCell(isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
       // Celda de Deuda
       DataCell(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: deuda > 0 ? Colors.red : Colors.transparent,
+        GestureDetector(
+          onTap: () async {
+            if (ra.reserva.estado == EstadoReserva.pagada) {
+              // Si ya está pagada, preguntar si queremos volver a pendiente
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Marcar como pendiente'),
+                  content: const Text('¿Deseas cambiar el estado a pendiente?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: const Text('Sí'),
+                    ),
+                  ],
+                ),
+              );
+              if (ok == true) {
+                final updated = ra.reserva.copyWith(
+                  estado: EstadoReserva.pendiente,
+                );
+                await ReservasController().updateReserva(ra.id, updated);
+                widget.onUpdate();
+              }
+            } else if (ra.reserva.deuda > 0) {
+              // Lógica existente para marcar como pagada
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Marcar como pagada'),
+                  content: const Text(
+                    '¿Deseas marcar esta reserva como pagada?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: const Text('Sí'),
+                    ),
+                  ],
+                ),
+              );
+              if (ok == true) {
+                final updated = ra.reserva.copyWith(
+                  estado: EstadoReserva.pagada,
+                );
+                await ReservasController().updateReserva(ra.id, updated);
+                widget.onUpdate();
+              }
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: ra.reserva.estado == EstadoReserva.pagada
+                    ? Colors.green
+                    : (ra.reserva.deuda > 0 ? Colors.red : Colors.transparent),
+              ),
+              borderRadius: BorderRadius.circular(4),
             ),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            Formatters.formatCurrency(deuda),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: deuda > 0 ? Colors.red.shade700 : Colors.green.shade700,
-            ),
+            alignment: Alignment.center,
+            child: ra.reserva.estado == EstadoReserva.pagada
+                ? const Text(
+                    'Pagado',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  )
+                : Text(
+                    Formatters.formatCurrency(ra.reserva.deuda),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: ra.reserva.deuda > 0
+                          ? Colors.red.shade700
+                          : Colors.green.shade700,
+                    ),
+                  ),
           ),
         ),
       ),
