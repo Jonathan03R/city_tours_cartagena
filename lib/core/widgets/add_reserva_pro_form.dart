@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../mvvc/agencias_controller.dart';
 import '../mvvc/reservas_controller.dart';
 
 class AddReservaProForm extends StatefulWidget {
@@ -23,7 +24,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   bool _isLoading = false;
   bool _agencyError = false;
   String? _selectedAgenciaId;
-  double _precioPorAsiento = 0.0;
+  double _precioPorAsientoGlobal = 0.0; // Renombrado para claridad
 
   // Instancia de TextParser
   final TextParser _textParser = TextParser();
@@ -31,11 +32,11 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   @override
   void initState() {
     super.initState();
-    // Cargar ejemplo por defecto
-    // _textController.text = TextParser.getExampleText();
-    _parseText();
-    final config = context.read<ConfiguracionController>().configuracion;
-    _precioPorAsiento = config?.precioPorAsiento ?? 0.0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _parseText();
+      final config = context.read<ConfiguracionController>().configuracion;
+      _precioPorAsientoGlobal = config?.precioPorAsiento ?? 0.0;
+    });
   }
 
   @override
@@ -46,31 +47,41 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
 
   void _parseText() {
     final text = _textController.text;
+    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
+    final allAgencias = agenciasController.getAllAgencias();
+
     setState(() {
-      // Corrección: Llamar al método de instancia
-      _parsedData = text.isNotEmpty ? _textParser.parseReservaText(text) : null;
+      _parsedData = text.isNotEmpty ? _textParser.parseReservaText(text, allAgencias) : null;
       _showPreview = _parsedData != null;
     });
   }
 
   Future<void> _submitReserva() async {
     debugPrint('Submitting reserva with data: $_parsedData');
-    // 2) validación agencia
+
     if (_selectedAgenciaId == null) {
       setState(() => _agencyError = true);
       return;
     }
-    if (_precioPorAsiento <= 0) {
+
+    // Obtener la agencia seleccionada para verificar su precio específico
+    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
+    final selectedAgencia = agenciasController.getAgenciaById(_selectedAgenciaId!);
+
+    // Determinar el costo por asiento: precio de agencia > precio global
+    final costoAsiento = selectedAgencia?.precioPorAsiento ?? _precioPorAsientoGlobal;
+
+    if (costoAsiento <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Error: precio por asiento no válido, cominicate con el administrador',
+            'Error: precio por asiento no válido, comunícate con el administrador',
           ),
         ),
       );
       return;
     }
-    // reset del error para siguientes envíos
+
     if (_agencyError) setState(() => _agencyError = false);
     if (_parsedData == null || _selectedAgenciaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,37 +89,35 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       );
       return;
     }
+
     setState(() => _isLoading = true);
 
-    // Asegúrate de que 'saldo' y 'telefono' se extraen correctamente
     final saldo = _parsedData!['saldo'] as double? ?? 0.0;
     final estado = saldo > 0
         ? EstadoReserva.confirmada
         : EstadoReserva.pendiente;
     final telefono = (_parsedData!['telefono'] as String?)?.trim() ?? '';
-    final costoAsiento = _precioPorAsiento; // Usar el parseado o el por defecto
 
     final newReserva = Reserva(
       id: '',
       nombreCliente: _parsedData!['nombreCliente'] as String,
       hotel: _parsedData!['hotel'] as String? ?? '',
       fecha:
-          _parsedData!['fechaReserva'] !=
-              null // Usar 'fechaReserva' como clave
-          ? DateTime.parse(_parsedData!['fechaReserva'] as String)
-          : DateTime.now(),
+          _parsedData!['fechaReserva'] != null
+              ? DateTime.parse(_parsedData!['fechaReserva'] as String)
+              : DateTime.now(),
       pax: _parsedData!['pax'] as int? ?? 1,
       saldo: saldo,
       observacion: _parsedData!['observacion'] as String? ?? '',
       agenciaId: _selectedAgenciaId!,
       estado: estado,
-      costoAsiento: costoAsiento,
+      costoAsiento: costoAsiento, // Usar el costoAsiento determinado
       telefono: telefono,
     );
+
     try {
-      await ReservasController.addReserva(newReserva);
+      await context.read<ReservasController>().addReserva(newReserva);
       widget.onAdd();
-      // Usar `pop` para cerrar el modal o la pantalla actual
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,54 +136,24 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     }
   }
 
-  // double parseSaldo(String input) {
-  //   try {
-  //     // Normalizar: reemplaza coma por punto si hay decimales
-  //     String normalized = input.trim();
-
-  //     // Si el usuario usa formato con separador de miles (puntos), elimínalos
-  //     if (normalized.contains('.') && normalized.contains(',')) {
-  //       // Ej: "1.234,56" → "1234,56"
-  //       normalized = normalized.replaceAll('.', '');
-  //     }
-
-  //     // Detectar decimales con coma y cambiarlos a punto
-  //     normalized = normalized.replaceAll(',', '.');
-
-  //     // Usa NumberFormat según locale
-  //     final formatter = NumberFormat.decimalPattern('es'); // español
-  //     return formatter.parse(normalized).toDouble();
-  //   } catch (_) {
-  //     return 0.0; // Si falla, devuelve 0
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
-    // Obtener el padding del teclado para ajustar la vista
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
-    // Calcular la altura disponible para el contenido, dejando un margen superior
-    // y ajustando por el teclado. Se usa un factor para que no ocupe el 100%
-    // y permita ver el fondo si es un modal.
     final double availableHeight =
         MediaQuery.of(context).size.height * 0.9 - keyboardInset;
     return Padding(
-      // Ajustar el padding inferior para evitar que el teclado cubra el contenido
       padding: EdgeInsets.only(bottom: keyboardInset),
       child: Container(
-        // Usar ConstrainedBox para asegurar que el formulario no exceda
-        // una altura máxima, pero que también se adapte.
         constraints: BoxConstraints(
           maxHeight: availableHeight,
           minHeight:
               MediaQuery.of(context).size.height *
-              0.5, // Altura mínima para pantallas pequeñas
+              0.5,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabecera y cerrar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -183,24 +162,22 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                  ), // Aumentar tamaño de fuente
+                  ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(
                     Icons.close,
                     size: 24,
-                  ), // Aumentar tamaño del icono
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 20), // Espacio más generoso
-            // Contenido scrollable
+            const SizedBox(height: 20),
             Expanded(
-              // Usar Expanded para que el SingleChildScrollView ocupe el espacio restante
               child: SingleChildScrollView(
                 physics:
-                    const BouncingScrollPhysics(), // Efecto de rebote al hacer scroll
+                    const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -233,9 +210,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                         ),
                       ),
                     const SizedBox(height: 20),
-                    // costo por asiento para esa reserva obligatorio pero por defecto
-                    const SizedBox(height: 20),
-                    // Botón para mostrar/ocultar vista previa
                     if (_showPreview && _parsedData != null)
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -277,7 +251,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                   'Hotel',
                                   _parsedData!['hotel'],
                                 ),
-                                // _buildPreviewItem('Fecha',_parsedData!['fechaReserva']?.toString().split(' ',)[0] ??'No detectada',), // Clave ajustada
                                 _buildPreviewItem(
                                   'Fecha',
                                   _parsedData!['fechaReserva'] != null
@@ -312,14 +285,12 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                   'Teléfono',
                                   _parsedData!['telefono'] as String?,
                                 ),
-                                // _buildPreviewItem('Costo Asiento', _parsedData!['costoAsiento']?.toString() ?? _precioPorAsiento.toStringAsFixed(2)), // Nuevo campo
                               ],
                             ),
                           ],
                         ),
                       ),
                     const SizedBox(height: 20),
-                    // Texto de la reserva (altura automática según contenido)
                     const Text(
                       'Texto de la reserva:',
                       style: TextStyle(
@@ -333,18 +304,17 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                       keyboardType: TextInputType.multiline,
                       minLines: 3,
                       maxLines:
-                          null, // Permite que el campo crezca con el contenido
+                          null,
                       textAlignVertical: TextAlignVertical.top,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'Pega aquí los datos de la reserva...',
                         alignLabelWithHint:
-                            true, // Alinea el hint text en la parte superior
+                            true,
                       ),
                       onChanged: (_) {
                         final text = _textController.text;
                         final newText = text.replaceAll('*', '');
-
                         if (newText != text) {
                           final cursorPos =
                               _textController.selection.baseOffset;
@@ -357,7 +327,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                             ),
                           );
                         }
-
                         _parseText();
                       },
                     ),
@@ -400,7 +369,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                             '• Saldo/Precio\n'
                             '• Observaciones\n'
                             '• Estado (confirmada/pendiente/cancelada)\n',
-                            // '• Costo Asiento', // Añadido a las instrucciones
                             style: TextStyle(fontSize: 12),
                           ),
                         ],
@@ -410,7 +378,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                 ),
               ),
             ),
-            const SizedBox(height: 20), // Espacio antes de los botones
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: Row(
@@ -423,10 +391,10 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           vertical: 12,
-                        ), // Aumentar padding vertical
+                        ),
                         textStyle: const TextStyle(
                           fontSize: 16,
-                        ), // Aumentar tamaño de fuente
+                        ),
                       ),
                       child: const Text('Cancelar'),
                     ),
@@ -442,10 +410,10 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           vertical: 12,
-                        ), // Aumentar padding vertical
+                        ),
                         textStyle: const TextStyle(
                           fontSize: 16,
-                        ), // Aumentar tamaño de fuente
+                        ),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -455,7 +423,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   Colors.white,
-                                ), // Color blanco para el indicador
+                                ),
                               ),
                             )
                           : const Text('Crear Reserva Pro'),
@@ -470,13 +438,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     );
   }
 
-  /// Construye un widget de vista previa para mostrar los datos detectados
-  /// con un formato consistente y resaltando valores vacíos.
-  /// @param label El texto de la etiqueta para el campo.
-  /// @param value El valor del campo, puede ser nulo.
-  ///
-  /// @return Un widget que muestra la etiqueta y el valor, con estilos para valores vacíos.
-  /// Si el valor es nulo o vacío, se muestra un texto en gris y curs
   Widget _buildPreviewItem(String label, String? value) {
     final displayValue = value?.isEmpty ?? true ? '(vacío)' : value!;
     final isValueEmpty = value?.isEmpty ?? true;
@@ -487,7 +448,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
         children: [
           SizedBox(
             width:
-                90, // Ajustar el ancho de la etiqueta para pantallas pequeñas
+                90,
             child: Text(
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),

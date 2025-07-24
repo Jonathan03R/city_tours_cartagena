@@ -2,12 +2,13 @@ import 'dart:io';
 
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
-import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/models/reserva_con_agencia.dart' hide AgenciaConReservas; // Mantener si es intencional
+import 'package:citytourscartagena/core/mvvc/agencias_controller.dart'; // Importar AgenciasController para _editarAgencia
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
-import 'package:citytourscartagena/core/services/cloudinaryService.dart';
-import 'package:citytourscartagena/core/services/configuracion_service.dart';
-import 'package:citytourscartagena/core/services/firestore_service.dart';
+// import 'package:citytourscartagena/core/services/configuracion_service.dart'; // Ya no es necesario importar directamente
+// import 'package:citytourscartagena/core/services/firestore_service.dart'; // Ya no es necesario importar directamente
 import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:excel/excel.dart' as xls;
@@ -16,7 +17,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../core/mvvc/reservas_controller.dart';
-import '../core/widgets/add_reserva_form.dart';
 import '../core/widgets/add_reserva_pro_form.dart';
 import '../core/widgets/date_filter_buttons.dart';
 import '../core/widgets/reserva_card_item.dart';
@@ -32,125 +32,94 @@ class ReservasView extends StatefulWidget {
 }
 
 class _ReservasViewState extends State<ReservasView> {
-  List<ReservaConAgencia> _currentReservas = [];
-  Stream<List<ReservaConAgencia>>? _reservasStream;
+  // Eliminamos el estado local de reservas y filtros, ahora lo gestiona ReservasController
+  // List<ReservaConAgencia> _currentReservas = [];
+  // Stream<List<ReservaConAgencia>>? _reservasStream;
+  // DateFilterType _selectedFilter = DateFilterType.today;
+  // DateTime? _customDate;
+  // Configuracion? _configuracion; // ConfiguracionController ya lo provee
 
-  DateFilterType _selectedFilter = DateFilterType.today;
-  DateTime? _customDate;
   bool _isTableView = true;
   bool _editandoPrecio = false;
   final TextEditingController _precioController = TextEditingController();
-  Configuracion? _configuracion;
 
   @override
   void initState() {
     super.initState();
-    ReservasController.printDebugInfo();
-    _loadReservas();
-    _loadConfiguracion();
-  }
-
-  Future<void> _loadConfiguracion() async {
-    final config = await ConfiguracionService.getConfiguracion();
-    if (config != null) {
-      setState(() {
-        _configuracion = config;
-      });
-    }
-  }
-
-  void _loadReservas() {
-    setState(() {
-      switch (_selectedFilter) {
-        case DateFilterType.all:
-          _reservasStream = ReservasController.getReservasStream();
-          break;
-        case DateFilterType.today:
-          _reservasStream = ReservasController.getReservasByFechaStream(
-            DateTime.now(),
-          );
-          break;
-        case DateFilterType.tomorrow:
-          _reservasStream = ReservasController.getReservasByFechaStream(
-            DateTime.now().add(const Duration(days: 1)),
-          );
-          break;
-        case DateFilterType.lastWeek:
-          _reservasStream = ReservasController.getReservasLastWeekStream();
-          break;
-        case DateFilterType.custom:
-          if (_customDate != null) {
-            _reservasStream = ReservasController.getReservasByFechaStream(
-              _customDate!,
-            );
-          } else {
-            _reservasStream = Stream.value([]);
-          }
-          break;
-      }
-      if (widget.agencia != null) {
-        _reservasStream = _reservasStream!.map(
-          (list) =>
-              list.where((r) => r.agencia.id == widget.agencia!.id).toList(),
-        );
-      }
+    // Inicializar el filtro del controlador al inicio
+    // Usamos addPostFrameCallback para asegurar que el contexto esté disponible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final reservasController = Provider.of<ReservasController>(context, listen: false);
+      reservasController.updateFilter(
+        DateFilterType.today, // Filtro inicial por defecto
+        agenciaId: widget.agencia?.id, // Si es una vista de agencia específica
+      );
     });
   }
+
+  // Eliminamos _loadConfiguracion() y _loadReservas()
+  // La lógica de carga y filtrado ahora está en ReservasController
 
   void _onFilterChanged(DateFilterType filter, DateTime? date) {
-    setState(() {
-      _selectedFilter = filter;
-      if (date != null) {
-        _customDate = date;
-      }
-    });
-    _loadReservas();
+    // Delegar el cambio de filtro al controlador
+    Provider.of<ReservasController>(context, listen: false).updateFilter(
+      filter,
+      date: date,
+      agenciaId: widget.agencia?.id,
+    );
   }
 
   void _showTableOnlyView() {
+    final reservasController = Provider.of<ReservasController>(context, listen: false);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TableOnlyViewScreen(
-          selectedFilter: _selectedFilter,
-          customDate: _customDate,
+          selectedFilter: reservasController.selectedFilter, // Obtener del controlador
+          customDate: reservasController.customDate, // Obtener del controlador
           agenciaId: widget.agencia?.id,
-          onUpdate: _loadReservas,
+          onUpdate: () {
+            // Al volver de la vista de tabla, recargar las reservas a través del controlador
+            reservasController.updateFilter(
+              reservasController.selectedFilter,
+              date: reservasController.customDate,
+              agenciaId: widget.agencia?.id,
+            );
+          },
         ),
       ),
     );
   }
 
   void _editarAgencia() {
-  final agencia = widget.agencia!;
-  showDialog(
-    context: context,
-    builder: (_) => CrearAgenciaForm(
-      initialNombre: agencia.nombre,          // PASAMOS datos iniciales
-      initialImagenFile: null,                // opcional: podrías descargarla y convertir a File
-      onCrear: (nuevoNombre, nuevaImagenFile) async {
-        String? nuevaUrl = agencia.imagenUrl;
-        if (nuevaImagenFile != null) {
-          // sube foto nueva
-          nuevaUrl = await CloudinaryService.uploadImage(nuevaImagenFile);
-        }
-        // Llama a updateAgencia en lugar de addAgencia
-        final updated = Agencia(
-          id: agencia.id,
-          nombre: nuevoNombre,
-          imagenUrl: nuevaUrl,
-        );
-        await FirestoreService().updateAgencia(agencia.id, updated);
-        Navigator.of(context).pop();          // cierra diálogo
-      },
-    ),
-  );
-}
-
+    final agencia = widget.agencia!;
+    showDialog(
+      context: context,
+      builder: (_) => CrearAgenciaForm(
+        initialNombre: agencia.nombre,
+        initialImagenUrl: agencia.imagenUrl, // Pasar la URL actual de la imagen
+        initialPrecioPorAsiento: agencia.precioPorAsiento, // NUEVO: Pasar el precio por asiento de la agencia
+        onCrear: (nuevoNombre, nuevaImagenFile, nuevoPrecioPorAsiento) async { // MODIFICADO: Recibir nuevoPrecioPorAsiento
+          final agenciasController = Provider.of<AgenciasController>(context, listen: false);
+          await agenciasController.updateAgencia(
+            agencia.id,
+            nuevoNombre,
+            nuevaImagenFile?.path, // Pasar la ruta del archivo si existe
+            agencia.imagenUrl, // Pasar la URL actual para que el controlador decida si subir una nueva
+            newPrecioPorAsiento: nuevoPrecioPorAsiento, // NUEVO: Pasar el nuevo precio
+          );
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<ConfiguracionController>();
-    final configuracion = controller.configuracion;
+    // Observar los controladores para que la UI se reconstruya con los cambios
+    final reservasController = context.watch<ReservasController>();
+    final configuracionController = context.watch<ConfiguracionController>();
+    final configuracion = configuracionController.configuracion;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -171,7 +140,7 @@ class _ReservasViewState extends State<ReservasView> {
           if (widget.agencia != null) ...[
             IconButton(
               icon: const Icon(Icons.settings),
-              onPressed: _editarAgencia, // nuevo método
+              onPressed: _editarAgencia,
               tooltip: 'Editar agencia',
             ),
           ],
@@ -182,18 +151,24 @@ class _ReservasViewState extends State<ReservasView> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadReservas,
+            onPressed: () {
+              // Recargar las reservas forzando una actualización del filtro actual
+              reservasController.updateFilter(
+                reservasController.selectedFilter,
+                date: reservasController.customDate,
+                agenciaId: widget.agencia?.id,
+              );
+            },
             tooltip: 'Recargar',
           ),
         ],
       ),
       body: SingleChildScrollView(
-        // Envuelve todo el contenido del body para permitir el scroll vertical
         child: Column(
           children: [
             DateFilterButtons(
-              selectedFilter: _selectedFilter,
-              customDate: _customDate,
+              selectedFilter: reservasController.selectedFilter, // Obtener del controlador
+              customDate: reservasController.customDate, // Obtener del controlador
               onFilterChanged: _onFilterChanged,
             ),
             Container(
@@ -207,35 +182,35 @@ class _ReservasViewState extends State<ReservasView> {
                           children: [
                             Flexible(
                               child: Text(
-                                _getFilterTitle(),
+                                _getFilterTitle(reservasController.selectedFilter, reservasController.customDate),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                 ),
                               ),
                             ),
-                            _buildRightControls(),
+                            _buildRightControls(reservasController.currentReservas, configuracion),
                           ],
                         )
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _getFilterTitle(),
+                              _getFilterTitle(reservasController.selectedFilter, reservasController.customDate),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            _buildRightControls(),
+                            _buildRightControls(reservasController.currentReservas, configuracion),
                           ],
                         );
                 },
               ),
             ),
             StreamBuilder<List<ReservaConAgencia>>(
-              stream: _reservasStream,
+              stream: reservasController.filteredReservasStream, // Usar el stream del controlador
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -243,8 +218,9 @@ class _ReservasViewState extends State<ReservasView> {
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  _currentReservas = [];
+                final currentReservas = snapshot.data ?? []; // Obtener la lista del snapshot
+                if (currentReservas.isEmpty) {
+                  // _currentReservas = []; // Ya no es necesario, la lista viene del snapshot
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -260,35 +236,35 @@ class _ReservasViewState extends State<ReservasView> {
                   );
                 }
 
-                _currentReservas = snapshot.data!;
-                debugPrint(
-                  '🔄 Reservas cargadas en vista: ${_currentReservas.length}',
-                );
+                debugPrint('🔄 Reservas cargadas en vista: ${currentReservas.length}');
 
                 return _isTableView
                     ? ReservasTable(
-                        reservas: _currentReservas,
-                        onUpdate: _loadReservas,
-                        currentFilter: _selectedFilter, // Pasa el filtro actual
+                        reservas: currentReservas, // Pasar la lista del snapshot
+                        onUpdate: () {
+                          // Al actualizar desde la tabla, recargar las reservas a través del controlador
+                          reservasController.updateFilter(
+                            reservasController.selectedFilter,
+                            date: reservasController.customDate,
+                            agenciaId: widget.agencia?.id,
+                          );
+                        },
+                        currentFilter: reservasController.selectedFilter, // Pasar del controlador
                       )
                     : ListView.builder(
-                        shrinkWrap:
-                            true, // Importante para ListView dentro de SingleChildScrollView
-                        physics:
-                            const NeverScrollableScrollPhysics(), // Deshabilita el scroll propio del ListView
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(16),
-                        itemCount: _currentReservas.length,
+                        itemCount: currentReservas.length,
                         itemBuilder: (ctx, i) {
                           return ReservaCardItem(
-                            reserva: _currentReservas[i],
-                            onTap: () =>
-                                _showReservaDetails(_currentReservas[i]),
+                            reserva: currentReservas[i],
+                            onTap: () => _showReservaDetails(currentReservas[i]),
                           );
                         },
                       );
               },
             ),
-
             const SizedBox(height: 100),
           ],
         ),
@@ -306,75 +282,88 @@ class _ReservasViewState extends State<ReservasView> {
                   heroTag: "pro_button",
                 ),
                 const SizedBox(height: 16),
-                // FloatingActionButton(
-                //   onPressed: _showAddReservaForm,
-                //   backgroundColor: Colors.blue.shade600,
-                //   heroTag: "normal_button",
-                //   child: const Icon(Icons.add, color: Colors.white),
-                // ),
               ],
             )
           : null,
     );
   }
 
-  String _getFilterTitle() {
+  // Este método ahora recibe los parámetros del controlador
+  String _getFilterTitle(DateFilterType selectedFilter, DateTime? customDate) {
     final meses = [
-      'enero',
-      'febrero',
-      'marzo',
-      'abril',
-      'mayo',
-      'junio',
-      'julio',
-      'agosto',
-      'septiembre',
-      'octubre',
-      'noviembre',
-      'diciembre',
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
     ];
     String formatearFecha(DateTime fecha) {
       return '${fecha.day} de ${meses[fecha.month - 1]} del ${fecha.year}';
     }
 
-    switch (_selectedFilter) {
+    switch (selectedFilter) {
       case DateFilterType.all:
         return 'Todas las reservas';
       case DateFilterType.lastWeek:
         return 'Reservas de la última semana';
       case DateFilterType.today:
         return formatearFecha(DateTime.now());
+      case DateFilterType.yesterday:  // ← nuevo caso agregado
+      return formatearFecha(
+        DateTime.now().subtract(const Duration(days: 1))
+      );
       case DateFilterType.tomorrow:
         return formatearFecha(DateTime.now().add(const Duration(days: 1)));
       case DateFilterType.custom:
-        return _customDate != null
-            ? formatearFecha(_customDate!)
+        return customDate != null
+            ? formatearFecha(customDate)
             : 'Fecha personalizada';
     }
   }
 
   void _showReservaDetails(ReservaConAgencia reserva) {
+    final reservasController = Provider.of<ReservasController>(context, listen: false);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) =>
-          ReservaDetails(reserva: reserva, onUpdate: _loadReservas),
+          ReservaDetails(reserva: reserva, onUpdate: () {
+            // Al actualizar desde los detalles, recargar las reservas a través del controlador
+            reservasController.updateFilter(
+              reservasController.selectedFilter,
+              date: reservasController.customDate,
+              agenciaId: widget.agencia?.id,
+            );
+          }),
     );
   }
 
   void _showAddReservaForm() {
+    final reservasController = Provider.of<ReservasController>(context, listen: false);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddReservaForm(onAdd: _loadReservas),
+      builder: (context) => AddReservaForm(onAdd: () {
+        // Al añadir una reserva, recargar las reservas a través del controlador
+        reservasController.updateFilter(
+          reservasController.selectedFilter,
+          date: reservasController.customDate,
+          agenciaId: widget.agencia?.id,
+        );
+      }),
     );
   }
 
   void _showAddReservaProForm() {
+    final reservasController = Provider.of<ReservasController>(context, listen: false);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddReservaProForm(onAdd: _loadReservas),
+      builder: (context) => AddReservaProForm(onAdd: () {
+        // Al añadir una reserva, recargar las reservas a través del controlador
+        reservasController.updateFilter(
+          reservasController.selectedFilter,
+          date: reservasController.customDate,
+          agenciaId: widget.agencia?.id,
+        );
+      }),
     );
   }
 
@@ -440,9 +429,10 @@ class _ReservasViewState extends State<ReservasView> {
     }
   }
 
-  void _guardarNuevoPrecio() async {
+  // Este método ahora recibe la configuración como parámetro
+  void _guardarNuevoPrecio(Configuracion? configuracion) async {
     final input = _precioController.text.trim();
-    final nuevoPrecio = double.tryParse(input);
+    final nuevoPrecio = double.tryParse(input); // Ojo: aquí deberíamos usar ParserUtils.parseDouble
     if (nuevoPrecio == null || nuevoPrecio <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -453,9 +443,23 @@ class _ReservasViewState extends State<ReservasView> {
       return;
     }
     try {
-      await context.read<ConfiguracionController>().actualizarPrecio(
-        nuevoPrecio,
-      );
+      // Si estamos en la vista de una agencia, actualizamos el precio de la agencia
+      if (widget.agencia != null) {
+        final agenciasController = Provider.of<AgenciasController>(context, listen: false);
+        await agenciasController.updateAgencia(
+          widget.agencia!.id,
+          widget.agencia!.nombre, // Mantener el nombre actual
+          null, // No cambiar la imagen desde aquí
+          widget.agencia!.imagenUrl, // Mantener la URL de imagen actual
+          newPrecioPorAsiento: nuevoPrecio,
+        );
+      } else {
+        // Si no, actualizamos el precio global de configuración
+        await Provider.of<ConfiguracionController>(context, listen: false).actualizarPrecio(
+          nuevoPrecio,
+        );
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Precio actualizado correctamente'),
@@ -475,10 +479,12 @@ class _ReservasViewState extends State<ReservasView> {
     }
   }
 
-  Widget _buildRightControls() {
-    final configuracion = context
-        .watch<ConfiguracionController>()
-        .configuracion;
+  // Este método ahora recibe las reservas y la configuración como parámetros
+  Widget _buildRightControls(List<ReservaConAgencia> currentReservas, Configuracion? configuracion) {
+    // Determinar qué precio mostrar: el de la agencia si existe, o el global
+    final double? displayedPrice = widget.agencia?.precioPorAsiento ?? configuracion?.precioPorAsiento;
+    final String priceLabel = widget.agencia != null ? 'Costo por asiento (Agencia)' : 'Costo por asiento (Global)';
+
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 12,
@@ -490,19 +496,16 @@ class _ReservasViewState extends State<ReservasView> {
             color: Colors.blue.shade50,
             borderRadius: BorderRadius.circular(16),
           ),
-
-          ///aqui muestra el numero de reservas
           child: Text(
-            '${_currentReservas.length} reserva${_currentReservas.length != 1 ? 's' : ''}',
+            '${currentReservas.length} reserva${currentReservas.length != 1 ? 's' : ''}',
             style: TextStyle(
               color: Colors.blue.shade700,
               fontWeight: FontWeight.w500,
             ),
           ),
         ),
-        // Botón para exportar a Excel
         ElevatedButton(
-          onPressed: () => _exportToExcel(_currentReservas),
+          onPressed: () => _exportToExcel(currentReservas),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.indigo,
             padding: const EdgeInsets.all(12),
@@ -513,8 +516,6 @@ class _ReservasViewState extends State<ReservasView> {
           ),
           child: const Icon(Icons.file_download, color: Colors.white, size: 24),
         ),
-
-        /// Botón para editar el precio
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -525,11 +526,11 @@ class _ReservasViewState extends State<ReservasView> {
                       controller: _precioController,
                       keyboardType: TextInputType.number,
                       autofocus: true,
-                      onSubmitted: (_) => _guardarNuevoPrecio(),
+                      onSubmitted: (_) => _guardarNuevoPrecio(configuracion),
                     ),
                   )
                 : Text(
-                    'Costo por asiento: ${configuracion != null ? configuracion.precioPorAsiento.toStringAsFixed(2) : '0.00'}',
+                    '$priceLabel: ${displayedPrice != null ? displayedPrice.toStringAsFixed(2) : '0.00'}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -539,12 +540,11 @@ class _ReservasViewState extends State<ReservasView> {
               icon: Icon(_editandoPrecio ? Icons.check : Icons.edit),
               onPressed: () {
                 if (_editandoPrecio) {
-                  _guardarNuevoPrecio();
+                  _guardarNuevoPrecio(configuracion);
                 } else {
                   setState(() {
-                    _precioController.text =
-                        (configuracion?.precioPorAsiento.toStringAsFixed(2) ??
-                        '0.00');
+                    // Inicializar el controlador con el precio correcto (agencia o global)
+                    _precioController.text = (displayedPrice?.toStringAsFixed(2) ?? '0.00');
                     _editandoPrecio = true;
                   });
                 }

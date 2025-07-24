@@ -81,7 +81,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
           telefono: _telefonoController.text.trim(), 
         );
 
-        await ReservasController.addReserva(newReserva);
+        final reservasController = ReservasController();
+        await reservasController.addReserva(newReserva);
         widget.onAdd();
         
         if (mounted) {

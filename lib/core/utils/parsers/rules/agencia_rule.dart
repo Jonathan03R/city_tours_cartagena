@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/models/agencia.dart'; // Importar el modelo Agencia
 import 'package:citytourscartagena/core/models/parsed_reserva.dart';
 import 'package:citytourscartagena/core/utils/parsers/parser_rule.dart';
 import 'package:citytourscartagena/core/utils/parsers/parser_utils.dart';
@@ -14,13 +15,15 @@ class AgenciaRule extends ParserRule {
 
   @override
   void apply(String rawLine, ParsedReserva out) {
-    // La lógica de esta regla se aplica al texto completo, no a una línea individual.
-    // Por eso, el `rawLine` aquí es el texto completo de la reserva.
-    out.agenciaId = ParserUtils.findAgenciaId(out.rawText);
+    // Este método `apply` no se usará para esta regla especial.
+    // La lógica de esta regla se aplica al texto completo a través de `applyToFullText`.
+    // Dejamos el cuerpo vacío o lanzamos un error si se llama inesperadamente.
+    throw UnimplementedError('AgenciaRule.apply should not be called directly. Use applyToFullText.');
   }
 
   // Método específico para aplicar esta regla al texto completo
-  void applyToFullText(ParsedReserva out) {
-    out.agenciaId = ParserUtils.findAgenciaId(out.rawText);
+  // MODIFICADO: Ahora recibe la lista de agencias como parámetro
+  void applyToFullText(ParsedReserva out, List<Agencia> agencias) {
+    out.agenciaId = ParserUtils.findAgenciaId(out.rawText, agencias);
   }
 }

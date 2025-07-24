@@ -1,12 +1,14 @@
+import 'dart:async'; // Importar para StreamSubscription
+
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Importar Provider
 
-import '../mvvc/reservas_controller.dart';
+import '../mvvc/agencias_controller.dart'; // Importar AgenciasController
 
 class AgenciaSelector extends StatefulWidget {
   final String? selectedAgenciaId;
   final Function(String) onAgenciaSelected;
-
   const AgenciaSelector({
     super.key,
     this.selectedAgenciaId,
@@ -26,37 +28,46 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
   bool _isAddingAgencia = false;
   final TextEditingController _newAgenciaController = TextEditingController();
 
+  // Suscripción al stream del controlador
+  StreamSubscription<List<AgenciaConReservas>>? _agenciasSubscription;
+
   @override
   void initState() {
     super.initState();
-    _loadAgencias();
+    // Usar addPostFrameCallback para asegurar que el contexto esté disponible para Provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _listenToAgencias();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _newAgenciaController.dispose();
+    _agenciasSubscription?.cancel(); // Cancelar la suscripción para evitar fugas de memoria
     super.dispose();
   }
 
-  Future<void> _loadAgencias() async {
+  void _listenToAgencias() {
     setState(() {
       _isLoading = true;
     });
+    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
 
-    try {
-      _allAgencias = ReservasController.getAllAgencias();
-      _filteredAgencias = List.from(_allAgencias);
-
+    // Escuchar el stream de agencias del controlador
+    _agenciasSubscription = agenciasController.agenciasConReservasStream?.listen((data) {
+      setState(() {
+        _allAgencias = data;
+        _filterAgencias(_searchController.text); // Reaplicar filtro con los nuevos datos
+        _isLoading = false;
+      });
+    }, onError: (error) {
       setState(() {
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      debugPrint('Error cargando agencias: $e');
-    }
+      debugPrint('Error cargando agencias en AgenciaSelector: $error');
+      // Opcional: mostrar un mensaje de error al usuario
+    });
   }
 
   void _filterAgencias(String query) {
@@ -76,26 +87,23 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
 
   Future<void> _addNewAgencia() async {
     if (_newAgenciaController.text.trim().isEmpty) return;
-
     setState(() {
       _isAddingAgencia = true;
     });
-
     try {
-      final newAgencia = await ReservasController.addAgencia(
+      final agenciasController = Provider.of<AgenciasController>(context, listen: false);
+      // Llamar al método addAgencia del AgenciasController
+      final newAgencia = await agenciasController.addAgencia(
         _newAgenciaController.text.trim(),
+        null, // No se proporciona imagen para la adición rápida aquí
       );
       widget.onAgenciaSelected(newAgencia.id);
       _newAgenciaController.clear();
-
-      // Recargar agencias
-      await _loadAgencias();
-
+      // No es necesario llamar a _loadAgencias() aquí, el listener del stream ya actualizará _allAgencias
       setState(() {
         _showAddForm = false;
         _isAddingAgencia = false;
       });
-
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -111,7 +119,6 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
       setState(() {
         _isAddingAgencia = false;
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -125,18 +132,20 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
 
   @override
   Widget build(BuildContext context) {
+    // No es necesario observar AgenciasController aquí con context.watch,
+    // ya que _allAgencias se actualiza mediante el listener del stream.
     final selectedAgencia = widget.selectedAgenciaId != null
         ? _allAgencias.firstWhere(
             (a) => a.id == widget.selectedAgenciaId,
             orElse: () => AgenciaConReservas(
-              id: '',
-              nombre: 'Agencia no encontrada',
+              agencia: Agencia(
+                id: '',
+                nombre: 'Agencia no encontrada',
+              ),
               totalReservas: 0,
-              imagenUrl: null,
             ), // Manejo de caso no encontrado
           )
         : null;
-
     return InkWell(
       onTap: () => _showAgenciaDialog(),
       child: Container(
@@ -200,9 +209,8 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
   void _showAgenciaDialog() {
     // Resetear búsqueda al abrir
     _searchController.clear();
-    _filteredAgencias = List.from(_allAgencias);
+    _filterAgencias(''); // Aplicar filtro vacío para mostrar todas las agencias
     _showAddForm = false;
-
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -243,7 +251,6 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                   },
                 ),
                 const SizedBox(height: 16),
-
                 // Formulario para agregar nueva agencia
                 if (_showAddForm) ...[
                   Container(
@@ -290,7 +297,10 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                               child: ElevatedButton.icon(
                                 onPressed: _isAddingAgencia
                                     ? null
-                                    : _addNewAgencia,
+                                    : () async {
+                                        await _addNewAgencia();
+                                        setDialogState(() {}); // Actualizar el estado del diálogo después de añadir
+                                      },
                                 icon: _isAddingAgencia
                                     ? const SizedBox(
                                         width: 16,
@@ -331,75 +341,73 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                   ),
                   const SizedBox(height: 16),
                 ],
-
                 // Lista de agencias
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredAgencias.isEmpty
-                      ? _buildEmptyState(setDialogState)
-                      : ListView.builder(
-                          itemCount: _filteredAgencias.length,
-                          itemBuilder: (context, index) {
-                            final agencia = _filteredAgencias[index];
-                            final isSelected =
-                                agencia.id == widget.selectedAgenciaId;
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              color: isSelected ? Colors.blue.shade50 : null,
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  radius: 30,
-                                  backgroundColor: isSelected
-                                      ? Colors.blue.shade600
-                                      : Colors.grey.shade300,
-                                  backgroundImage:
-                                      agencia.imagenUrl != null &&
-                                          agencia.imagenUrl!.isNotEmpty
-                                      ? NetworkImage(agencia.imagenUrl!)
-                                      : null,
-                                  child:
-                                      agencia.imagenUrl == null ||
-                                          agencia.imagenUrl!.isEmpty
-                                      ? Icon(
-                                          Icons.business,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : Colors.grey.shade600,
-                                          size: 20,
-                                        )
-                                      : null,
-                                ),
-                                title: Text(
-                                  agencia.nombre,
-                                  style: TextStyle(
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                          ? _buildEmptyState(setDialogState)
+                          : ListView.builder(
+                              itemCount: _filteredAgencias.length,
+                              itemBuilder: (context, index) {
+                                final agencia = _filteredAgencias[index];
+                                final isSelected =
+                                    agencia.id == widget.selectedAgenciaId;
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  color: isSelected ? Colors.blue.shade50 : null,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      radius: 30,
+                                      backgroundColor: isSelected
+                                          ? Colors.blue.shade600
+                                          : Colors.grey.shade300,
+                                      backgroundImage:
+                                          agencia.imagenUrl != null &&
+                                                  agencia.imagenUrl!.isNotEmpty
+                                              ? NetworkImage(agencia.imagenUrl!)
+                                              : null,
+                                      child:
+                                          agencia.imagenUrl == null ||
+                                                  agencia.imagenUrl!.isEmpty
+                                              ? Icon(
+                                                  Icons.business,
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : Colors.grey.shade600,
+                                                  size: 20,
+                                                )
+                                              : null,
+                                    ),
+                                    title: Text(
+                                      agencia.nombre,
+                                      style: TextStyle(
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${agencia.totalReservas} reserva${agencia.totalReservas != 1 ? 's' : ''}',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    trailing: isSelected
+                                        ? Icon(
+                                            Icons.check_circle,
+                                            color: Colors.blue.shade600,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      widget.onAgenciaSelected(agencia.id);
+                                      Navigator.of(context).pop();
+                                    },
                                   ),
-                                ),
-                                subtitle: Text(
-                                  '${agencia.totalReservas} reserva${agencia.totalReservas != 1 ? 's' : ''}',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                trailing: isSelected
-                                    ? Icon(
-                                        Icons.check_circle,
-                                        color: Colors.blue.shade600,
-                                      )
-                                    : null,
-                                onTap: () {
-                                  widget.onAgenciaSelected(agencia.id);
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                                );
+                              },
+                            ),
                 ),
               ],
             ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum DateFilterType { all, today, tomorrow, lastWeek, custom }
+enum DateFilterType { all, today, yesterday, tomorrow, lastWeek, custom }
 
 class DateFilterButtons extends StatelessWidget {
   final DateFilterType selectedFilter;
@@ -32,6 +32,7 @@ class DateFilterButtons extends StatelessWidget {
             children: [
               _buildFilterChip('Todas', DateFilterType.all, Icons.list_alt),
               _buildFilterChip('Hoy', DateFilterType.today, Icons.today),
+              _buildFilterChip('Ayer', DateFilterType.yesterday, Icons.history), 
               _buildFilterChip('Mañana', DateFilterType.tomorrow, Icons.next_plan),
               _buildFilterChip('Última semana', DateFilterType.lastWeek, Icons.date_range),
               _buildFilterChip(
@@ -74,6 +75,9 @@ class DateFilterButtons extends StatelessWidget {
               break;
             case DateFilterType.today:
               date = DateTime.now();
+              break;
+            case DateFilterType.yesterday:  // ← nuevo
+              date = DateTime.now().subtract(const Duration(days: 1));
               break;
             case DateFilterType.tomorrow:
               date = DateTime.now().add(const Duration(days: 1));

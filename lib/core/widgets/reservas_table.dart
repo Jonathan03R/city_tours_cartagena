@@ -117,7 +117,7 @@ class _ReservasTableState extends State<ReservasTable> {
             _controllers['${_editingReservaId}_observacion']?.text ??
             reserva.observacion,
       );
-      await ReservasController.updateReserva(
+      await ReservasController().updateReserva(
         _editingReservaId!,
         updatedReserva,
       );
@@ -149,7 +149,7 @@ class _ReservasTableState extends State<ReservasTable> {
   ) async {
     try {
       final updatedReserva = reserva.reserva.copyWith(estado: newStatus);
-      await ReservasController.updateReserva(reserva.id, updatedReserva);
+      await ReservasController().updateReserva(reserva.id, updatedReserva);
       widget.onUpdate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -307,6 +307,7 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
+                  ///esto es para mostrar el total de saldo
                   DataCell(
                     Row(
                       children: [
@@ -329,6 +330,7 @@ class _ReservasTableState extends State<ReservasTable> {
 
                   const DataCell(Text('')),
                   const DataCell(Text('')),
+                  /// esto es para mostrar el total de deuda
                   DataCell(
                     Row(
                       children: [
@@ -576,7 +578,7 @@ class _ReservasTableState extends State<ReservasTable> {
   }
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
-    final agencias = ReservasController.getAllAgencias();
+    final agencias = ReservasController().getAllAgencias();
     return DropdownButtonFormField<String>(
       value: _agenciaValues[reserva.id],
       decoration: const InputDecoration(
@@ -630,7 +632,7 @@ class _ReservasTableState extends State<ReservasTable> {
                 final updated = ra.reserva.copyWith(
                   observacion: controller.text,
                 );
-                await ReservasController.updateReserva(ra.id, updated);
+                await ReservasController().updateReserva(ra.id, updated);
                 widget.onUpdate();
               },
               child: const Text('Guardar'),
@@ -659,7 +661,7 @@ class _ReservasTableState extends State<ReservasTable> {
               Navigator.of(ctx).pop();
               final messenger = ScaffoldMessenger.of(context);
               try {
-                await ReservasController.deleteReserva(reserva.id);
+                await ReservasController().deleteReserva(reserva.id);
                 widget.onUpdate();
                 messenger.showSnackBar(
                   const SnackBar(

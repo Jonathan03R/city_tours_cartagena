@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/mvvc/agencias_controller.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
@@ -22,8 +23,14 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
+        ChangeNotifierProvider<ConfiguracionController>(
           create: (_) => ConfiguracionController()..cargarConfiguracion(),
+        ),
+        ChangeNotifierProvider<ReservasController>(
+          create: (_) => ReservasController(),
+        ),
+        ChangeNotifierProvider<AgenciasController>(
+          create: (_) => AgenciasController(),
         ),
       ],
       child: const MyApp(),

@@ -1,4 +1,5 @@
-import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
+import 'package:citytourscartagena/core/models/agencia.dart'; // Importar el modelo Agencia
+import 'package:intl/intl.dart'; // Importar para NumberFormat
 
 /// Clase de utilidad para funciones de parseo comunes.
 class ParserUtils {
@@ -29,7 +30,6 @@ class ParserUtils {
     try {
       String clean = input.toLowerCase().trim();
       clean = clean.replaceAll(RegExp(r'(de|del|el|a|las)'), ' ');
-
       // Diccionario de meses
       final months = {
         'enero': 1,
@@ -57,9 +57,7 @@ class ParserUtils {
         'nov': 11,
         'dec': 12,
       };
-
       int? day, month, year;
-
       // 1️⃣ Detectar formato numérico clásico
       final numericMatch = RegExp(
         r'(\d{1,4})[-\/](\d{1,2})[-\/](\d{1,4})',
@@ -68,7 +66,6 @@ class ParserUtils {
         int g1 = int.parse(numericMatch.group(1)!);
         int g2 = int.parse(numericMatch.group(2)!);
         int g3 = int.parse(numericMatch.group(3)!);
-
         if (g1 > 31) {
           year = g1;
           month = g2;
@@ -84,7 +81,6 @@ class ParserUtils {
         }
         return DateTime(year, month, day);
       }
-
       // 2️⃣ Si no es formato numérico, buscar palabras (ej: "12 de agosto 2025")
       final parts = clean
           .split(RegExp(r'[\s,]+'))
@@ -104,18 +100,14 @@ class ParserUtils {
           month = months[part];
         }
       }
-
       if (year != null && year < 100) {
         year += (year < 50) ? 2000 : 1900;
       }
-
       year ??= DateTime.now().year;
-
       if (day != null && month != null && year != null) {
         return DateTime(year, month, day);
       }
     } catch (_) {}
-
     return null;
   }
 
@@ -130,24 +122,37 @@ class ParserUtils {
   }
 
   /// Parsea una cadena de texto a un double.
+  /// Maneja formatos con punto como separador de miles y coma como decimal,
+  /// o solo punto como decimal.
   static double? parseDouble(String str) {
     try {
-      // Elimina caracteres que no sean dígitos, punto o coma
-      String clean = str.replaceAll(RegExp(r'[^0-9,\.]'), '');
+      String clean = str.trim();
 
-      // Caso: "50.000" → quitar puntos si no hay coma decimal
-      if (clean.contains('.') && !clean.contains(',')) {
-        clean = clean.replaceAll('.', '');
-      }
+      // Eliminar todos los puntos (separadores de miles)
+      clean = clean.replaceAll('.', '');
 
-      // Cambiar coma por punto para decimales
+      // Reemplazar comas (separadores decimales) por puntos
       clean = clean.replaceAll(',', '.');
+
+      // Eliminar cualquier otro caracter no numérico excepto el punto decimal
+      clean = clean.replaceAll(RegExp(r'[^\d.]'), '');
 
       if (clean.isEmpty) return null;
       return double.parse(clean);
     } catch (_) {
       return null;
     }
+  }
+
+  /// Formatea un double para mostrarlo en un TextField, usando el formato de moneda colombiana
+  /// (punto como separador de miles y coma como decimal).
+  static String formatDoubleForInput(double value) {
+    final formatter = NumberFormat.currency(
+      locale: 'es_CO', // Colombia
+      symbol: '', // Sin símbolo de moneda
+      decimalDigits: 2, // Dos decimales
+    );
+    return formatter.format(value);
   }
 
   static double parseSaldo(String input) {
@@ -167,8 +172,8 @@ class ParserUtils {
   }
 
   /// Intenta encontrar el ID de la agencia en el texto completo.
-  static String findAgenciaId(String text) {
-    final agencias = ReservasController.getAllAgencias();
+  /// Ahora recibe la lista de agencias como parámetro.
+  static String findAgenciaId(String text, List<Agencia> agencias) {
     final lowerText = text.toLowerCase();
     for (final agencia in agencias) {
       if (lowerText.contains(agencia.nombre.toLowerCase())) {

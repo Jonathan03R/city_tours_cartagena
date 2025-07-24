@@ -77,7 +77,7 @@ class _ReservaDetailsState extends State<ReservaDetails> {
         observacion: _observacionController.text,
       );
 
-      await ReservasController.updateReserva(widget.reserva.id, updatedReserva);
+      await ReservasController().updateReserva(widget.reserva.id, updatedReserva);
       widget.onUpdate();
       
       setState(() {
