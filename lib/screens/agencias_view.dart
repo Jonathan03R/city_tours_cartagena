@@ -457,24 +457,25 @@ class _AgenciasViewState extends State<AgenciasView> {
   }
 
   void _mostrarFormularioAgregarAgencia() {
-    showDialog(
-      context: context,
-      builder: (_) => CrearAgenciaForm(
-        onCrear: (nombre, imagenFile, precioPorAsiento) async {
-          final agenciasController = Provider.of<AgenciasController>(
-            context,
-            listen: false,
-          );
-          await agenciasController.addAgencia(
-            nombre,
-            imagenFile?.path,
-            precioPorAsiento: precioPorAsiento,
-          );
-          Navigator.of(context).pop(); // Cerrar el diálogo
-        },
-      ),
-    );
-  }
+  showDialog(
+    context: context,
+    builder: (_) => CrearAgenciaForm(
+      onCrear: (nombre, imagenFile, precioManana, precioTarde) async {
+        final agenciasController = Provider.of<AgenciasController>(
+          context,
+          listen: false,
+        );
+        await agenciasController.addAgencia(
+          nombre,
+          imagenFile?.path,
+          precioPorAsientoTurnoManana: precioManana,
+          precioPorAsientoTurnoTarde: precioTarde,
+        );
+        Navigator.of(context).pop(); // Cerrar el diálogo
+      },
+    ),
+  );
+}
 
   void _navigateToAgenciaReservas(AgenciaConReservas agencia) {
     Navigator.of(
