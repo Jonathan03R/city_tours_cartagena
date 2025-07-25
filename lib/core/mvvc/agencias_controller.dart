@@ -22,6 +22,10 @@ class AgenciasController extends ChangeNotifier {
     _listenToAgenciasAndReservas();
   }
 
+
+  /// Escucha los cambios en las agencias y reservas.
+  /// Combina los streams de agencias y reservas para crear una lista de agencias con el total de reservas asociadas.
+  /// Actualiza el stream _agenciasConReservasSubject con los datos combinados.
   void _listenToAgenciasAndReservas() {
     final agenciasStream = _firestoreService.getAgenciasStream();
     final reservasStream = _firestoreService.getReservasStream(); // Obtener todas las reservas
