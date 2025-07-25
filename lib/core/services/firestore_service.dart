@@ -11,7 +11,7 @@ class FirestoreService {
   // Método auxiliar para aplicar filtros de fecha
   /// Aplica un filtro de fecha a la consulta de reservas.
   /// @param query La consulta de reservas a filtrar.
-  /// @param filter El tipo de filtro de fecha a aplicar. 
+  /// @param filter El tipo de filtro de fecha a aplicar.
   /// @param customDate Una fecha personalizada para el filtro, si es necesario.
   /// @return La consulta de reservas filtrada por fecha.
   Query<Reserva> _applyDateFilter(
@@ -94,7 +94,7 @@ class FirestoreService {
 
   // ========== RESERVAS ==========
   /// Obtiene reservas filtradas por turno, fecha y agencia.
-  /// @param turno El tipo de turno a filtrar (opcional). 
+  /// @param turno El tipo de turno a filtrar (opcional).
   /// @param filter El tipo de filtro de fecha a aplicar (opcional, por defecto es DateFilterType.all).
   /// @param customDate Una fecha personalizada para el filtro (opcional).
   // Stream<List<Reserva>> getReservasFiltered({
@@ -207,7 +207,7 @@ class FirestoreService {
 
   /// Obtiene un stream de todas las reservas.
   /// @return Un stream de listas de reservas.
-  /// en terminos sencillos, este método devuelve un stream que emite 
+  /// en terminos sencillos, este método devuelve un stream que emite
   /// una lista de reservas cada vez que hay un cambio en la colección de reservas en Firestore.
   /// Esto es útil para mantener la UI actualizada en tiempo real con los datos más recientes
   Stream<List<Reserva>> getReservasStream() {
@@ -300,7 +300,7 @@ class FirestoreService {
   // }
 
   /// Obtiene reservas por agencia.
-  /// @param agenciaId El ID de la agencia para filtrar las reservas. 
+  /// @param agenciaId El ID de la agencia para filtrar las reservas.
   // Future<List<Reserva>> getReservasByAgencia(String agenciaId) async {
   //   try {
   //     final snap = await _db
@@ -345,8 +345,9 @@ class FirestoreService {
       throw e;
     }
   }
+
   /// Actualiza una reserva existente.
-  /// @param id El ID de la reserva a actualizar. 
+  /// @param id El ID de la reserva a actualizar.
   /// @param reserva La reserva con los nuevos datos.
   /// @return Un Future que completa cuando la reserva se actualiza correctamente.
   Future<void> updateReserva(String id, Reserva reserva) async {
@@ -358,6 +359,7 @@ class FirestoreService {
       throw e;
     }
   }
+
   /// Elimina una reserva.
   /// @param id El ID de la reserva a eliminar.
   Future<void> deleteReserva(String id) async {
@@ -370,8 +372,69 @@ class FirestoreService {
     }
   }
 
-  // NUEVO MÉTODO: Actualiza el costoAsiento de todas las reservas de una agencia
-  Future<void> updateReservasCostoAsiento(
+  ///OBSOLETO ESTE METODO YA NO SE UTILIZARA POR EL HECHO QUE AHORA SE MANEJAN POR 2 PRECIOS POR ASIENTOS DIFERENTES
+  // // NUEVO MÉTODO: Actualiza el costoAsiento de todas las reservas de una agencia
+  // Future<void> updateReservasCostoAsiento(
+  //   String agenciaId,
+  //   double newCostoAsiento,
+  // ) async {
+  //   try {
+  //     final querySnapshot = await _db
+  //         .collection('reservas')
+  //         .where('agenciaId', isEqualTo: agenciaId)
+  //         .get();
+
+  //     final batch = _db.batch();
+  //     for (var doc in querySnapshot.docs) {
+  //       batch.update(doc.reference, {'costoAsiento': newCostoAsiento});
+  //     }
+  //     await batch.commit();
+  //     debugPrint(
+  //       '✅ Costo por asiento actualizado para ${querySnapshot.docs.length} reservas de la agencia $agenciaId a $newCostoAsiento',
+  //     );
+  //   } catch (e) {
+  //     debugPrint(
+  //       '❌ Error actualizando costo por asiento de reservas para agencia $agenciaId: $e',
+  //     );
+  //     throw e;
+  //   }
+  // }
+
+  Future<void> updateReservasCostoAsientoManana(
+    String agenciaId,
+    double newCostoAsiento,
+  ) async {
+    try {
+      /// Obtiene todas las reservas de la agencia en el turno de mañana
+      /// y actualiza el campo costoAsiento.
+      /// Este método es útil para actualizar el costo de los asientos
+      final querySnapshot = await _db
+          .collection('reservas')
+          .where('agenciaId', isEqualTo: agenciaId)
+          .where('turno', isEqualTo: 'manana')
+          .get();
+
+      final batch = _db.batch();
+      // for (var doc in querySnapshot.docs) {
+      //   // batch.update(doc.reference, {'costoAsiento': newCostoAsiento});
+      // }
+      await batch.commit();
+      debugPrint(
+        '✅ Costo por asiento (mañana) actualizado para '
+        '${querySnapshot.docs.length} reservas de la agencia $agenciaId a '
+        '$newCostoAsiento',
+      );
+    } catch (e) {
+      debugPrint(
+        '❌ Error actualizando costo por asiento (mañana) de reservas para '
+        'agencia $agenciaId: $e',
+      );
+      throw e;
+    }
+  }
+
+  /// Actualiza el costoAsiento de todas las reservas de una agencia en el turno de tarde.
+  Future<void> updateReservasCostoAsientoTarde(
     String agenciaId,
     double newCostoAsiento,
   ) async {
@@ -379,6 +442,7 @@ class FirestoreService {
       final querySnapshot = await _db
           .collection('reservas')
           .where('agenciaId', isEqualTo: agenciaId)
+          .where('turno', isEqualTo: 'tarde')
           .get();
 
       final batch = _db.batch();
@@ -387,11 +451,14 @@ class FirestoreService {
       }
       await batch.commit();
       debugPrint(
-        '✅ Costo por asiento actualizado para ${querySnapshot.docs.length} reservas de la agencia $agenciaId a $newCostoAsiento',
+        '✅ Costo por asiento (tarde) actualizado para '
+        '${querySnapshot.docs.length} reservas de la agencia $agenciaId a '
+        '$newCostoAsiento',
       );
     } catch (e) {
       debugPrint(
-        '❌ Error actualizando costo por asiento de reservas para agencia $agenciaId: $e',
+        '❌ Error actualizando costo por asiento (tarde) de reservas para '
+        'agencia $agenciaId: $e',
       );
       throw e;
     }
@@ -400,7 +467,7 @@ class FirestoreService {
   // ========== AGENCIAS ==========
 
   //// Obtiene un stream de agencias ordenadas por nombre.
-  /// @return Un stream de listas de agencias.  
+  /// @return Un stream de listas de agencias.
 
   Stream<List<Agencia>> getAgenciasStream() {
     return _db.collection('agencias').orderBy('nombre').snapshots().map((
@@ -411,6 +478,7 @@ class FirestoreService {
           .toList();
     });
   }
+
   /// Obtiene todas las agencias ordenadas por nombre.
   /// @return Una lista de agencias ordenadas por nombre.
   Future<List<Agencia>> getAllAgencias() async {
@@ -446,7 +514,12 @@ class FirestoreService {
 
   Future<void> updateAgencia(String id, Agencia agencia) async {
     try {
-      await _db.collection('agencias').doc(id).update(agencia.toFirestore());
+      // Construir el map a actualizar a partir de toFirestore()
+      final data = agencia.toFirestore();
+      // Eliminar el campo obsoleto 'precioPorAsiento'
+      data['precioPorAsiento'] = FieldValue.delete();
+
+      await _db.collection('agencias').doc(id).update(data);
       debugPrint('✅ Agencia actualizada: ${agencia.nombre}');
     } catch (e) {
       debugPrint('❌ Error actualizando agencia: $e');
@@ -471,6 +544,7 @@ class FirestoreService {
     await batch.commit();
     debugPrint('✅ Migración de campo "eliminada" completada.');
   }
+
   /// Inicializa los datos por defecto en Firestore.
   /// Este método se utiliza para migrar datos existentes y asegurarse de que
   Future<void> initializeDefaultData() async {

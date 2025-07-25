@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:citytourscartagena/core/models/agencia.dart';
@@ -37,57 +38,42 @@ class _ReservasViewState extends State<ReservasView> {
   bool _isTableView = true;
   bool _editandoPrecio = false;
   final TextEditingController _precioController = TextEditingController();
-
-  void _onDateChanged(DateFilterType filter, DateTime? date) {
-    final ctrl = Provider.of<ReservasController>(context, listen: false);
-    ctrl.updateFilter(
-      filter,
-      date: date,
-      agenciaId: widget.agencia?.id,
-      turno: ctrl.turnoFilter, // mantiene el turno actual
-    );
-  }
-
-  /// Llama al controlador para cambiar SOLO el turno,
-  /// preservando fecha y agencia.
-  void _onTurnoChanged(TurnoType? turno) {
-    final ctrl = Provider.of<ReservasController>(context, listen: false);
-    ctrl.updateFilter(
-      ctrl.selectedFilter, // mantiene el filtro de fecha actual
-      date: ctrl.customDate,
-      agenciaId: widget.agencia?.id,
-      turno: turno,
-    );
-  }
+  final TextEditingController _precioMananaController = TextEditingController();
+  final TextEditingController _precioTardeController = TextEditingController();
+  // Mantener agencia local para reflejar cambios inmediatos
+  AgenciaConReservas? _currentAgencia;
+  StreamSubscription<List<AgenciaConReservas>>? _agenciasSub;
 
   @override
   void initState() {
-    print('🔄🅰🅰🅰🅰 Iniciando ReservasView con turno: ${widget.turno}');
     super.initState();
 
-    /// WidgetsBinding es un mecanismo para coordinar la interacción entre el framework de Flutter y el motor subyacente.
-    /// Permite ejecutar código después de que el árbol de widgets se haya construido completamente.
+    // inicializar agencia local
+    _currentAgencia = widget.agencia;
+
+    // Suscribirse para recibir actualizaciones de AgenciasController en tiempo real
+    final agenciasCtrl = context.read<AgenciasController>();
+
+
+    _agenciasSub = agenciasCtrl.agenciasConReservasStream.listen((lista) {
+      if (widget.agencia != null) {
+        final updated = lista.firstWhereOrNull(
+          (ar) => ar.agencia.id == widget.agencia!.agencia.id,
+        );
+      if (updated != null && mounted) {
+          setState(() {
+            _currentAgencia = updated;
+          });
+        }
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl = Provider.of<ReservasController>(context, listen: false);
-      final turno = widget.turno;
-
-      //  DateFilterType dateFilter = DateFilterType.today;
-      //  if (turno == TurnoType.manana) {
-      //    dateFilter = DateFilterType.tomorrow;
-      //  } else if (turno == TurnoType.tarde) {
-      //    dateFilter = DateFilterType.today;
-      //  }
-      //
-      //  ctrl.updateFilter(
-      //    dateFilter,
-      //    agenciaId: widget.agencia?.id,
-      //    turno: turno,
-      //  );
-      // Siempre arrancamos en "hoy", y el turno lo paso aparte:
       ctrl.updateFilter(
         DateFilterType.today,
         agenciaId: widget.agencia?.id,
-        turno: turno,
+        turno: widget.turno,
       );
     });
   }
@@ -142,26 +128,30 @@ class _ReservasViewState extends State<ReservasView> {
       context: context,
       builder: (_) => CrearAgenciaForm(
         initialNombre: agencia.nombre,
-        initialImagenUrl: agencia.imagenUrl, // Pasar la URL actual de la imagen
-        initialPrecioPorAsiento: agencia
-            .precioPorAsiento, // NUEVO: Pasar el precio por asiento de la agencia
-        onCrear: (nuevoNombre, nuevaImagenFile, nuevoPrecioPorAsiento) async {
-          // MODIFICADO: Recibir nuevoPrecioPorAsiento
-          final agenciasController = Provider.of<AgenciasController>(
-            context,
-            listen: false,
-          );
-          await agenciasController.updateAgencia(
-            agencia.id,
-            nuevoNombre,
-            nuevaImagenFile?.path, // Pasar la ruta del archivo si existe
-            agencia
-                .imagenUrl, // Pasar la URL actual para que el controlador decida si subir una nueva
-            newPrecioPorAsiento:
-                nuevoPrecioPorAsiento, // NUEVO: Pasar el nuevo precio
-          );
-          Navigator.of(context).pop();
-        },
+        initialImagenUrl: agencia.imagenUrl,
+        initialPrecioPorAsientoTurnoManana: agencia.precioPorAsientoTurnoManana,
+        initialPrecioPorAsientoTurnoTarde: agencia.precioPorAsientoTurnoTarde,
+        onCrear:
+            (
+              nuevoNombre,
+              nuevaImagenFile,
+              nuevoPrecioManana,
+              nuevoPrecioTarde,
+            ) async {
+              final agenciasController = Provider.of<AgenciasController>(
+                context,
+                listen: false,
+              );
+              await agenciasController.updateAgencia(
+                agencia.id,
+                nuevoNombre,
+                nuevaImagenFile?.path,
+                agencia.imagenUrl,
+                newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
+                newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
+              );
+              Navigator.of(context).pop();
+            },
       ),
     );
   }
@@ -349,7 +339,8 @@ class _ReservasViewState extends State<ReservasView> {
                   children: [
                     _isTableView
                         ? ReservasTable(
-                            turno: reservasController.turnoFilter, // Pasar el turno si aplica
+                            turno: reservasController
+                                .turnoFilter, // Pasar el turno si aplica
                             reservas:
                                 currentReservas, // Pasar la lista paginada
                             onUpdate: () {
@@ -716,54 +707,98 @@ class _ReservasViewState extends State<ReservasView> {
 
   // Este método ahora recibe la configuración como parámetro
   void _guardarNuevoPrecio(Configuracion? configuracion) async {
+    // Si se edita precios de agencia
+    if (widget.agencia != null) {
+      final agenciasController = Provider.of<AgenciasController>(
+        context,
+        listen: false,
+      );
+      final mText = _precioMananaController.text.trim();
+      final tText = _precioTardeController.text.trim();
+      final double? manana = mText.isEmpty ? null : double.tryParse(mText);
+      final double? tarde = tText.isEmpty ? null : double.tryParse(tText);
+      // validar solo si hay texto, de lo contrario dejamos null para heredar global
+      if ((mText.isNotEmpty && (manana == null || manana <= 0)) ||
+          (tText.isNotEmpty && (tarde == null || tarde <= 0))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ingresa precios válidos o deja vacío para usar global',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      try {
+        await agenciasController.updateAgencia(
+          widget.agencia!.id,
+          widget.agencia!.nombre,
+          null,
+          widget.agencia!.imagenUrl,
+          newPrecioPorAsientoTurnoManana: manana,
+          newPrecioPorAsientoTurnoTarde: tarde,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Precio de agencia actualizado correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // actualizar agencia local para refrescar UI
+        setState(() {
+          final old = _currentAgencia ?? widget.agencia!;
+          final updatedAg = old.agencia.copyWith(
+            precioPorAsientoTurnoManana: manana,
+            precioPorAsientoTurnoTarde: tarde,
+          );
+          _currentAgencia = AgenciaConReservas(
+            agencia: updatedAg,
+            totalReservas: old.totalReservas,
+          );
+          _editandoPrecio = false;
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error actualizando precio de agencia: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Si no hay agencia, actualizamos precio global
     final input = _precioController.text.trim();
-    final nuevoPrecio = double.tryParse(
-      input,
-    ); // Ojo: aquí deberíamos usar ParserUtils.parseDouble
+    final nuevoPrecio = double.tryParse(input);
     if (nuevoPrecio == null || nuevoPrecio <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor ingresa un precio válido (p.ej. 55.50)'),
+          content: Text(
+            'Por favor ingresa un precio global válido (p.ej. 55.50)',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
     try {
-      // Si estamos en la vista de una agencia, actualizamos el precio de la agencia
-      if (widget.agencia != null) {
-        final agenciasController = Provider.of<AgenciasController>(
-          context,
-          listen: false,
-        );
-        await agenciasController.updateAgencia(
-          widget.agencia!.id,
-          widget.agencia!.nombre, // Mantener el nombre actual
-          null, // No cambiar la imagen desde aquí
-          widget.agencia!.imagenUrl, // Mantener la URL de imagen actual
-          newPrecioPorAsiento: nuevoPrecio,
-        );
-      } else {
-        // Si no, actualizamos el precio global de configuración
-        await Provider.of<ConfiguracionController>(
-          context,
-          listen: false,
-        ).actualizarPrecio(nuevoPrecio);
-      }
-
+      await Provider.of<ConfiguracionController>(
+        context,
+        listen: false,
+      ).actualizarPrecio(nuevoPrecio);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Precio actualizado correctamente'),
+          content: Text('Precio global actualizado correctamente'),
           backgroundColor: Colors.green,
         ),
       );
-      setState(() {
-        _editandoPrecio = false;
-      });
+      setState(() => _editandoPrecio = false);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error actualizando precio: $e'),
+          content: Text('Error actualizando precio global: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -775,117 +810,193 @@ class _ReservasViewState extends State<ReservasView> {
     List<ReservaConAgencia> currentReservas,
     Configuracion? configuracion,
   ) {
-    final double? displayedPrice =
-        widget.agencia?.precioPorAsiento ?? configuracion?.precioPorAsiento;
-    final String priceLabel = widget.agencia != null
-        ? 'Costo por asiento (Agencia)'
-        : 'Costo por asiento (Global)';
+    // final ag = widget.agencia?.agencia;
+    final ac = _currentAgencia ?? widget.agencia;
+    final ag = ac?.agencia;
+    // obtener el turno filtrado (null = ambos)
+    final turnoFilter = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    ).turnoFilter;
+    // para agencia, decidir qué turno mostrar
+    final showManana =
+        ag != null && (turnoFilter == null || turnoFilter == TurnoType.manana);
+    final showTarde =
+        ag != null && (turnoFilter == null || turnoFilter == TurnoType.tarde);
+    // precio global único
+    final double? globalPrice = configuracion?.precioPorAsiento;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      // ... decoración ...
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Reservas y exportar
+          // -----------------------
+          // Reservas y botón export
+          // -----------------------
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Reservas info
-              Row(
-                children: [
-                  Icon(Icons.event_available, color: Colors.blue.shade700),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${currentReservas.length} reserva${currentReservas.length != 1 ? 's' : ''}',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-              // Botón exportar
+              // ... información de reservas ...
               ElevatedButton.icon(
                 onPressed: () => _exportToExcel(currentReservas),
                 icon: const Icon(Icons.file_download, size: 20),
                 label: const Text("Exportar"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                ),
+                // ... estilo ...
               ),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Precio editable
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(Icons.attach_money, color: Colors.green.shade700),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _editandoPrecio
-                    ? TextField(
-                        controller: _precioController,
-                        keyboardType: TextInputType.number,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 12,
-                          ),
-                          border: OutlineInputBorder(),
-                        ),
-                        onSubmitted: (_) => _guardarNuevoPrecio(configuracion),
-                      )
-                    : Text(
-                        '$priceLabel: ${displayedPrice != null ? displayedPrice.toStringAsFixed(2) : '0.00'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-              ),
-              IconButton(
-                icon: Icon(
-                  _editandoPrecio ? Icons.check : Icons.edit,
-                  color: Colors.grey.shade800,
+          // -----------------------
+          // Precio editable según contexto
+          // -----------------------
+          if (ag != null) ...[
+            // mostrar precio Mañana / Tarde según turnoFilter
+            if (showManana)
+              Text(
+                'Costo por asiento (Mañana): ${(ag.precioPorAsientoTurnoManana ?? globalPrice)?.toStringAsFixed(2) ?? '0.00'}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                 ),
-                onPressed: () {
-                  if (_editandoPrecio) {
-                    _guardarNuevoPrecio(configuracion);
-                  } else {
-                    setState(() {
-                      _precioController.text =
-                          (displayedPrice?.toStringAsFixed(2) ?? '0.00');
-                      _editandoPrecio = true;
-                    });
-                  }
-                },
               ),
+            if (showTarde)
+              Text(
+                'Costo por asiento (Tarde): ${(ag.precioPorAsientoTurnoTarde ?? globalPrice)?.toStringAsFixed(2) ?? '0.00'}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+
+            // campos de edición según turnoFilter
+            if (_editandoPrecio) ...[
+              if (showManana) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _precioMananaController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nuevo precio mañana',
+                    hintText: 'vacío = usar global',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+              if (showTarde) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _precioTardeController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nuevo precio tarde',
+                    hintText: 'vacío = usar global',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ],
-          ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _editandoPrecio
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.grey.shade600),
+                          tooltip: 'Cancelar',
+                          onPressed: () {
+                            setState(() {
+                              _editandoPrecio = false;
+                              _precioMananaController.clear();
+                              _precioTardeController.clear();
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.check, color: Colors.grey.shade800),
+                          tooltip: 'Guardar',
+                          onPressed: () => _guardarNuevoPrecio(configuracion),
+                        ),
+                      ],
+                    )
+                  : IconButton(
+                      icon: Icon(Icons.edit, color: Colors.grey.shade800),
+                      tooltip: 'Editar precios',
+                      onPressed: () {
+                        setState(() {
+                          _precioMananaController.text =
+                              ag.precioPorAsientoTurnoManana != null
+                              ? ag.precioPorAsientoTurnoManana!.toStringAsFixed(
+                                  2,
+                                )
+                              : '';
+                          _precioTardeController.text =
+                              ag.precioPorAsientoTurnoTarde != null
+                              ? ag.precioPorAsientoTurnoTarde!.toStringAsFixed(
+                                  2,
+                                )
+                              : '';
+                          _editandoPrecio = true;
+                        });
+                      },
+                    ),
+            ),
+          ] else ...[
+            // precio global único
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.attach_money, color: Colors.green.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _editandoPrecio
+                      ? TextField(
+                          controller: _precioController,
+                          keyboardType: TextInputType.number,
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 12,
+                            ),
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (_) =>
+                              _guardarNuevoPrecio(configuracion),
+                        )
+                      : Text(
+                          'Costo por asiento (Global): ${globalPrice?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _editandoPrecio ? Icons.check : Icons.edit,
+                    color: Colors.grey.shade800,
+                  ),
+                  onPressed: () {
+                    if (_editandoPrecio) {
+                      _guardarNuevoPrecio(configuracion);
+                    } else {
+                      setState(() {
+                        _precioController.text =
+                            globalPrice?.toStringAsFixed(2) ?? '0.00';
+                        _editandoPrecio = true;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

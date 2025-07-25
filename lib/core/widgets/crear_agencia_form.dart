@@ -7,14 +7,18 @@ import 'package:image_picker/image_picker.dart';
 class CrearAgenciaForm extends StatefulWidget {
   final String? initialNombre;
   final String? initialImagenUrl;
-  final double? initialPrecioPorAsiento;
-  final Function(String nombre, XFile? imagenFile, double? precioPorAsiento) onCrear;
+  // final double? initialPrecioPorAsiento;
+  final double? initialPrecioPorAsientoTurnoManana;
+  final double? initialPrecioPorAsientoTurnoTarde;
+  final Function(String nombre, XFile? imagenFile, double? precioPorAsientoTurnoManana, double? precioPorAsientoTurnoTarde) onCrear;
 
   const CrearAgenciaForm({
     super.key,
     this.initialNombre,
     this.initialImagenUrl,
-    this.initialPrecioPorAsiento,
+    // this.initialPrecioPorAsiento,
+    this.initialPrecioPorAsientoTurnoManana,
+    this.initialPrecioPorAsientoTurnoTarde,
     required this.onCrear,
   });
 
@@ -25,7 +29,8 @@ class CrearAgenciaForm extends StatefulWidget {
 class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nombreController;
-  late TextEditingController _precioController;
+  late TextEditingController _precioMananaController;
+  late TextEditingController _precioTardeController;
   XFile? _selectedImage;
   bool _isSaving = false;
   bool _clearExistingImage = false; // Nuevo estado para indicar si se debe eliminar la imagen existente
@@ -35,17 +40,30 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
     super.initState();
     _nombreController = TextEditingController(text: widget.initialNombre);
     // Formatear el precio inicial para mostrarlo correctamente en el TextField
-    _precioController = TextEditingController(
-      text: widget.initialPrecioPorAsiento != null
-          ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsiento!)
+    // _precioController = TextEditingController(
+    //   text: widget.initialPrecioPorAsiento != null
+    //       ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsiento!)
+    //       : '',
+    // );
+    _precioMananaController = TextEditingController(
+      text: widget.initialPrecioPorAsientoTurnoManana != null
+          ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsientoTurnoManana!)
           : '',
     );
+    _precioTardeController = TextEditingController(
+      text: widget.initialPrecioPorAsientoTurnoTarde != null
+          ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsientoTurnoTarde!)
+          : '',
+    );
+  
   }
 
   @override
   void dispose() {
     _nombreController.dispose();
-    _precioController.dispose();
+    // _precioController.dispose();
+    _precioMananaController.dispose();
+    _precioTardeController.dispose();
     super.dispose();
   }
 
@@ -71,17 +89,23 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
         _isSaving = true;
       });
       final nombre = _nombreController.text.trim();
-      // Usar ParserUtils.parseDouble para manejar el formato de moneda
-      final precio = ParserUtils.parseDouble(_precioController.text.trim());
+    // Sólo parsear si no está vacío, si no dejar null
+    final double? precioManana = _precioMananaController.text.trim().isEmpty
+        ? null
+        : ParserUtils.parseDouble(_precioMananaController.text.trim());
+    final double? precioTarde = _precioTardeController.text.trim().isEmpty
+        ? null
+        : ParserUtils.parseDouble(_precioTardeController.text.trim());
+
 
       // Si se marcó para limpiar la imagen existente, pasar null para la URL de la imagen
       XFile? finalImageFile = _selectedImage;
       if (_clearExistingImage && _selectedImage == null) {
         // Si el usuario explícitamente borró la imagen y no seleccionó una nueva
-        await widget.onCrear(nombre, null, precio);
+        await widget.onCrear(nombre, null, precioManana, precioTarde);
       } else {
         // Si hay una nueva imagen seleccionada o no se borró la existente
-        await widget.onCrear(nombre, finalImageFile, precio);
+        await widget.onCrear(nombre, finalImageFile, precioManana, precioTarde);
       }
 
       if (mounted) {
@@ -117,10 +141,52 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                 },
               ),
               const SizedBox(height: 20),
+              // TextFormField(
+              //   controller: _precioController,
+              //   decoration: const InputDecoration(
+              //     labelText: 'Precio por Asiento (opcional)',
+              //     hintText: 'Ej: 50.000 o 50,000.00',
+              //     border: OutlineInputBorder(),
+              //     prefixIcon: Icon(Icons.attach_money),
+              //   ),
+              //   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              //   // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+              //   validator: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final parsed = ParserUtils.parseDouble(value);
+              //       if (parsed == null || parsed < 0) {
+              //         return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+              //       }
+              //     }
+              //     return null;
+              //   },
+              // ),
+
               TextFormField(
-                controller: _precioController,
+                controller: _precioMananaController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio por Asiento (opcional)',
+                  labelText: 'Precio por Asiento (Turno Mañana)',
+                  hintText: 'Ej: 50.000 o 50,000.00',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final parsed = ParserUtils.parseDouble(value);
+                    if (parsed == null || parsed < 0) {
+                      return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                    }
+                  }
+                  return null;
+                },
+              ),
+
+              TextFormField(
+                controller: _precioTardeController,
+                decoration: const InputDecoration(
+                  labelText: 'Precio por Asiento (Turno Tarde)',
                   hintText: 'Ej: 50.000 o 50,000.00',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
