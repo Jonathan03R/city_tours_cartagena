@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/models/agencia.dart'; // Importar el modelo Agencia
 import 'package:citytourscartagena/core/models/parsed_reserva.dart';
 import 'package:citytourscartagena/core/utils/parsers/parser_rule.dart';
 import 'package:citytourscartagena/core/utils/parsers/rules/agencia_rule.dart';
@@ -31,7 +32,8 @@ class TextParser {
         _agenciaRule = AgenciaRule(); // Instancia de la regla de agencia
 
   /// Parsea el texto de una reserva y devuelve un Map<String, dynamic>.
-  Map<String, dynamic> parseReservaText(String text) {
+  /// MODIFICADO: Ahora recibe la lista de agencias como parámetro.
+  Map<String, dynamic> parseReservaText(String text, List<Agencia> agencias) {
     final cleanText = text.trim();
     final lines = cleanText.split('\n');
 
@@ -48,8 +50,8 @@ class TextParser {
       }
     }
 
-    // Aplica la regla de agencia al final, usando el texto completo
-    _agenciaRule.applyToFullText(parsedReserva);
+    // Aplica la regla de agencia al final, usando el texto completo y la lista de agencias
+    _agenciaRule.applyToFullText(parsedReserva, agencias);
 
     return parsedReserva.toMap();
   }

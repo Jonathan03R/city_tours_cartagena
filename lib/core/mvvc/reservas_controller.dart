@@ -3,319 +3,282 @@ import 'dart:async'; // Importar para StreamSubscription
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
-import 'package:flutter/foundation.dart';
+import 'package:citytourscartagena/core/services/firestore_service.dart';
+import 'package:citytourscartagena/core/utils/extensions.dart'; // Importar la extensión compartida
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Para DateFilterType
+import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Importar para DocumentSnapshot
+import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
 
-import '../services/firestore_service.dart';
+class ReservasController extends ChangeNotifier {
+  final FirestoreService _firestoreService;
+  StreamSubscription? _reservasSubscription; // Para gestionar la suscripción al stream
 
-class ReservasController {
-  static final FirestoreService _firestoreService = FirestoreService();
-  static List<Reserva> _reservasCache = [];
-  static List<Agencia> _agenciasCache = [];
-  static bool _initialized = false;
-  static StreamSubscription?
-  _agenciasSubscription; // Para escuchar cambios en agencias
+  // --- Filtros ---
+  TurnoType? _turnoFilter;   
+  DateFilterType _selectedFilter = DateFilterType.today;
+  DateTime? _customDate;
+  String? _agenciaIdFilter; // Para filtrar por agencia en ReservasView
 
-  static Future<void> initialize() async {
-    if (_initialized) return;
-    try {
-      debugPrint('🔄 Inicializando Firebase Controller...');
-      await _firestoreService.initializeDefaultData();
+  // --- Paginación ---
+  int _itemsPerPage = 10; // Default items per page
+  int _currentPageIndex = 0; // 0-indexed current page
+  List<DocumentSnapshot?> _pageLastDocuments = [null]; // Stores the last document of each loaded page
+  bool _isFetchingPage = false; // To prevent multiple simultaneous fetches
+  bool _hasMorePages = true; // Indicates if there are more pages after the current one
+  List<ReservaConAgencia> _allLoadedReservas = []; // DECLARACIÓN AÑADIDA AQUÍ
+  bool _isLoading = false; // Nuevo estado de carga
 
-      // Suscribirse al stream de agencias para mantener la caché actualizada en tiempo real
-      _agenciasSubscription = _firestoreService.getAgenciasStream().listen(
-        (agencias) {
-          _agenciasCache = agencias;
-          debugPrint(
-            '✅ ${_agenciasCache.length} agencias actualizadas en cache (via stream)',
-          );
-        },
-        onError: (e) {
-          debugPrint('❌ Error en el stream de agencias: $e');
-        },
-      );
+  // --- Streams ---
+  final BehaviorSubject<List<ReservaConAgencia>> _filteredReservasSubject =
+      BehaviorSubject<List<ReservaConAgencia>>();
+  Stream<List<ReservaConAgencia>> get filteredReservasStream => // CORREGIDO: ReservaConAgencia
+      _filteredReservasSubject.stream;
 
-      // Cargar agencias una vez al inicio para asegurar que la caché no esté vacía
-      // antes de que el stream entregue el primer evento.
-      // Esto es un fallback, el stream debería mantenerla actualizada.
-      if (_agenciasCache.isEmpty) {
-        _agenciasCache = await _firestoreService.getAllAgencias();
-        debugPrint(
-          '✅ ${_agenciasCache.length} agencias cargadas inicialmente en cache (fallback)',
-        );
-      }
+  List<Agencia> _allAgencias = []; // Cache de agencias para combinar
 
-      _initialized = true;
-      debugPrint('🎉 Firebase Controller inicializado exitosamente');
-    } catch (e) {
-      debugPrint('❌ Error inicializando Firebase Controller: $e');
+  ReservasController({FirestoreService? firestoreService})
+    : _firestoreService = firestoreService ?? FirestoreService() {
+    _initializeController(); // Call async initialization
+  }
+
+  Future<void> _initializeController() async {
+    _isLoading = true;
+    notifyListeners();
+    await _loadAllAgencias(); // Await agency loading
+    _updateFilteredReservasStream(resetPagination: true); // Then update stream
+  }
+
+  // Getters para la UI
+  DateFilterType get selectedFilter => _selectedFilter;
+  DateTime? get customDate => _customDate;
+  List<ReservaConAgencia> get currentReservas => _allLoadedReservas; // Ahora devuelve todas las cargadas
+  TurnoType? get turnoFilter => _turnoFilter; // Exponer el filtro de turno
+  bool get isLoading => _isLoading; // Exponer el estado de carga
+
+  // Getters para la paginación
+  int get itemsPerPage => _itemsPerPage;
+  int get currentPage => _currentPageIndex + 1; // 1-indexed for UI
+  bool get isFetchingPage => _isFetchingPage;
+  bool get canGoPrevious => _currentPageIndex > 0;
+  bool get canGoNext => _hasMorePages;
+
+  // Método para cargar todas las agencias (para uso interno y dropdowns)
+  Future<void> _loadAllAgencias() async {
+    _allAgencias = await _firestoreService.getAllAgencias();
+    // debugPrint('✅ Agencias cargadas: ${_allAgencias.length}'); // Debug print
+    // No notificar listeners aquí, ya que _updateFilteredReservasStream lo hará
+  }
+
+  // Método para obtener todas las agencias (para dropdowns en la UI)
+  List<Agencia> getAllAgencias() {
+    return _allAgencias;
+  }
+
+  // NUEVO: Stream para obtener TODAS las reservas con sus agencias, sin filtros
+  Stream<List<ReservaConAgencia>> getAllReservasConAgenciaStream() {
+    return Rx.combineLatest2<
+      List<Reserva>,
+      List<Agencia>,
+      List<ReservaConAgencia>
+    >(
+      _firestoreService
+          .getReservasStream(), // Stream de todas las reservas sin filtrar
+      _firestoreService.getAgenciasStream(), // Stream de todas las agencias
+      (reservas, agencias) {
+        return reservas
+            .where((r) => agencias.any((a) => a.id == r.agenciaId))
+            .map((r) {
+              final ag = agencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
+                         Agencia(id: r.agenciaId, nombre: 'Agencia Desconocida', eliminada: true); // Fallback
+              return ReservaConAgencia(reserva: r, agencia: ag);
+            })
+            .toList();
+      },
+    );
+  }
+
+  // Método para actualizar el filtro y recargar el stream
+  /// Actualiza los filtros de reservas y recarga el stream
+  /// @param filter El filtro de tipo DateFilterType a aplicar
+  /// @param date Fecha personalizada si se aplica
+  /// @param agenciaId ID de la agencia para filtrar reservas
+  /// @param turno Turno seleccionado para filtrar reservas
+  /// @note Este método no fuerza una recarga de la UI, ya que el stream
+  ///       se actualizará automáticamente al cambiar los filtros.
+  /// @note Si el filtro no cambia, no se actualiza el stream.
+  /// @note Si se cambia el filtro, se reinicia la paginación.
+  /// @note Si se cambia el turno, se reinicia la paginación.
+  /// @note Si se cambia la agencia, se reinicia la paginación.
+  /// @note Si se cambia la fecha personalizada, se reinicia la paginación.
+  /// @note Si se cambia el número de elementos por página, se reinicia la paginación.
+  /// @note Si se cambia la página actual, se reinicia la paginación.
+  /// @note Si se cambia el estado de carga, se reinicia la paginación.
+  /// @note Si se cambia el estado de paginación, se reinicia la paginación.
+  void updateFilter(
+    DateFilterType filter, {
+    DateTime? date,
+    String? agenciaId,
+    TurnoType? turno,
+  }) {
+
+  //   debugPrint('🔎 filtro prueba → '
+  //   'filter: $filter, '
+  //   'customDate: ${date?.toIso8601String() ?? "null"}, '
+  //   'agenciaId: ${agenciaId ?? "null"}, '
+  //   'turno: ${turno?.toString() ?? "null"}'
+  // );
+    // Solo actualizar si los filtros realmente cambian
+    /// la condicion dice que si el filtro, fecha, agencia o turno no cambian, no se actualiza
+    /// esto previene recargas innecesarias del stream
+    /// ejemplo: si el filtro es DateFilterType.today y la fecha es null, no se actualiza
+    /// la condicion dice _selectedFilter == filter lo que quiere decir que el filtro no ha cambiado
+    if (_selectedFilter == filter &&
+        _customDate == date &&
+        _agenciaIdFilter == agenciaId &&
+        _turnoFilter == turno) {
+      return;
     }
+
+    _selectedFilter = filter;
+    _customDate = date;
+    _agenciaIdFilter = agenciaId;
+    _turnoFilter = turno;
+    _updateFilteredReservasStream(resetPagination: true); // Resetear paginación al cambiar filtros
+    notifyListeners(); // Notificar para que la UI refleje los nuevos filtros
   }
 
-  // Método para limpiar la suscripción cuando la app se cierra
-  static void dispose() {
-    _agenciasSubscription?.cancel();
-    debugPrint('🧹 Firebase Controller suscripciones limpiadas.');
+  // Método para establecer el número de elementos por página
+  void setItemsPerPage(int newSize) {
+    if (_itemsPerPage == newSize) return;
+    _itemsPerPage = newSize;
+    _updateFilteredReservasStream(resetPagination: true);
   }
 
-  // ========== RESERVAS ==========
-
-  // Método Future existente (no modificado)
-  static Future<List<ReservaConAgencia>> getAllReservas() async {
-    final raw = await _firestoreService.getAllReservas();
-    _reservasCache = raw; // Actualiza la caché de reservas
-    return await _combineReservasWithAgencias(raw);
+  // Método para cargar la siguiente página de reservas
+  void nextPage() {
+    if (!canGoNext || _isFetchingPage) return;
+    _currentPageIndex++;
+    _updateFilteredReservasStream(resetPagination: false);
   }
 
-  static Stream<List<ReservaConAgencia>> getReservasConAgenciasStream() {
-    return _firestoreService.getReservasConAgenciasStream();
+  // Método para cargar la página anterior de reservas
+  void previousPage() {
+    if (!canGoPrevious || _isFetchingPage) return;
+    _currentPageIndex--;
+    _updateFilteredReservasStream(resetPagination: false);
   }
 
-  // Método Stream existente (no modificado)
-  static Stream<List<ReservaConAgencia>> getReservasStream() {
-    return getReservasConAgenciasStream();
-  }
+  // Lógica para construir el stream de reservas basado en el filtro y paginación
+  void _updateFilteredReservasStream({
+    bool resetPagination = false,
+  }) {
+    _reservasSubscription?.cancel(); // Cancelar suscripción anterior para evitar duplicados
 
-  // Método Future existente (no modificado)
-  static Future<List<ReservaConAgencia>> getReservasByFecha(
-    DateTime fecha,
-  ) async {
-    try {
-      final reservas = await _firestoreService.getReservasByFecha(fecha);
-      return await _combineReservasWithAgencias(reservas);
-    } catch (e) {
-      debugPrint('❌ Error obteniendo reservas por fecha: $e');
-      return [];
+    if (resetPagination) {
+      _allLoadedReservas = [];
+      _currentPageIndex = 0;
+      _pageLastDocuments = [null]; // Reset to start from the beginning
+      _hasMorePages = true;
+      _filteredReservasSubject.add([]);
     }
+
+    _isFetchingPage = true;
+    _isLoading = true; // Indicar que se está cargando
+    notifyListeners();
+
+    DocumentSnapshot? startAfterDoc = _pageLastDocuments[_currentPageIndex];
+
+    _reservasSubscription = _firestoreService.getPaginatedReservasFiltered(
+      turno: _turnoFilter,
+      filter: _selectedFilter,
+      customDate: _customDate,
+      agenciaId: _agenciaIdFilter,
+      limit: _itemsPerPage + 1, // Fetch one extra to check if there's a next page
+      startAfterDocument: startAfterDoc,
+    ).listen(
+      (snapshot) {
+        final fetchedDocs = snapshot.docs;
+        
+        _hasMorePages = fetchedDocs.length > _itemsPerPage;
+
+        final currentReservasDocs = fetchedDocs.take(_itemsPerPage).toList();
+        
+        // Update _pageLastDocuments for the next page if we are moving forward
+        // and there are actual documents on the current page.
+        if (_hasMorePages && _currentPageIndex + 1 == _pageLastDocuments.length) {
+          if (currentReservasDocs.isNotEmpty) {
+            _pageLastDocuments.add(currentReservasDocs.last);
+          } else {
+            // This case means we thought there was a next page, but the current page
+            // is actually empty. This might happen if data was deleted.
+            // We should mark no more pages and potentially trim _pageLastDocuments.
+            _hasMorePages = false;
+            // Trim _pageLastDocuments to current index + 1 if it's longer
+            if (_pageLastDocuments.length > _currentPageIndex + 1) {
+              _pageLastDocuments = _pageLastDocuments.sublist(0, _currentPageIndex + 1);
+            }
+          }
+        } else if (!_hasMorePages && _pageLastDocuments.length > _currentPageIndex + 1) {
+          // If we are on the last page and there are no more, ensure _pageLastDocuments
+          // doesn't contain stale markers for non-existent future pages.
+          _pageLastDocuments = _pageLastDocuments.sublist(0, _currentPageIndex + 1);
+        }
+
+        // Map fetched reservations to ReservaConAgencia, ensuring agency data is available
+        _allLoadedReservas = currentReservasDocs
+            .map((doc) {
+              // CORRECCIÓN: doc.data() ya es un objeto Reserva debido al withConverter en FirestoreService
+              final r = doc.data(); 
+              // Safely get the agency, providing a fallback if not found in _allAgencias
+              final ag = _allAgencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
+                         Agencia(id: r.agenciaId, nombre: 'Agencia Desconocida', eliminada: true);
+              return ReservaConAgencia(reserva: r, agencia: ag);
+            })
+            .toList();
+        
+        _isFetchingPage = false;
+        _isLoading = false; // Finalizar carga
+        _filteredReservasSubject.add(_allLoadedReservas);
+        notifyListeners();
+        // debugPrint('🔄 Reservas cargadas en vista: ${_allLoadedReservas.length}');
+      },
+      onError: (e) {
+        debugPrint('Error en ReservasController stream: $e');
+        _isFetchingPage = false;
+        _isLoading = false; // Finalizar carga con error
+        _filteredReservasSubject.addError(e);
+        notifyListeners();
+      },
+    );
   }
 
-  // NUEVO: Método Stream para Reservas por Fecha
-  static Stream<List<ReservaConAgencia>> getReservasByFechaStream(
-    DateTime fecha,
-  ) {
-    return _firestoreService.getReservasByFechaStream(fecha).asyncMap((
-      reservas,
-    ) async {
-      // No actualizamos _reservasCache aquí para evitar sobrescribir el stream principal
-      return await _combineReservasWithAgencias(reservas);
-    });
+  // Métodos CRUD que delegan a FirestoreService (ya no fuerzan recarga)
+  Future<void> addReserva(Reserva reserva) async {
+    await _firestoreService.addReserva(reserva);
+    // El stream de Firestore se encargará de actualizar la UI
   }
 
-  // Método Future existente (no modificado)
-  static Future<List<ReservaConAgencia>> getReservasByDateRange(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
-    try {
-      final reservas = await _firestoreService.getReservasByDateRange(
-        startDate,
-        endDate,
-      );
-      return await _combineReservasWithAgencias(reservas);
-    } catch (e) {
-      debugPrint('❌ Error obteniendo reservas por rango: $e');
-      return [];
-    }
+  Future<void> updateReserva(String id, Reserva reserva) async {
+    await _firestoreService.updateReserva(id, reserva);
+    // El stream de Firestore se encargará de actualizar la UI
   }
 
-  // NUEVO: Método Stream para Reservas por Rango de Fechas
-  static Stream<List<ReservaConAgencia>> getReservasByDateRangeStream(
-    DateTime startDate,
-    DateTime endDate,
-  ) {
-    return _firestoreService
-        .getReservasByDateRangeStream(startDate, endDate)
-        .asyncMap((reservas) async {
-          return await _combineReservasWithAgencias(reservas);
-        });
+  Future<void> deleteReserva(String id) async {
+    await _firestoreService.deleteReserva(id);
+    // El stream de Firestore se encargará de actualizar la UI
   }
 
-  // Método Future existente (no modificado)
-  static Future<List<ReservaConAgencia>> getReservasLastWeek() async {
-    final now = DateTime.now();
-    final lastWeek = now.subtract(const Duration(days: 7));
-    return await getReservasByDateRange(lastWeek, now);
-  }
-
-  // NUEVO: Método Stream para Reservas de la Última Semana
-  static Stream<List<ReservaConAgencia>> getReservasLastWeekStream() {
-    final now = DateTime.now();
-    final lastWeek = now.subtract(const Duration(days: 7));
-    return getReservasByDateRangeStream(lastWeek, now);
-  }
-
-  // Método Future existente (no modificado)
-  static Future<List<ReservaConAgencia>> getReservasByAgencia(
-    String agenciaId,
-  ) async {
-    try {
-      final reservas = await _firestoreService.getReservasByAgencia(agenciaId);
-      return await _combineReservasWithAgencias(reservas);
-    } catch (e) {
-      debugPrint('❌ Error obteniendo reservas por agencia: $e');
-      return [];
-    }
-  }
-
-  // NUEVO: Método Stream para Reservas por Agencia
-  static Stream<List<ReservaConAgencia>> getReservasByAgenciaStream(
-    String agenciaId,
-  ) {
-    return _firestoreService.getReservasByAgenciaStream(agenciaId).asyncMap((
-      reservas,
-    ) async {
-      return await _combineReservasWithAgencias(reservas);
-    });
-  }
-
-  static Future<void> addReserva(Reserva reserva) async {
-    try {
-      await _firestoreService.addReserva(reserva);
-      debugPrint('✅ Reserva agregada exitosamente');
-    } catch (e) {
-      debugPrint('❌ Error agregando reserva: $e');
-      throw e;
-    }
-  }
-
-  static Future<void> updateReserva(String id, Reserva reserva) async {
-    try {
-      await _firestoreService.updateReserva(id, reserva);
-      debugPrint('✅ Reserva actualizada exitosamente');
-    } catch (e) {
-      debugPrint('❌ Error actualizando reserva: $e');
-      throw e;
-    }
-  }
-
-  static Future<void> deleteReserva(String id) async {
-    try {
-      await _firestoreService.deleteReserva(id);
-      debugPrint('✅ Reserva eliminada exitosamente');
-    } catch (e) {
-      debugPrint('❌ Error eliminando reserva: $e');
-      throw e;
-    }
-  }
-
-  // ========== AGENCIAS ==========
-
-  // Método Stream existente (no modificado)
-  static Stream<List<AgenciaConReservas>> getAgenciasStream() {
-    return _firestoreService.getAgenciasStream().asyncMap((agencias) async {
-      _agenciasCache = agencias; // Actualiza la caché de agencias
-      // Calcular total de reservas para cada agencia
-      final agenciasConReservas = <AgenciaConReservas>[];
-      for (final agencia in agencias) {
-        // Usamos la caché de reservas para calcular el total, que se actualiza
-        // con el stream principal de reservas.
-        final totalReservas = _reservasCache
-            .where((r) => r.agenciaId == agencia.id)
-            .length;
-        agenciasConReservas.add(
-          AgenciaConReservas(
-            id: agencia.id,
-            nombre: agencia.nombre,
-            imagenUrl: agencia.imagenUrl,
-            totalReservas: totalReservas,
-          ),
-        );
-      }
-      return agenciasConReservas;
-    });
-  }
-
-  // Método existente (no modificado)
-  static List<AgenciaConReservas> getAllAgencias() {
-    return _agenciasCache.map((agencia) {
-      final totalReservas = _reservasCache
-          .where((r) => r.agenciaId == agencia.id)
-          .length;
-      return AgenciaConReservas(
-        id: agencia.id,
-        nombre: agencia.nombre,
-        imagenUrl: agencia.imagenUrl,
-        totalReservas: totalReservas,
-      );
-    }).toList();
-  }
-
-  // Método existente (no modificado)
-  static Agencia? getAgenciaById(String id) {
-    try {
-      return _agenciasCache.firstWhere((a) => a.id == id);
-    } catch (e) {
-      debugPrint('❌ Agencia no encontrada: $id');
-      return null;
-    }
-  }
-
-  // Método existente (no modificado)
-  static List<Agencia> searchAgencias(String query) {
-    return _agenciasCache
-        .where(
-          (agencia) =>
-              agencia.nombre.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList();
-  }
-
-  // Método existente (no modificado)
-  static Future<Agencia> addAgencia(String nombre) async {
-    try {
-      final newAgencia = Agencia(id: '', nombre: nombre);
-      await _firestoreService.addAgencia(newAgencia);
-      // Recargar cache (esto se hará automáticamente por el listener del stream de agencias)
-      // _agenciasCache = await _firestoreService.getAllAgencias(); // Ya no es necesario aquí
-      // Encontrar la agencia recién creada
-      final createdAgencia = _agenciasCache.firstWhere(
-        (a) => a.nombre == nombre,
-      );
-      debugPrint('✅ Agencia agregada: $nombre');
-      return createdAgencia;
-    } catch (e) {
-      debugPrint('❌ Error agregando agencia: $e');
-      throw e;
-    }
-  }
-
-  // ========== MÉTODOS AUXILIARES ==========
-  static Future<List<ReservaConAgencia>> _combineReservasWithAgencias(
-    List<Reserva> reservas,
-  ) async {
-    // Asegurar que tenemos las agencias en cache
-    if (_agenciasCache.isEmpty) {
-      _agenciasCache = await _firestoreService.getAllAgencias();
-      debugPrint(
-        '⚠️ Caché de agencias cargada por fallback en _combineReservasWithAgencias.',
-      );
-    }
-    return reservas.map((reserva) {
-      final agencia = _agenciasCache.firstWhere(
-        (a) => a.id == reserva.agenciaId,
-        orElse: () => Agencia(id: '', nombre: 'Sin agencia'),
-      );
-      return ReservaConAgencia(reserva: reserva, agencia: agencia);
-    }).toList();
-  }
-
-  static DateTime getTodayDate() {
-    return DateTime.now();
-  }
-
-  // Método para debug
+  // Método para depuración (mantener si es útil)
   static void printDebugInfo() {
-    debugPrint('=== FIREBASE DEBUG INFO ===');
-    debugPrint('Initialized: $_initialized');
-    debugPrint('Reservas en cache: ${_reservasCache.length}');
-    debugPrint('Agencias en cache: ${_agenciasCache.length}');
-    for (var reserva in _reservasCache) {
-      debugPrint(
-        '- ${reserva.nombreCliente} (${reserva.fecha}) - Hotel: ${reserva.hotel}',
-      );
-    }
-    for (var agencia in _agenciasCache) {
-      debugPrint('- ${agencia.nombre}');
-    }
-    debugPrint('============================');
+    debugPrint('ReservasController debug info: (implementar si es necesario)');
+  }
+
+  @override
+  void dispose() {
+    _reservasSubscription?.cancel(); // Cancelar la suscripción al disponer
+    _filteredReservasSubject.close(); // Es crucial cerrar el BehaviorSubject
+    super.dispose();
   }
 }

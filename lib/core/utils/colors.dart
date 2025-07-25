@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   static Color getEstadoColor(EstadoReserva estado) {
     switch (estado) {
-      case EstadoReserva.confirmada:
+      case EstadoReserva.pagada:
         return Colors.green.shade600;
       case EstadoReserva.pendiente:
         return Colors.orange.shade600;
@@ -15,7 +15,7 @@ class AppColors {
 
   static Color getEstadoBackgroundColor(EstadoReserva estado) {
     switch (estado) {
-      case EstadoReserva.confirmada:
+      case EstadoReserva.pagada:
         return Colors.green.shade50;
       case EstadoReserva.pendiente:
         return Colors.orange.shade50;
@@ -26,7 +26,7 @@ class AppColors {
 
   static Color getEstadoBorderColor(EstadoReserva estado) {
     switch (estado) {
-      case EstadoReserva.confirmada:
+      case EstadoReserva.pagada:
         return Colors.green.shade200;
       case EstadoReserva.pendiente:
         return Colors.orange.shade200;

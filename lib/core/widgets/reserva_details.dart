@@ -77,7 +77,7 @@ class _ReservaDetailsState extends State<ReservaDetails> {
         observacion: _observacionController.text,
       );
 
-      await ReservasController.updateReserva(widget.reserva.id, updatedReserva);
+      await ReservasController().updateReserva(widget.reserva.id, updatedReserva);
       widget.onUpdate();
       
       setState(() {
@@ -413,7 +413,7 @@ class _ReservaDetailsState extends State<ReservaDetails> {
 
   IconData _getEstadoIcon(EstadoReserva estado) {
     switch (estado) {
-      case EstadoReserva.confirmada:
+      case EstadoReserva.pagada:
         return Icons.check_circle;
       case EstadoReserva.pendiente:
         return Icons.schedule;

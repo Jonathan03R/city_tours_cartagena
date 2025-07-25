@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 class ConfiguracionController extends ChangeNotifier {
   Configuracion? configuracion;
 
+  ConfiguracionController() {
+    cargarConfiguracion();
+  }
+
   Future<void> cargarConfiguracion() async {
     configuracion = await ConfiguracionService.getConfiguracion();
     notifyListeners();

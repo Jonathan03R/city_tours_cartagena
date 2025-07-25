@@ -12,7 +12,7 @@ class EstadoRule extends ParserRule {
   void apply(String rawLine, ParsedReserva out) {
     final estadoStr = extractValue(rawLine).toLowerCase();
     if (estadoStr.contains('confirmad') || estadoStr.contains('pagad')) {
-      out.estado = EstadoReserva.confirmada;
+      out.estado = EstadoReserva.pagada;
     } else if (estadoStr.contains('cancelad')) {
       out.estado = EstadoReserva.cancelada;
     } else {

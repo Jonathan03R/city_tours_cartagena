@@ -1,19 +1,20 @@
 import 'dart:io';
 
+import 'package:citytourscartagena/core/utils/parsers/parser_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CrearAgenciaForm extends StatefulWidget {
   final String? initialNombre;
-  final File? initialImagenFile;
-  final String? initialImagenUrl;               // ← Nuevo, opcional
-  final void Function(String nombre, File? imagen) onCrear;
+  final String? initialImagenUrl;
+  final double? initialPrecioPorAsiento;
+  final Function(String nombre, XFile? imagenFile, double? precioPorAsiento) onCrear;
 
   const CrearAgenciaForm({
     super.key,
     this.initialNombre,
-    this.initialImagenFile,
-    this.initialImagenUrl,                      // ← Nuevo
+    this.initialImagenUrl,
+    this.initialPrecioPorAsiento,
     required this.onCrear,
   });
 
@@ -24,87 +25,241 @@ class CrearAgenciaForm extends StatefulWidget {
 class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nombreController;
-  File? _imagenSeleccionada;
-  bool _borrarImagen = false;
+  late TextEditingController _precioController;
+  XFile? _selectedImage;
+  bool _isSaving = false;
+  bool _clearExistingImage = false; // Nuevo estado para indicar si se debe eliminar la imagen existente
 
   @override
   void initState() {
     super.initState();
-    // Nombre pre-cargado
-    _nombreController = TextEditingController(text: widget.initialNombre ?? '');
-    // Si llamas con initialImagenFile (File), lo cargas; sino null
-    _imagenSeleccionada = widget.initialImagenFile;
+    _nombreController = TextEditingController(text: widget.initialNombre);
+    // Formatear el precio inicial para mostrarlo correctamente en el TextField
+    _precioController = TextEditingController(
+      text: widget.initialPrecioPorAsiento != null
+          ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsiento!)
+          : '',
+    );
   }
 
-  Future<void> _seleccionarImagen() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _imagenSeleccionada = File(picked.path);
-        _borrarImagen = false;
-      });
-    }
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _precioController.dispose();
+    super.dispose();
   }
 
-  void _toggleBorrarImagen() {
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     setState(() {
-      _borrarImagen = !_borrarImagen;
-      if (_borrarImagen) _imagenSeleccionada = null;
+      _selectedImage = image;
+      _clearExistingImage = false; // Si se selecciona una nueva imagen, no se borra la existente
     });
   }
 
-  void _guardar() {
-    if (!_formKey.currentState!.validate()) return;
-    final imagenParaEnviar = _borrarImagen ? null : _imagenSeleccionada;
-    widget.onCrear(_nombreController.text.trim(), imagenParaEnviar);
-    Navigator.of(context).pop();
+  void _clearImage() {
+    setState(() {
+      _selectedImage = null;
+      _clearExistingImage = true; // Marcar para eliminar la imagen existente
+    });
+  }
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isSaving = true;
+      });
+      final nombre = _nombreController.text.trim();
+      // Usar ParserUtils.parseDouble para manejar el formato de moneda
+      final precio = ParserUtils.parseDouble(_precioController.text.trim());
+
+      // Si se marcó para limpiar la imagen existente, pasar null para la URL de la imagen
+      XFile? finalImageFile = _selectedImage;
+      if (_clearExistingImage && _selectedImage == null) {
+        // Si el usuario explícitamente borró la imagen y no seleccionó una nueva
+        await widget.onCrear(nombre, null, precio);
+      } else {
+        // Si hay una nueva imagen seleccionada o no se borró la existente
+        await widget.onCrear(nombre, finalImageFile, precio);
+      }
+
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Decide qué mostrar en el avatar:
-    ImageProvider? avatarImage;
-    if (_imagenSeleccionada != null) {
-      avatarImage = FileImage(_imagenSeleccionada!);
-    } else if (!_borrarImagen && widget.initialImagenFile != null) {
-      avatarImage = FileImage(widget.initialImagenFile!);
-    } else if (!_borrarImagen && widget.initialImagenUrl != null) {
-      avatarImage = NetworkImage(widget.initialImagenUrl!);
-    }
-
     return AlertDialog(
-      title: Text(widget.initialNombre != null ? 'Editar Agencia' : 'Agregar Agencia'),
-      content: Form(
-        key: _formKey,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Stack(alignment: Alignment.topRight, children: [
-            GestureDetector(
-              onTap: _seleccionarImagen,
-              child: CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: avatarImage,
-                child: avatarImage == null ? const Icon(Icons.add_a_photo, size: 32) : null,
+      title: Text(widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nombreController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de la Agencia',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.business),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa un nombre';
+                  }
+                  return null;
+                },
               ),
-            ),
-            if (avatarImage != null)
-              IconButton(
-                icon: Icon(_borrarImagen ? Icons.undo : Icons.delete, color: Colors.red),
-                onPressed: _toggleBorrarImagen,
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _precioController,
+                decoration: const InputDecoration(
+                  labelText: 'Precio por Asiento (opcional)',
+                  hintText: 'Ej: 50.000 o 50,000.00',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final parsed = ParserUtils.parseDouble(value);
+                    if (parsed == null || parsed < 0) {
+                      return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                    }
+                  }
+                  return null;
+                },
               ),
-          ]),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _nombreController,
-            decoration: const InputDecoration(labelText: 'Nombre de la agencia'),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+              const SizedBox(height: 20),
+              // Sección de selección y vista previa de imagen
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.image, color: Colors.blue.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Imagen de la Agencia',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _pickImage,
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Seleccionar Imagen'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (_selectedImage != null || (widget.initialImagenUrl != null && !_clearExistingImage))
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.red),
+                              onPressed: _clearImage,
+                              tooltip: 'Eliminar imagen',
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Vista previa de la imagen
+                    if (_selectedImage != null)
+                      Center(
+                        child: Image.file(
+                          File(_selectedImage!.path),
+                          height: 120,
+                          width: 120,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else if (widget.initialImagenUrl != null && !_clearExistingImage)
+                      Center(
+                        child: Image.network(
+                          widget.initialImagenUrl!,
+                          height: 120,
+                          width: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 120,
+                            width: 120,
+                            color: Colors.grey.shade200,
+                            child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                          ),
+                        ),
+                      )
+                    else
+                      Center(
+                        child: Container(
+                          height: 120,
+                          width: 120,
+                          color: Colors.grey.shade200,
+                          child: Icon(Icons.image_not_supported, color: Colors.grey.shade400),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        _selectedImage != null
+                            ? 'Nueva imagen: ${_selectedImage!.name}'
+                            : (widget.initialImagenUrl != null && !_clearExistingImage)
+                                ? 'Imagen actual'
+                                : 'Ninguna imagen seleccionada',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-        ElevatedButton(onPressed: _guardar, child: const Text('Guardar')),
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _submitForm,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green.shade600,
+            foregroundColor: Colors.white,
+          ),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                )
+              : Text(widget.initialNombre != null ? 'Guardar Cambios' : 'Crear Agencia'),
+        ),
       ],
     );
   }

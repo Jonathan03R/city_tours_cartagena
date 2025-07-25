@@ -79,9 +79,11 @@ class _AddReservaFormState extends State<AddReservaForm> {
           observacion: _observacionController.text,
           costoAsiento: _precioPorAsiento,
           telefono: _telefonoController.text.trim(), 
+          turno: null, // Aquí puedes asignar el turno si es necesario
         );
 
-        await ReservasController.addReserva(newReserva);
+        final reservasController = ReservasController();
+        await reservasController.addReserva(newReserva);
         widget.onAdd();
         
         if (mounted) {
