@@ -13,10 +13,11 @@ import 'package:rxdart/rxdart.dart';
 
 class ReservasController extends ChangeNotifier {
   final FirestoreService _firestoreService;
-  StreamSubscription? _reservasSubscription; // Para gestionar la suscripción al stream
+  StreamSubscription?
+  _reservasSubscription; // Para gestionar la suscripción al stream
 
   // --- Filtros ---
-  TurnoType? _turnoFilter;   
+  TurnoType? _turnoFilter;
   DateFilterType _selectedFilter = DateFilterType.today;
   DateTime? _customDate;
   String? _agenciaIdFilter; // Para filtrar por agencia en ReservasView
@@ -24,23 +25,36 @@ class ReservasController extends ChangeNotifier {
   // --- Paginación ---
   int _itemsPerPage = 10; // Default items per page
   int _currentPageIndex = 0; // 0-indexed current page
-  List<DocumentSnapshot?> _pageLastDocuments = [null]; // Stores the last document of each loaded page
+  List<DocumentSnapshot?> _pageLastDocuments = [
+    null,
+  ]; // Stores the last document of each loaded page
   bool _isFetchingPage = false; // To prevent multiple simultaneous fetches
-  bool _hasMorePages = true; // Indicates if there are more pages after the current one
+  bool _hasMorePages =
+      true; // Indicates if there are more pages after the current one
   List<ReservaConAgencia> _allLoadedReservas = []; // DECLARACIÓN AÑADIDA AQUÍ
   bool _isLoading = false; // Nuevo estado de carga
 
   // --- Streams ---
   final BehaviorSubject<List<ReservaConAgencia>> _filteredReservasSubject =
       BehaviorSubject<List<ReservaConAgencia>>();
-  Stream<List<ReservaConAgencia>> get filteredReservasStream => // CORREGIDO: ReservaConAgencia
+  Stream<List<ReservaConAgencia>>
+  get filteredReservasStream => // CORREGIDO: ReservaConAgencia
       _filteredReservasSubject.stream;
+  StreamSubscription<List<Agencia>>? _agenciasSub;
 
   List<Agencia> _allAgencias = []; // Cache de agencias para combinar
 
   ReservasController({FirestoreService? firestoreService})
     : _firestoreService = firestoreService ?? FirestoreService() {
     _initializeController(); // Call async initialization
+
+    // ---------------- SUSCRIPCIÓN A CAMBIOS EN AGENCIAS ----------------
+    _agenciasSub = _firestoreService.getAgenciasStream().listen((all) {
+      // sólo agencias activas
+      _allAgencias = all.where((a) => !a.eliminada).toList();
+      // refrescar lista de reservas actuales
+      _updateFilteredReservasStream(resetPagination: true);
+    });
   }
 
   Future<void> _initializeController() async {
@@ -53,7 +67,8 @@ class ReservasController extends ChangeNotifier {
   // Getters para la UI
   DateFilterType get selectedFilter => _selectedFilter;
   DateTime? get customDate => _customDate;
-  List<ReservaConAgencia> get currentReservas => _allLoadedReservas; // Ahora devuelve todas las cargadas
+  List<ReservaConAgencia> get currentReservas =>
+      _allLoadedReservas; // Ahora devuelve todas las cargadas
   TurnoType? get turnoFilter => _turnoFilter; // Exponer el filtro de turno
   bool get isLoading => _isLoading; // Exponer el estado de carga
 
@@ -66,7 +81,8 @@ class ReservasController extends ChangeNotifier {
 
   // Método para cargar todas las agencias (para uso interno y dropdowns)
   Future<void> _loadAllAgencias() async {
-    _allAgencias = await _firestoreService.getAllAgencias();
+    final all = await _firestoreService.getAllAgencias();
+    _allAgencias = all.where((a) => !a.eliminada).toList();
     // debugPrint('✅ Agencias cargadas: ${_allAgencias.length}'); // Debug print
     // No notificar listeners aquí, ya que _updateFilteredReservasStream lo hará
   }
@@ -86,15 +102,34 @@ class ReservasController extends ChangeNotifier {
       _firestoreService
           .getReservasStream(), // Stream de todas las reservas sin filtrar
       _firestoreService.getAgenciasStream(), // Stream de todas las agencias
+      /// Combina reservas y agencias para crear una lista de ReservaConAgencia
+      /// @param reservas Lista de reservas obtenidas del stream
+      /// @param agencias Lista de agencias obtenidas del stream
+      /// @return Lista de ReservaConAgencia que combina reservas con sus agencias correspondientes
       (reservas, agencias) {
-        return reservas
-            .where((r) => agencias.any((a) => a.id == r.agenciaId))
-            .map((r) {
-              final ag = agencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
-                         Agencia(id: r.agenciaId, nombre: 'Agencia Desconocida', eliminada: true); // Fallback
-              return ReservaConAgencia(reserva: r, agencia: ag);
-            })
-            .toList();
+        // Filtrar reservas para incluir solo aquellas que tienen una agencia válida
+        // y mapearlas a ReservaConAgencia
+        return reservas.where((r) => agencias.any((a) => a.id == r.agenciaId)).map((
+          r,
+        ) {
+          /// Buscar la agencia correspondiente a la reserva
+          /// @param r Reserva actual del stream
+          /// @return ReservaConAgencia que combina la reserva con su agencia
+          /// Si no se encuentra la agencia, se crea una agencia por defecto
+          /// con el ID de la reserva y un nombre genérico
+          /// para evitar errores en la UI.
+          /// Esto es útil para manejar casos donde la agencia puede haber sido eliminada.
+          /// @note Se utiliza firstWhereOrNull para evitar excepciones si no se encuentra la agencia
+          /// y se proporciona un fallback para evitar errores en la UI.
+          final ag =
+              agencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
+              Agencia(
+                id: r.agenciaId,
+                nombre: 'Agencia Desconocida',
+                eliminada: true,
+              ); // Fallback
+          return ReservaConAgencia(reserva: r, agencia: ag);
+        }).toList();
       },
     );
   }
@@ -122,13 +157,12 @@ class ReservasController extends ChangeNotifier {
     String? agenciaId,
     TurnoType? turno,
   }) {
-
-  //   debugPrint('🔎 filtro prueba → '
-  //   'filter: $filter, '
-  //   'customDate: ${date?.toIso8601String() ?? "null"}, '
-  //   'agenciaId: ${agenciaId ?? "null"}, '
-  //   'turno: ${turno?.toString() ?? "null"}'
-  // );
+    //   debugPrint('🔎 filtro prueba → '
+    //   'filter: $filter, '
+    //   'customDate: ${date?.toIso8601String() ?? "null"}, '
+    //   'agenciaId: ${agenciaId ?? "null"}, '
+    //   'turno: ${turno?.toString() ?? "null"}'
+    // );
     // Solo actualizar si los filtros realmente cambian
     /// la condicion dice que si el filtro, fecha, agencia o turno no cambian, no se actualiza
     /// esto previene recargas innecesarias del stream
@@ -145,7 +179,9 @@ class ReservasController extends ChangeNotifier {
     _customDate = date;
     _agenciaIdFilter = agenciaId;
     _turnoFilter = turno;
-    _updateFilteredReservasStream(resetPagination: true); // Resetear paginación al cambiar filtros
+    _updateFilteredReservasStream(
+      resetPagination: true,
+    ); // Resetear paginación al cambiar filtros
     notifyListeners(); // Notificar para que la UI refleje los nuevos filtros
   }
 
@@ -171,10 +207,9 @@ class ReservasController extends ChangeNotifier {
   }
 
   // Lógica para construir el stream de reservas basado en el filtro y paginación
-  void _updateFilteredReservasStream({
-    bool resetPagination = false,
-  }) {
-    _reservasSubscription?.cancel(); // Cancelar suscripción anterior para evitar duplicados
+  void _updateFilteredReservasStream({bool resetPagination = false}) {
+    _reservasSubscription
+        ?.cancel(); // Cancelar suscripción anterior para evitar duplicados
 
     if (resetPagination) {
       _allLoadedReservas = [];
@@ -190,68 +225,90 @@ class ReservasController extends ChangeNotifier {
 
     DocumentSnapshot? startAfterDoc = _pageLastDocuments[_currentPageIndex];
 
-    _reservasSubscription = _firestoreService.getPaginatedReservasFiltered(
-      turno: _turnoFilter,
-      filter: _selectedFilter,
-      customDate: _customDate,
-      agenciaId: _agenciaIdFilter,
-      limit: _itemsPerPage + 1, // Fetch one extra to check if there's a next page
-      startAfterDocument: startAfterDoc,
-    ).listen(
-      (snapshot) {
-        final fetchedDocs = snapshot.docs;
-        
-        _hasMorePages = fetchedDocs.length > _itemsPerPage;
+    _reservasSubscription = _firestoreService
+        .getPaginatedReservasFiltered(
+          turno: _turnoFilter,
+          filter: _selectedFilter,
+          customDate: _customDate,
+          agenciaId: _agenciaIdFilter,
+          limit:
+              _itemsPerPage +
+              1, // Fetch one extra to check if there's a next page
+          startAfterDocument: startAfterDoc,
+        )
+        .listen(
+          (snapshot) {
+            final fetchedDocs = snapshot.docs;
 
-        final currentReservasDocs = fetchedDocs.take(_itemsPerPage).toList();
-        
-        // Update _pageLastDocuments for the next page if we are moving forward
-        // and there are actual documents on the current page.
-        if (_hasMorePages && _currentPageIndex + 1 == _pageLastDocuments.length) {
-          if (currentReservasDocs.isNotEmpty) {
-            _pageLastDocuments.add(currentReservasDocs.last);
-          } else {
-            // This case means we thought there was a next page, but the current page
-            // is actually empty. This might happen if data was deleted.
-            // We should mark no more pages and potentially trim _pageLastDocuments.
-            _hasMorePages = false;
-            // Trim _pageLastDocuments to current index + 1 if it's longer
-            if (_pageLastDocuments.length > _currentPageIndex + 1) {
-              _pageLastDocuments = _pageLastDocuments.sublist(0, _currentPageIndex + 1);
+            _hasMorePages = fetchedDocs.length > _itemsPerPage;
+
+            final currentReservasDocs = fetchedDocs
+                .take(_itemsPerPage)
+                .toList();
+
+            // Update _pageLastDocuments for the next page if we are moving forward
+            // and there are actual documents on the current page.
+            if (_hasMorePages &&
+                _currentPageIndex + 1 == _pageLastDocuments.length) {
+              if (currentReservasDocs.isNotEmpty) {
+                _pageLastDocuments.add(currentReservasDocs.last);
+              } else {
+                // This case means we thought there was a next page, but the current page
+                // is actually empty. This might happen if data was deleted.
+                // We should mark no more pages and potentially trim _pageLastDocuments.
+                _hasMorePages = false;
+                // Trim _pageLastDocuments to current index + 1 if it's longer
+                if (_pageLastDocuments.length > _currentPageIndex + 1) {
+                  _pageLastDocuments = _pageLastDocuments.sublist(
+                    0,
+                    _currentPageIndex + 1,
+                  );
+                }
+              }
+            } else if (!_hasMorePages &&
+                _pageLastDocuments.length > _currentPageIndex + 1) {
+              // If we are on the last page and there are no more, ensure _pageLastDocuments
+              // doesn't contain stale markers for non-existent future pages.
+              _pageLastDocuments = _pageLastDocuments.sublist(
+                0,
+                _currentPageIndex + 1,
+              );
             }
-          }
-        } else if (!_hasMorePages && _pageLastDocuments.length > _currentPageIndex + 1) {
-          // If we are on the last page and there are no more, ensure _pageLastDocuments
-          // doesn't contain stale markers for non-existent future pages.
-          _pageLastDocuments = _pageLastDocuments.sublist(0, _currentPageIndex + 1);
-        }
 
-        // Map fetched reservations to ReservaConAgencia, ensuring agency data is available
-        _allLoadedReservas = currentReservasDocs
-            .map((doc) {
-              // CORRECCIÓN: doc.data() ya es un objeto Reserva debido al withConverter en FirestoreService
-              final r = doc.data(); 
-              // Safely get the agency, providing a fallback if not found in _allAgencias
-              final ag = _allAgencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
-                         Agencia(id: r.agenciaId, nombre: 'Agencia Desconocida', eliminada: true);
-              return ReservaConAgencia(reserva: r, agencia: ag);
-            })
-            .toList();
-        
-        _isFetchingPage = false;
-        _isLoading = false; // Finalizar carga
-        _filteredReservasSubject.add(_allLoadedReservas);
-        notifyListeners();
-        // debugPrint('🔄 Reservas cargadas en vista: ${_allLoadedReservas.length}');
-      },
-      onError: (e) {
-        debugPrint('Error en ReservasController stream: $e');
-        _isFetchingPage = false;
-        _isLoading = false; // Finalizar carga con error
-        _filteredReservasSubject.addError(e);
-        notifyListeners();
-      },
-    );
+            // Map fetched reservations to ReservaConAgencia, ensuring agency data is available
+            _allLoadedReservas = currentReservasDocs
+                .map((doc) {
+                  // CORRECCIÓN: doc.data() ya es un objeto Reserva debido al withConverter en FirestoreService
+                  final r = doc.data();
+                  // Safely get the agency, providing a fallback if not found in _allAgencias
+                  final ag =
+                      _allAgencias.firstWhereOrNull(
+                        (a) => a.id == r.agenciaId,
+                      ) ??
+                      Agencia(
+                        id: r.agenciaId,
+                        nombre: 'Agencia Desconocida',
+                        eliminada: true,
+                      );
+                  return ReservaConAgencia(reserva: r, agencia: ag);
+                })
+                .where((rca) => !rca.agencia.eliminada)
+                .toList();
+
+            _isFetchingPage = false;
+            _isLoading = false; // Finalizar carga
+            _filteredReservasSubject.add(_allLoadedReservas);
+            notifyListeners();
+            // debugPrint('🔄 Reservas cargadas en vista: ${_allLoadedReservas.length}');
+          },
+          onError: (e) {
+            debugPrint('Error en ReservasController stream: $e');
+            _isFetchingPage = false;
+            _isLoading = false; // Finalizar carga con error
+            _filteredReservasSubject.addError(e);
+            notifyListeners();
+          },
+        );
   }
 
   // Métodos CRUD que delegan a FirestoreService (ya no fuerzan recarga)
@@ -278,6 +335,7 @@ class ReservasController extends ChangeNotifier {
   @override
   void dispose() {
     _reservasSubscription?.cancel(); // Cancelar la suscripción al disponer
+    _agenciasSub?.cancel(); 
     _filteredReservasSubject.close(); // Es crucial cerrar el BehaviorSubject
     super.dispose();
   }

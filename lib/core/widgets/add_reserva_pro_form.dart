@@ -11,8 +11,6 @@ import '../mvvc/agencias_controller.dart';
 import '../mvvc/reservas_controller.dart';
 
 class AddReservaProForm extends StatefulWidget {
-
-
   final TurnoType? turno;
   final VoidCallback onAdd;
   const AddReservaProForm({super.key, required this.onAdd, this.turno});
@@ -37,9 +35,16 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _parseText();
       final config = context.read<ConfiguracionController>().configuracion;
-      _precioPorAsientoGlobal = config?.precioPorAsiento ?? 0.0;
+      final precio = config?.precioPorAsiento;
+
+      if (precio != null && precio > 0.0) {
+        setState(() {
+          _precioPorAsientoGlobal = precio;
+        });
+      }
+
+      _parseText();
     });
   }
 
@@ -51,13 +56,29 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
 
   void _parseText() {
     final text = _textController.text;
-    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
+    final agenciasController = Provider.of<AgenciasController>(
+      context,
+      listen: false,
+    );
     final allAgencias = agenciasController.getAllAgencias();
 
     setState(() {
-      _parsedData = text.isNotEmpty ? _textParser.parseReservaText(text, allAgencias) : null;
+      _parsedData = text.isNotEmpty
+          ? _textParser.parseReservaText(text, allAgencias)
+          : null;
       _showPreview = _parsedData != null;
     });
+  }
+
+  EstadoReserva _computeEstado(double costoAsiento) {
+    if (_parsedData == null) return EstadoReserva.pendiente;
+
+    final pax = _parsedData!['pax'] as int? ?? 1;
+    final saldo = _parsedData!['saldo'] as double? ?? 0.0;
+
+    return saldo == pax * costoAsiento
+        ? EstadoReserva.pagada
+        : EstadoReserva.pendiente;
   }
 
   Future<void> _submitReserva() async {
@@ -67,14 +88,36 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       setState(() => _agencyError = true);
       return;
     }
+    final fechaRaw = _parsedData?['fechaReserva'] as String?;
+    if (fechaRaw == null) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Fecha requerida'),
+          content: const Text('Por favor ingresa la fecha de la reserva.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     // Obtener la agencia seleccionada para verificar su precio específico
-    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
-    final selectedAgencia = agenciasController.getAgenciaById(_selectedAgenciaId!);
+    final agenciasController = Provider.of<AgenciasController>(
+      context,
+      listen: false,
+    );
+    final selectedAgencia = agenciasController.getAgenciaById(
+      _selectedAgenciaId!,
+    );
 
-    // Determinar el costo por asiento: precio de agencia > precio global
-    final costoAsiento = selectedAgencia?.precioPorAsiento ?? _precioPorAsientoGlobal;
-
+    // Determinar el costo por asiento y validar su valor
+    final double costoAsiento =
+        selectedAgencia?.precioPorAsiento ?? _precioPorAsientoGlobal;
     if (costoAsiento <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -86,8 +129,9 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       return;
     }
 
+    // Resetear error de agencia y validar que tengamos datos parseados
     if (_agencyError) setState(() => _agencyError = false);
-    if (_parsedData == null || _selectedAgenciaId == null) {
+    if (_parsedData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Falta texto o seleccionar agencia')),
       );
@@ -95,22 +139,25 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     }
 
     setState(() => _isLoading = true);
-
+    // Validar que los campos requeridos estén presentes
+    // aqui saldo es  = a _parsedData que es un mapa
+    final pax = _parsedData!['pax'] as int? ?? 1;
     final saldo = _parsedData!['saldo'] as double? ?? 0.0;
-    final estado = saldo > 0
-        ? EstadoReserva.pagada
-        : EstadoReserva.pendiente;
+    // calcular total esperado y determinar estado
+    final estado = _computeEstado(costoAsiento);
+    // final estado = saldo > 0
+    //     ? EstadoReserva.pagada
+    //     : EstadoReserva.pendiente;
     final telefono = (_parsedData!['telefono'] as String?)?.trim() ?? '';
 
     final newReserva = Reserva(
       id: '',
       nombreCliente: _parsedData!['nombreCliente'] as String,
       hotel: _parsedData!['hotel'] as String? ?? '',
-      fecha:
-          _parsedData!['fechaReserva'] != null
-              ? DateTime.parse(_parsedData!['fechaReserva'] as String)
-              : DateTime.now(),
-      pax: _parsedData!['pax'] as int? ?? 1,
+      fecha: _parsedData!['fechaReserva'] != null
+          ? DateTime.parse(_parsedData!['fechaReserva'] as String)
+          : DateTime.now(),
+      pax: pax,
       saldo: saldo,
       observacion: _parsedData!['observacion'] as String? ?? '',
       agenciaId: _selectedAgenciaId!,
@@ -143,6 +190,27 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedAgencia = _selectedAgenciaId != null
+        ? context.read<AgenciasController>().getAgenciaById(_selectedAgenciaId!)
+        : null;
+
+    final globalPrecio =
+        context
+            .watch<ConfiguracionController>()
+            .configuracion
+            ?.precioPorAsiento ??
+        0.0;
+    final usedPrice = selectedAgencia?.precioPorAsiento ?? globalPrecio;
+    final priceSource =
+        (selectedAgencia != null && selectedAgencia.precioPorAsiento != null)
+        ? 'Agencia'
+        : 'Global';
+    final priceLabel = 'Precio asiento ($priceSource)';
+
+    final computedEstado = _parsedData != null
+        ? _computeEstado(usedPrice)
+        : EstadoReserva.pendiente;
+
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
     final double availableHeight =
         MediaQuery.of(context).size.height * 0.9 - keyboardInset;
@@ -151,9 +219,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       child: Container(
         constraints: BoxConstraints(
           maxHeight: availableHeight,
-          minHeight:
-              MediaQuery.of(context).size.height *
-              0.5,
+          minHeight: MediaQuery.of(context).size.height * 0.5,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -164,25 +230,18 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
               children: [
                 const Text(
                   'Agregar reserva Pro',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(
-                    Icons.close,
-                    size: 24,
-                  ),
+                  icon: const Icon(Icons.close, size: 24),
                 ),
               ],
             ),
             const SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
-                physics:
-                    const BouncingScrollPhysics(),
+                physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -275,13 +334,13 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                   'Saldo',
                                   _parsedData!['saldo'].toString(),
                                 ),
-                                _buildPreviewItem(
-                                  'Estado',
-                                  _parsedData!['estado']
-                                      .toString()
-                                      .split('.')
-                                      .last,
-                                ),
+                                // _buildPreviewItem(
+                                //   'Estado',
+                                //   _parsedData!['estado']
+                                //       .toString()
+                                //       .split('.')
+                                //       .last,
+                                // ),
                                 _buildPreviewItem(
                                   'Observación',
                                   _parsedData!['observacion'],
@@ -289,6 +348,21 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                 _buildPreviewItem(
                                   'Teléfono',
                                   _parsedData!['telefono'] as String?,
+                                ),
+                                _buildPreviewItem(
+                                  priceLabel,
+                                  usedPrice.toStringAsFixed(2),
+                                ),
+
+                                _buildPreviewItem(
+                                  'Turno',
+                                  widget.turno != null
+                                      ? widget.turno.toString().split('.').last
+                                      : 'No seleccionado',
+                                ),
+                                _buildPreviewItem(
+                                  'Estado calculado',
+                                  computedEstado.name,
                                 ),
                               ],
                             ),
@@ -308,14 +382,12 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                       controller: _textController,
                       keyboardType: TextInputType.multiline,
                       minLines: 3,
-                      maxLines:
-                          null,
+                      maxLines: null,
                       textAlignVertical: TextAlignVertical.top,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'Pega aquí los datos de la reserva...',
-                        alignLabelWithHint:
-                            true,
+                        alignLabelWithHint: true,
                       ),
                       onChanged: (_) {
                         final text = _textController.text;
@@ -394,12 +466,8 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                           ? null
                           : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        textStyle: const TextStyle(fontSize: 16),
                       ),
                       child: const Text('Cancelar'),
                     ),
@@ -407,18 +475,12 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: (_parsedData != null && !_isLoading)
-                          ? _submitReserva
-                          : null,
+                      onPressed: _isLoading ? null : _submitReserva,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.purple.shade600,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        textStyle: const TextStyle(fontSize: 16),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -446,28 +508,31 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   Widget _buildPreviewItem(String label, String? value) {
     final displayValue = value?.isEmpty ?? true ? '(vacío)' : value!;
     final isValueEmpty = value?.isEmpty ?? true;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(4),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width:
-                90,
+          Expanded(
             child: Text(
               '$label:',
               style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
             ),
           ),
-          Expanded(
-            child: Text(
-              displayValue,
-              style: TextStyle(
-                fontSize: 13,
-                color: isValueEmpty ? Colors.grey : Colors.black,
-                fontStyle: isValueEmpty ? FontStyle.italic : FontStyle.normal,
-              ),
+          const SizedBox(width: 8),
+          Text(
+            displayValue,
+            style: TextStyle(
+              fontSize: 13,
+              color: isValueEmpty ? Colors.grey : Colors.black,
+              fontStyle: isValueEmpty ? FontStyle.italic : FontStyle.normal,
             ),
+            textAlign: TextAlign.right,
           ),
         ],
       ),
