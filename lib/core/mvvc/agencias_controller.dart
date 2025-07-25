@@ -12,38 +12,52 @@ class AgenciasController extends ChangeNotifier {
 
   final BehaviorSubject<List<AgenciaConReservas>> _agenciasConReservasSubject =
       BehaviorSubject<List<AgenciaConReservas>>();
-  Stream<List<AgenciaConReservas>> get agenciasConReservasStream => _agenciasConReservasSubject.stream;
+  Stream<List<AgenciaConReservas>> get agenciasConReservasStream =>
+      _agenciasConReservasSubject.stream;
 
   List<AgenciaConReservas> _agencias = [];
   List<AgenciaConReservas> get agencias => _agencias;
 
   AgenciasController({FirestoreService? firestoreService})
-      : _firestoreService = firestoreService ?? FirestoreService() {
+    : _firestoreService = firestoreService ?? FirestoreService() {
     _listenToAgenciasAndReservas();
   }
 
+  /// Escucha los cambios en las agencias y reservas.
+  /// Combina los streams de agencias y reservas para crear una lista de agencias con el total de reservas asociadas.
+  /// Actualiza el stream _agenciasConReservasSubject con los datos combinados.
   void _listenToAgenciasAndReservas() {
     final agenciasStream = _firestoreService.getAgenciasStream();
-    final reservasStream = _firestoreService.getReservasStream(); // Obtener todas las reservas
+    final reservasStream = _firestoreService
+        .getReservasStream(); // Obtener todas las reservas
 
-    Rx.combineLatest2(
-      agenciasStream,
-      reservasStream,
-      (List<Agencia> agencias, List<Reserva> reservas) {
-        final activeAgencias = agencias.where((ag) => ag.eliminada == false).toList();
-        return activeAgencias.map((agencia) {
-          final totalReservas = reservas.where((r) => r.agenciaId == agencia.id).length;
-          return AgenciaConReservas(agencia: agencia, totalReservas: totalReservas);
-        }).toList();
+    Rx.combineLatest2(agenciasStream, reservasStream, (
+      List<Agencia> agencias,
+      List<Reserva> reservas,
+    ) {
+      final activeAgencias = agencias
+          .where((ag) => ag.eliminada == false)
+          .toList();
+      return activeAgencias.map((agencia) {
+        final totalReservas = reservas
+            .where((r) => r.agenciaId == agencia.id)
+            .length;
+        return AgenciaConReservas(
+          agencia: agencia,
+          totalReservas: totalReservas,
+        );
+      }).toList();
+    }).listen(
+      (data) {
+        _agencias = data;
+        _agenciasConReservasSubject.add(data);
+        notifyListeners();
       },
-    ).listen((data) {
-      _agencias = data;
-      _agenciasConReservasSubject.add(data);
-      notifyListeners();
-    }, onError: (error) {
-      debugPrint('Error en AgenciasController stream: $error');
-      _agenciasConReservasSubject.addError(error);
-    });
+      onError: (error) {
+        debugPrint('Error en AgenciasController stream: $error');
+        _agenciasConReservasSubject.addError(error);
+      },
+    );
   }
 
   // Método para obtener una agencia por su ID (útil para dropdowns, etc.)
@@ -51,39 +65,81 @@ class AgenciasController extends ChangeNotifier {
     return _agencias.firstWhereOrNull((ag) => ag.id == id)?.agencia;
   }
 
-  Future<Agencia> addAgencia(String nombre, String? imagePath, {double? precioPorAsiento}) async { // MODIFICADO: Añadir precioPorAsiento
+  /// Añade una nueva agencia.
+  Future<Agencia> addAgencia(
+    String nombre,
+    String? imagePath, {
+    double? precioPorAsientoTurnoManana,
+    double? precioPorAsientoTurnoTarde,
+  }) async {
     String? imageUrl;
     if (imagePath != null) {
       imageUrl = await CloudinaryService.uploadImage(File(imagePath));
     }
-    final nuevaAgencia = Agencia(id: '', nombre: nombre, imagenUrl: imageUrl, precioPorAsiento: precioPorAsiento); // NUEVO
+    final nuevaAgencia = Agencia(
+      id: '',
+      nombre: nombre,
+      imagenUrl: imageUrl,
+      // precioPorAsiento: precioPorAsiento
+      precioPorAsientoTurnoManana:precioPorAsientoTurnoManana, // Asignar un valor por defecto si no se proporciona
+      precioPorAsientoTurnoTarde: precioPorAsientoTurnoTarde,
+    ); // NUEVO
     final addedAgencia = await _firestoreService.addAgencia(nuevaAgencia);
     return addedAgencia;
   }
 
-  Future<void> updateAgencia(String id, String nombre, String? imagePath, String? currentImageUrl, {double? newPrecioPorAsiento}) async { // MODIFICADO: Añadir newPrecioPorAsiento
+  Future<void> updateAgencia(
+    String id,
+    String nombre,
+    String? imagePath,
+    String? currentImageUrl, {
+    // double? newPrecioPorAsiento,
+    double? newPrecioPorAsientoTurnoManana,
+    double? newPrecioPorAsientoTurnoTarde,
+  }) async {
+    // MODIFICADO: Añadir newPrecioPorAsiento
     String? imageUrl = currentImageUrl;
     if (imagePath != null) {
       imageUrl = await CloudinaryService.uploadImage(File(imagePath));
     }
 
     // Obtener la agencia actual para comparar el precio
-    final currentAgencia = _agencias.firstWhereOrNull((ag) => ag.id == id)?.agencia;
+    final currentAgencia = _agencias
+        .firstWhereOrNull((ag) => ag.id == id)
+        ?.agencia;
 
     final updatedAgencia = Agencia(
       id: id,
       nombre: nombre,
       imagenUrl: imageUrl,
-      eliminada: currentAgencia?.eliminada ?? false, // Mantener el estado de eliminada
-      precioPorAsiento: newPrecioPorAsiento, // NUEVO
+      eliminada:
+          currentAgencia?.eliminada ?? false, // Mantener el estado de eliminada
+      precioPorAsientoTurnoManana: newPrecioPorAsientoTurnoManana, // NUEVO
+      precioPorAsientoTurnoTarde: newPrecioPorAsientoTurnoTarde, // NUEVO
     );
 
     await _firestoreService.updateAgencia(id, updatedAgencia);
 
     // Si el precio por asiento ha cambiado, actualizar todas las reservas asociadas
-    if (currentAgencia?.precioPorAsiento != newPrecioPorAsiento) {
-      if (newPrecioPorAsiento != null) {
-        await _firestoreService.updateReservasCostoAsiento(id, newPrecioPorAsiento);
+    if (currentAgencia?.precioPorAsientoTurnoManana != newPrecioPorAsientoTurnoManana ||
+        currentAgencia?.precioPorAsientoTurnoTarde  != newPrecioPorAsientoTurnoTarde) {
+
+      // Actualiza reservas de la mañana
+      if (newPrecioPorAsientoTurnoManana != null &&
+          currentAgencia?.precioPorAsientoTurnoManana != newPrecioPorAsientoTurnoManana) {
+        await _firestoreService.updateReservasCostoAsientoManana(
+          id,
+          newPrecioPorAsientoTurnoManana,
+        );
+      }
+
+      // Actualiza reservas de la tarde
+      if (newPrecioPorAsientoTurnoTarde != null &&
+          currentAgencia?.precioPorAsientoTurnoTarde != newPrecioPorAsientoTurnoTarde) {
+        await _firestoreService.updateReservasCostoAsientoTarde(
+          id,
+          newPrecioPorAsientoTurnoTarde,
+        );
       }
     }
   }
@@ -92,7 +148,9 @@ class AgenciasController extends ChangeNotifier {
     for (var id in ids) {
       // En lugar de eliminar, actualizamos el campo 'eliminada'
       // Necesitamos obtener la agencia actual para mantener sus otros campos
-      final currentAgencia = _agencias.firstWhereOrNull((ag) => ag.id == id)?.agencia;
+      final currentAgencia = _agencias
+          .firstWhereOrNull((ag) => ag.id == id)
+          ?.agencia;
       if (currentAgencia != null) {
         await _firestoreService.updateAgencia(
           id,

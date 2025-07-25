@@ -161,11 +161,11 @@ class _ReservasTableState extends State<ReservasTable> {
               .toList()
         : widget.reservas;
     // debugPrint('📋filtro prueba Reservas en tabla: ${reservasFiltradas.map((r) => r.reserva.nombreCliente + " " + r.reserva.turno.toString().split('.').last).toList()}');
+    final totalPax = reservasFiltradas.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
 
     final unpaid = reservasFiltradas
         .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
         .toList();
-    final totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
     final totalSaldo = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
     final totalDeuda = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
 

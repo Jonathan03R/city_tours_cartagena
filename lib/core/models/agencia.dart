@@ -3,14 +3,18 @@ class Agencia {
   final String nombre;
   final String? imagenUrl;
   final bool eliminada;
-  final double? precioPorAsiento;
+  // final double? precioPorAsiento;
+  final double? precioPorAsientoTurnoManana;
+  final double? precioPorAsientoTurnoTarde;
 
   Agencia({
     required this.id,
     required this.nombre,
     this.imagenUrl,
     this.eliminada = false,
-    this.precioPorAsiento,
+    // this.precioPorAsiento,
+    this.precioPorAsientoTurnoManana,
+    this.precioPorAsientoTurnoTarde,
   });
 
   // Añadir el método copyWith para facilitar la creación de nuevas instancias con ID
@@ -19,14 +23,18 @@ class Agencia {
     String? nombre,
     String? imagenUrl,
     bool? eliminada,
-    double? precioPorAsiento,
+    // double? precioPorAsiento,
+    double? precioPorAsientoTurnoManana,
+    double? precioPorAsientoTurnoTarde,
   }) {
     return Agencia(
       id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       imagenUrl: imagenUrl ?? this.imagenUrl,
       eliminada: eliminada ?? this.eliminada,
-      precioPorAsiento: precioPorAsiento ?? this.precioPorAsiento,
+      precioPorAsientoTurnoManana: precioPorAsientoTurnoManana ?? this.precioPorAsientoTurnoManana,
+      precioPorAsientoTurnoTarde: precioPorAsientoTurnoTarde ?? this.precioPorAsientoTurnoTarde,
+      // precioPorAsiento: precioPorAsiento ?? this.precioPorAsiento,
     );
   }
 
@@ -36,7 +44,13 @@ class Agencia {
       nombre: data['nombre'] ?? '',
       imagenUrl: data['imagenUrl'],
       eliminada: data['eliminada'] ?? false,
-      precioPorAsiento: (data['precioPorAsiento'] is num) ? data['precioPorAsiento'].toDouble() : null, // NUEVO
+      // precioPorAsiento: (data['precioPorAsiento'] is num) ? data['precioPorAsiento'].toDouble() : null, // NUEVO
+      precioPorAsientoTurnoManana: (data['precioPorAsientoTurnoManana'] is num)
+          ? data['precioPorAsientoTurnoManana'].toDouble()
+          : null,
+      precioPorAsientoTurnoTarde: (data['precioPorAsientoTurnoTarde'] is num)
+          ? data['precioPorAsientoTurnoTarde'].toDouble()
+          : null,
     );
   }
 
@@ -46,7 +60,9 @@ class Agencia {
       'imagenUrl': imagenUrl,
       'eliminada': eliminada,
       'fechaRegistro': DateTime.now().toIso8601String(),
-      'precioPorAsiento': precioPorAsiento,
+      // 'precioPorAsiento': precioPorAsiento,
+      'precioPorAsientoTurnoManana': precioPorAsientoTurnoManana,
+      'precioPorAsientoTurnoTarde': precioPorAsientoTurnoTarde
     };
   }
 }
@@ -65,5 +81,7 @@ class AgenciaConReservas {
   String get nombre => agencia.nombre;
   String? get imagenUrl => agencia.imagenUrl;
   bool get eliminada => agencia.eliminada;
-  double? get precioPorAsiento => agencia.precioPorAsiento;
+  // double? get precioPorAsiento => agencia.precioPorAsiento;
+  double? get precioPorAsientoTurnoManana => agencia.precioPorAsientoTurnoManana;
+  double? get precioPorAsientoTurnoTarde => agencia.precioPorAsientoTurnoTarde;
 }
