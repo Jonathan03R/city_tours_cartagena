@@ -9,6 +9,7 @@ import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
+import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:excel/excel.dart' as xls;
 import 'package:flutter/material.dart';
@@ -37,36 +38,77 @@ class _ReservasViewState extends State<ReservasView> {
   bool _editandoPrecio = false;
   final TextEditingController _precioController = TextEditingController();
 
-  @override
-  void initState() {
-    print('🔄 Iniciando ReservasView con turno: ${widget.turno}');
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final reservasController = Provider.of<ReservasController>(
-        context,
-        listen: false,
-      );
-      reservasController.updateFilter(
-        DateFilterType.today, // Filtro inicial por defecto
-        agenciaId: widget.agencia?.id, // Si es una vista de agencia específica
-        turno: widget.turno, // Pasar el turno inicial si existe
-      );
-    });
-  }
-
-  void _onFilterChanged(
-    DateFilterType filter,
-    DateTime? date, {
-    TurnoType? turno,
-  }) {
-    Provider.of<ReservasController>(context, listen: false).updateFilter(
+  void _onDateChanged(DateFilterType filter, DateTime? date) {
+    final ctrl = Provider.of<ReservasController>(context, listen: false);
+    ctrl.updateFilter(
       filter,
       date: date,
+      agenciaId: widget.agencia?.id,
+      turno: ctrl.turnoFilter, // mantiene el turno actual
+    );
+  }
+
+  /// Llama al controlador para cambiar SOLO el turno,
+  /// preservando fecha y agencia.
+  void _onTurnoChanged(TurnoType? turno) {
+    final ctrl = Provider.of<ReservasController>(context, listen: false);
+    ctrl.updateFilter(
+      ctrl.selectedFilter, // mantiene el filtro de fecha actual
+      date: ctrl.customDate,
       agenciaId: widget.agencia?.id,
       turno: turno,
     );
   }
 
+  @override
+  void initState() {
+    print('🔄🅰🅰🅰🅰 Iniciando ReservasView con turno: ${widget.turno}');
+    super.initState();
+
+    /// WidgetsBinding es un mecanismo para coordinar la interacción entre el framework de Flutter y el motor subyacente.
+    /// Permite ejecutar código después de que el árbol de widgets se haya construido completamente.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctrl = Provider.of<ReservasController>(context, listen: false);
+      final turno = widget.turno;
+
+      //  DateFilterType dateFilter = DateFilterType.today;
+      //  if (turno == TurnoType.manana) {
+      //    dateFilter = DateFilterType.tomorrow;
+      //  } else if (turno == TurnoType.tarde) {
+      //    dateFilter = DateFilterType.today;
+      //  }
+      //
+      //  ctrl.updateFilter(
+      //    dateFilter,
+      //    agenciaId: widget.agencia?.id,
+      //    turno: turno,
+      //  );
+      // Siempre arrancamos en "hoy", y el turno lo paso aparte:
+      ctrl.updateFilter(
+        DateFilterType.today,
+        agenciaId: widget.agencia?.id,
+        turno: turno,
+      );
+    });
+  }
+
+  /// Método para manejar cambios en los filtros
+  void _onFilterChanged(
+    DateFilterType filter,
+    DateTime? date, {
+    TurnoType? turno,
+  }) {
+    final ctrl = Provider.of<ReservasController>(context, listen: false);
+    ctrl.updateFilter(
+      filter,
+      date: date,
+      agenciaId: widget.agencia?.id,
+      // si me llegan turno==null, uso el que ya está en el controlador
+      turno: turno ?? ctrl.turnoFilter,
+    );
+  }
+
+  /// Método para mostrar el formulario de reserva rápida
   void _showTableOnlyView() {
     final reservasController = Provider.of<ReservasController>(
       context,
@@ -189,6 +231,17 @@ class _ReservasViewState extends State<ReservasView> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            TurnoFilterButtons(
+              selectedTurno: reservasController.turnoFilter,
+              onTurnoChanged: (nuevoTurno) {
+                reservasController.updateFilter(
+                  reservasController.selectedFilter,
+                  date: reservasController.customDate,
+                  agenciaId: widget.agencia?.id,
+                  turno: nuevoTurno,
+                );
+              },
+            ),
             // Nuevo widget de botones de filtro compactos
             CompactDateFilterButtons(
               selectedFilter: reservasController.selectedFilter,
@@ -257,8 +310,12 @@ class _ReservasViewState extends State<ReservasView> {
               stream: reservasController
                   .filteredReservasStream, // Usar el stream del controlador
               builder: (context, snapshot) {
-                if (reservasController.isFetchingPage &&
-                    snapshot.data == null) {
+                // if (reservasController.isFetchingPage &&
+                //     snapshot.data == null) {
+                //   return const Center(child: CircularProgressIndicator());
+                // }
+                if (reservasController.isFetchingPage) {
+                  // Mientras esté cargando, siempre muestro el spinner
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
@@ -284,15 +341,15 @@ class _ReservasViewState extends State<ReservasView> {
                   );
                 }
 
-                debugPrint(
-                  '🔄 Reservas cargadas en vista: ${currentReservas.length}',
-                );
+                // debugPrint(
+                //   '🔄 Reservas cargadas en vista: ${currentReservas.length}',
+                // );
 
                 return Column(
                   children: [
                     _isTableView
                         ? ReservasTable(
-                            turno: widget.turno, // Pasar el turno si aplica
+                            turno: reservasController.turnoFilter, // Pasar el turno si aplica
                             reservas:
                                 currentReservas, // Pasar la lista paginada
                             onUpdate: () {
@@ -836,7 +893,7 @@ class _ReservasViewState extends State<ReservasView> {
 }
 
 // Nuevo enum para las opciones de filtro adicionales
-enum MoreFilterOption { yesterday, tomorrow, lastWeek, turnoManana, turnoTarde }
+enum MoreFilterOption { yesterday, tomorrow, lastWeek }
 
 // Nuevo widget para los botones de filtro compactos
 class CompactDateFilterButtons extends StatelessWidget {
@@ -896,10 +953,10 @@ class CompactDateFilterButtons extends StatelessWidget {
         return 'Mañana';
       case MoreFilterOption.lastWeek:
         return 'Última Semana';
-      case MoreFilterOption.turnoManana:
-        return 'Turno Mañana';
-      case MoreFilterOption.turnoTarde:
-        return 'Turno Tarde';
+      // case MoreFilterOption.turnoManana:
+      //   return 'Turno Mañana';
+      // case MoreFilterOption.turnoTarde:
+      //   return 'Turno Tarde';
     }
   }
 
@@ -907,7 +964,7 @@ class CompactDateFilterButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     // Determinar si el botón "Más filtros" debe estar seleccionado
     final isMoreFiltersSelected =
-        selectedTurno != null ||
+        // selectedTurno != null ||
         selectedFilter == DateFilterType.yesterday ||
         selectedFilter == DateFilterType.tomorrow ||
         selectedFilter == DateFilterType.lastWeek;
@@ -921,8 +978,9 @@ class CompactDateFilterButtons extends StatelessWidget {
             context,
             DateFilterType.today,
             _getButtonText(DateFilterType.today, null),
-            selectedFilter == DateFilterType.today &&
-                selectedTurno == null, // Solo hoy, sin turno
+            selectedFilter == DateFilterType.today,
+            // selectedFilter == DateFilterType.today &&
+            // selectedTurno == null, // Solo hoy, sin turno
             onPressed: () =>
                 onFilterChanged(DateFilterType.today, null, turno: null),
           ),
@@ -930,8 +988,9 @@ class CompactDateFilterButtons extends StatelessWidget {
             context,
             DateFilterType.all,
             _getButtonText(DateFilterType.all, null),
-            selectedFilter == DateFilterType.all &&
-                selectedTurno == null, // Solo todas, sin turno
+            selectedFilter == DateFilterType.all,
+            // selectedFilter == DateFilterType.all &&
+            //     selectedTurno == null, // Solo todas, sin turno
             onPressed: () =>
                 onFilterChanged(DateFilterType.all, null, turno: null),
           ),
@@ -941,8 +1000,9 @@ class CompactDateFilterButtons extends StatelessWidget {
             customDate != null
                 ? _getButtonText(DateFilterType.custom, customDate)
                 : 'Fecha Específica',
-            selectedFilter == DateFilterType.custom &&
-                selectedTurno == null, // Solo fecha específica, sin turno
+            selectedFilter == DateFilterType.custom,
+            // selectedFilter == DateFilterType.custom &&
+            //     selectedTurno == null, // Solo fecha específica, sin turno
             onPressed: () async {
               final pickedDate = await showDatePicker(
                 context: context,
@@ -979,22 +1039,22 @@ class CompactDateFilterButtons extends StatelessWidget {
                     turno: null,
                   ); // Sobrescribe turno
                   break;
-                case MoreFilterOption.turnoManana:
-                  // Aplica turno al filtro de fecha actual
-                  onFilterChanged(
-                    selectedFilter,
-                    customDate,
-                    turno: TurnoType.manana,
-                  );
-                  break;
-                case MoreFilterOption.turnoTarde:
-                  // Aplica turno al filtro de fecha actual
-                  onFilterChanged(
-                    selectedFilter,
-                    customDate,
-                    turno: TurnoType.tarde,
-                  );
-                  break;
+                // case MoreFilterOption.turnoManana:
+                //   // Aplica turno al filtro de fecha actual
+                //   onFilterChanged(
+                //     selectedFilter,
+                //     customDate,
+                //     turno: TurnoType.manana,
+                //   );
+                //   break;
+                // case MoreFilterOption.turnoTarde:
+                //   // Aplica turno al filtro de fecha actual
+                //   onFilterChanged(
+                //     selectedFilter,
+                //     customDate,
+                //     turno: TurnoType.tarde,
+                //   );
+                //   break;
               }
             },
             itemBuilder: (BuildContext context) =>
@@ -1017,19 +1077,19 @@ class CompactDateFilterButtons extends StatelessWidget {
                       _getMoreFilterOptionText(MoreFilterOption.lastWeek),
                     ),
                   ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem<MoreFilterOption>(
-                    value: MoreFilterOption.turnoManana,
-                    child: Text(
-                      _getMoreFilterOptionText(MoreFilterOption.turnoManana),
-                    ),
-                  ),
-                  PopupMenuItem<MoreFilterOption>(
-                    value: MoreFilterOption.turnoTarde,
-                    child: Text(
-                      _getMoreFilterOptionText(MoreFilterOption.turnoTarde),
-                    ),
-                  ),
+                  // const PopupMenuDivider(),
+                  // PopupMenuItem<MoreFilterOption>(
+                  //   value: MoreFilterOption.turnoManana,
+                  //   child: Text(
+                  //     _getMoreFilterOptionText(MoreFilterOption.turnoManana),
+                  //   ),
+                  // ),
+                  // PopupMenuItem<MoreFilterOption>(
+                  //   value: MoreFilterOption.turnoTarde,
+                  //   child: Text(
+                  //     _getMoreFilterOptionText(MoreFilterOption.turnoTarde),
+                  //   ),
+                  // ),
                 ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

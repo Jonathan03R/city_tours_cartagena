@@ -8,6 +8,85 @@ import 'package:flutter/foundation.dart';
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
 
+  // Método auxiliar para aplicar filtros de fecha
+  Query<Reserva> _applyDateFilter(
+    Query<Reserva> query,
+    DateFilterType filter,
+    DateTime? customDate,
+  ) {
+    final now = DateTime.now();
+    switch (filter) {
+      case DateFilterType.today:
+        final ini = DateTime(now.year, now.month, now.day);
+        query = query
+            .where(
+              'fechaReserva',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(ini),
+            )
+            .where(
+              'fechaReserva',
+              isLessThan: Timestamp.fromDate(ini.add(const Duration(days: 1))),
+            );
+        break;
+      case DateFilterType.yesterday:
+        final ayer = now.subtract(const Duration(days: 1));
+        final iniY = DateTime(ayer.year, ayer.month, ayer.day);
+        query = query
+            .where(
+              'fechaReserva',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(iniY),
+            )
+            .where(
+              'fechaReserva',
+              isLessThan: Timestamp.fromDate(iniY.add(const Duration(days: 1))),
+            );
+        break;
+      case DateFilterType.tomorrow:
+        final man = now.add(const Duration(days: 1));
+        final iniM = DateTime(man.year, man.month, man.day);
+        query = query
+            .where(
+              'fechaReserva',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(iniM),
+            )
+            .where(
+              'fechaReserva',
+              isLessThan: Timestamp.fromDate(iniM.add(const Duration(days: 1))),
+            );
+        break;
+      case DateFilterType.lastWeek:
+        final iniW = now.subtract(const Duration(days: 7));
+        query = query.where(
+          'fechaReserva',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(iniW),
+        );
+        break;
+      case DateFilterType.custom:
+        if (customDate != null) {
+          final iniC = DateTime(
+            customDate.year,
+            customDate.month,
+            customDate.day,
+          );
+          query = query
+              .where(
+                'fechaReserva',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(iniC),
+              )
+              .where(
+                'fechaReserva',
+                isLessThan: Timestamp.fromDate(
+                  iniC.add(const Duration(days: 1)),
+                ),
+              );
+        }
+        break;
+      case DateFilterType.all:
+        break;
+    }
+    return query;
+  }
+
   // ========== RESERVAS ==========
   Stream<List<Reserva>> getReservasFiltered({
     TurnoType? turno,
@@ -15,69 +94,36 @@ class FirestoreService {
     DateTime? customDate,
     String? agenciaId,
   }) {
-    // 1) Parto de la colección sin límite
-    var query = _db
-      .collection('reservas')
-      .withConverter<Reserva>(
-        fromFirestore: (snap, _) => Reserva.fromFirestore(snap.data()!, snap.id),
-        toFirestore: (res, _) => res.toFirestore(),
-      ) as Query<Reserva>;
+    var query =
+        _db
+                .collection('reservas')
+                .withConverter<Reserva>(
+                  fromFirestore: (snap, _) =>
+                      Reserva.fromFirestore(snap.data()!, snap.id),
+                  toFirestore: (res, _) => res.toFirestore(),
+                )
+            as Query<Reserva>;
 
-    // 2) Filtro por turno si viene
     if (turno != null) {
       final t = turno.toString().split('.').last;
       query = query.where('turno', isEqualTo: t);
     }
 
-    // 3) Filtro por agencia
     if (agenciaId != null && agenciaId.isNotEmpty) {
       query = query.where('agenciaId', isEqualTo: agenciaId);
     }
 
-    // 4) Filtro por fecha
-    final now = DateTime.now();
-    switch (filter) {
-      case DateFilterType.today:
-        final ini = DateTime(now.year, now.month, now.day);
-        query = query
-          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(ini))
-          .where('fechaReserva', isLessThan: Timestamp.fromDate(ini.add(const Duration(days: 1))));
-        break;
-      case DateFilterType.yesterday:
-        final ayer = now.subtract(const Duration(days: 1));
-        final iniY = DateTime(ayer.year, ayer.month, ayer.day);
-        query = query
-          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniY))
-          .where('fechaReserva', isLessThan: Timestamp.fromDate(iniY.add(const Duration(days: 1))));
-        break;
-      case DateFilterType.tomorrow:
-        final man = now.add(const Duration(days: 1));
-        final iniM = DateTime(man.year, man.month, man.day);
-        query = query
-          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniM))
-          .where('fechaReserva', isLessThan: Timestamp.fromDate(iniM.add(const Duration(days: 1))));
-        break;
-      case DateFilterType.lastWeek:
-        final iniW = now.subtract(const Duration(days: 7));
-        query = query.where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniW));
-        break;
-      case DateFilterType.custom:
-        if (customDate != null) {
-          final iniC = DateTime(customDate.year, customDate.month, customDate.day);
-          query = query
-            .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniC))
-            .where('fechaReserva', isLessThan: Timestamp.fromDate(iniC.add(const Duration(days: 1))));
-        }
-        break;
-      case DateFilterType.all:
-        break;
-    }
+    query = _applyDateFilter(
+      query,
+      filter,
+      customDate,
+    ); // Usar el método auxiliar
 
-    // 5) Ordeno por fecha (opcional)
     query = query.orderBy('fechaReserva', descending: true);
 
-    // 6) Retorno el stream mapeado
-    return query.snapshots().map((snap) => snap.docs.map((d) => d.data()).toList());
+    return query.snapshots().map(
+      (snap) => snap.docs.map((d) => d.data()).toList(),
+    );
   }
 
   // NUEVO MÉTODO: Para obtener reservas con paginación
@@ -89,12 +135,25 @@ class FirestoreService {
     required int limit,
     DocumentSnapshot? startAfterDocument,
   }) {
-    var query = _db
-      .collection('reservas')
-      .withConverter<Reserva>(
-        fromFirestore: (snap, _) => Reserva.fromFirestore(snap.data()!, snap.id),
-        toFirestore: (res, _) => res.toFirestore(),
-      ) as Query<Reserva>;
+    // 🐞 DEBUG: imprime TODO lo que llega al servicio
+    debugPrint(
+      ' 🔎 filtro prueba  🔥 FirestoreService.getPaginatedReservasFiltered → '
+      'turno=${turno?.toString() ?? "null"}, '
+      'filter=$filter, '
+      'customDate=${customDate?.toIso8601String() ?? "null"}, '
+      'agenciaId=${agenciaId ?? "null"}, '
+      'limit=$limit, '
+      'startAfterDoc=${startAfterDocument != null}',
+    );
+    var query =
+        _db
+                .collection('reservas')
+                .withConverter<Reserva>(
+                  fromFirestore: (snap, _) =>
+                      Reserva.fromFirestore(snap.data()!, snap.id),
+                  toFirestore: (res, _) => res.toFirestore(),
+                )
+            as Query<Reserva>;
 
     if (turno != null) {
       final t = turno.toString().split('.').last;
@@ -105,43 +164,11 @@ class FirestoreService {
       query = query.where('agenciaId', isEqualTo: agenciaId);
     }
 
-    final now = DateTime.now();
-    switch (filter) {
-      case DateFilterType.today:
-        final ini = DateTime(now.year, now.month, now.day);
-        query = query
-          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(ini))
-          .where('fechaReserva', isLessThan: Timestamp.fromDate(ini.add(const Duration(days: 1))));
-        break;
-      case DateFilterType.yesterday:
-        final ayer = now.subtract(const Duration(days: 1));
-        final iniY = DateTime(ayer.year, ayer.month, ayer.day);
-        query = query
-          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniY))
-          .where('fechaReserva', isLessThan: Timestamp.fromDate(iniY.add(const Duration(days: 1))));
-        break;
-      case DateFilterType.tomorrow:
-        final man = now.add(const Duration(days: 1));
-        final iniM = DateTime(man.year, man.month, man.day);
-        query = query
-          .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniM))
-          .where('fechaReserva', isLessThan: Timestamp.fromDate(iniM.add(const Duration(days: 1))));
-        break;
-      case DateFilterType.lastWeek:
-        final iniW = now.subtract(const Duration(days: 7));
-        query = query.where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniW));
-        break;
-      case DateFilterType.custom:
-        if (customDate != null) {
-          final iniC = DateTime(customDate.year, customDate.month, customDate.day);
-          query = query
-            .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(iniC))
-            .where('fechaReserva', isLessThan: Timestamp.fromDate(iniC.add(const Duration(days: 1))));
-        }
-        break;
-      case DateFilterType.all:
-        break;
-    }
+    query = _applyDateFilter(
+      query,
+      filter,
+      customDate,
+    ); // Usar el método auxiliar
 
     query = query.orderBy('fechaReserva', descending: true);
 
@@ -172,10 +199,10 @@ class FirestoreService {
         .orderBy('fechaRegistro', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Reserva.fromFirestore(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return Reserva.fromFirestore(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   Future<List<Reserva>> getReservasByFecha(DateTime fecha) async {
@@ -197,12 +224,17 @@ class FirestoreService {
     final end = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
     return _db
         .collection('reservas')
-        .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where(
+          'fechaReserva',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(start),
+        )
         .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(end))
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
-    });
+          return snapshot.docs
+              .map((d) => Reserva.fromFirestore(d.data(), d.id))
+              .toList();
+        });
   }
 
   Future<List<Reserva>> getReservasByDateRange(
@@ -221,7 +253,9 @@ class FirestoreService {
   }
 
   Stream<List<Reserva>> getReservasByDateRangeStream(
-      DateTime startDate, DateTime endDate) {
+    DateTime startDate,
+    DateTime endDate,
+  ) {
     return _db
         .collection('reservas')
         .where(
@@ -231,8 +265,10 @@ class FirestoreService {
         .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
-    });
+          return snapshot.docs
+              .map((d) => Reserva.fromFirestore(d.data(), d.id))
+              .toList();
+        });
   }
 
   Future<List<Reserva>> getReservasByAgencia(String agenciaId) async {
@@ -259,12 +295,12 @@ class FirestoreService {
         .where('agenciaId', isEqualTo: agenciaId)
         .snapshots()
         .map((snapshot) {
-      final list = snapshot.docs
-          .map((d) => Reserva.fromFirestore(d.data(), d.id))
-          .toList();
-      list.sort((a, b) => b.fecha.compareTo(a.fecha));
-      return list;
-    });
+          final list = snapshot.docs
+              .map((d) => Reserva.fromFirestore(d.data(), d.id))
+              .toList();
+          list.sort((a, b) => b.fecha.compareTo(a.fecha));
+          return list;
+        });
   }
 
   Future<void> addReserva(Reserva reserva) async {
@@ -298,9 +334,13 @@ class FirestoreService {
   }
 
   // NUEVO MÉTODO: Actualiza el costoAsiento de todas las reservas de una agencia
-  Future<void> updateReservasCostoAsiento(String agenciaId, double newCostoAsiento) async {
+  Future<void> updateReservasCostoAsiento(
+    String agenciaId,
+    double newCostoAsiento,
+  ) async {
     try {
-      final querySnapshot = await _db.collection('reservas')
+      final querySnapshot = await _db
+          .collection('reservas')
           .where('agenciaId', isEqualTo: agenciaId)
           .get();
 
@@ -309,9 +349,13 @@ class FirestoreService {
         batch.update(doc.reference, {'costoAsiento': newCostoAsiento});
       }
       await batch.commit();
-      debugPrint('✅ Costo por asiento actualizado para ${querySnapshot.docs.length} reservas de la agencia $agenciaId a $newCostoAsiento');
+      debugPrint(
+        '✅ Costo por asiento actualizado para ${querySnapshot.docs.length} reservas de la agencia $agenciaId a $newCostoAsiento',
+      );
     } catch (e) {
-      debugPrint('❌ Error actualizando costo por asiento de reservas para agencia $agenciaId: $e');
+      debugPrint(
+        '❌ Error actualizando costo por asiento de reservas para agencia $agenciaId: $e',
+      );
       throw e;
     }
   }
@@ -319,26 +363,21 @@ class FirestoreService {
   // ========== AGENCIAS ==========
 
   Stream<List<Agencia>> getAgenciasStream() {
-    return _db
-      .collection('agencias')
-      .orderBy('nombre')
-      .snapshots()
-      .map((snapshot) {
-        return snapshot.docs
+    return _db.collection('agencias').orderBy('nombre').snapshots().map((
+      snapshot,
+    ) {
+      return snapshot.docs
           .map((doc) => Agencia.fromFirestore(doc.data(), doc.id))
           .toList();
-      });
+    });
   }
 
   Future<List<Agencia>> getAllAgencias() async {
     try {
-      final snapshot = await _db
-        .collection('agencias')
-        .orderBy('nombre')
-        .get();
+      final snapshot = await _db.collection('agencias').orderBy('nombre').get();
       return snapshot.docs
-        .map((doc) => Agencia.fromFirestore(doc.data(), doc.id))
-        .toList();
+          .map((doc) => Agencia.fromFirestore(doc.data(), doc.id))
+          .toList();
     } catch (e) {
       debugPrint('Error obteniendo agencias: $e');
       return [];
@@ -348,9 +387,15 @@ class FirestoreService {
   // MODIFICADO: addAgencia ahora devuelve la Agencia con su ID generado
   Future<Agencia> addAgencia(Agencia agencia) async {
     try {
-      final docRef = await _db.collection('agencias').add(agencia.toFirestore());
-      final newAgencia = agencia.copyWith(id: docRef.id); // Usar copyWith para añadir el ID
-      debugPrint('✅ Agencia agregada: ${newAgencia.nombre} con ID: ${newAgencia.id}');
+      final docRef = await _db
+          .collection('agencias')
+          .add(agencia.toFirestore());
+      final newAgencia = agencia.copyWith(
+        id: docRef.id,
+      ); // Usar copyWith para añadir el ID
+      debugPrint(
+        '✅ Agencia agregada: ${newAgencia.nombre} con ID: ${newAgencia.id}',
+      );
       return newAgencia;
     } catch (e) {
       debugPrint('❌ Error agregando agencia: $e');

@@ -1,13 +1,15 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Importar DateFilterType
 import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Importar Provider
 import 'package:url_launcher/url_launcher.dart';
 
-import '../mvvc/reservas_controller.dart';
-import '../utils/formatters.dart';
+import 'reserva_details.dart'; // Importar ReservaDetails
 
 class ReservasTable extends StatefulWidget {
   final List<ReservaConAgencia> reservas;
@@ -31,11 +33,19 @@ class _ReservasTableState extends State<ReservasTable> {
   String? _editingReservaId;
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, EstadoReserva> _estadoValues = {};
-  final Map<String, DateTime> _fechaValues = {};
+  final Map<String, DateTime> _fechaValues = {}; // Para la fecha de la reserva
   final Map<String, String> _agenciaValues = {};
 
-  // Use a single controller instance for all operations
-  final ReservasController _controller = ReservasController();
+  late ReservasController _controller; // Declarar como late
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar el controlador aquí, asegurándose de que el contexto esté disponible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller = Provider.of<ReservasController>(context, listen: false);
+    });
+  }
 
   @override
   void dispose() {
@@ -68,8 +78,8 @@ class _ReservasTableState extends State<ReservasTable> {
         text: reserva.observacion,
       );
       _estadoValues[reserva.id] = reserva.estado;
-      _fechaValues[reserva.id] = reserva.fecha;
-      _agenciaValues[reserva.id] = reserva.agenciaId;
+      _fechaValues[reserva.id] = reserva.fecha; // Usar reserva.fecha
+      _agenciaValues[reserva.id] = reserva.agencia.id; // Usar agencia.id
     });
   }
 
@@ -101,10 +111,10 @@ class _ReservasTableState extends State<ReservasTable> {
         hotel: _controllers['${_editingReservaId}_hotel']?.text ?? reservaCA.hotel,
         telefono: _controllers['${_editingReservaId}_telefono']?.text ?? reservaCA.telefono,
         estado: _estadoValues[_editingReservaId] ?? reservaCA.estado,
-        fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha,
+        fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha, // CORREGIDO: Usar 'fecha'
         pax: int.tryParse(_controllers['${_editingReservaId}_pax']?.text ?? '') ?? reservaCA.pax,
         saldo: double.tryParse(_controllers['${_editingReservaId}_saldo']?.text ?? '') ?? reservaCA.saldo,
-        agenciaId: _agenciaValues[_editingReservaId] ?? reservaCA.agenciaId,
+        agenciaId: _agenciaValues[_editingReservaId] ?? reservaCA.agencia.id, // Usar agencia.id
         observacion: _controllers['${_editingReservaId}_observacion']?.text ?? reservaCA.observacion,
       );
       await _controller.updateReserva(_editingReservaId!, updatedReserva);
@@ -129,13 +139,28 @@ class _ReservasTableState extends State<ReservasTable> {
     }
   }
 
+  void _showReservaDetails(BuildContext context, ReservaConAgencia reserva) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ReservaDetails(
+        reserva: reserva,
+        onUpdate: widget.onUpdate, // Pasar el callback de actualización
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Obtener el controlador a través de Provider
+    _controller = Provider.of<ReservasController>(context);
+
     final reservasFiltradas = widget.turno != null
         ? widget.reservas
-              .where((rca) => rca.reserva.turno == widget.turno)
+              .where((rca) => rca.reserva.turno.toString().split('.').last == widget.turno.toString().split('.').last) // Comparar con string
               .toList()
         : widget.reservas;
+    // debugPrint('📋filtro prueba Reservas en tabla: ${reservasFiltradas.map((r) => r.reserva.nombreCliente + " " + r.reserva.turno.toString().split('.').last).toList()}');
 
     final unpaid = reservasFiltradas
         .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
@@ -168,6 +193,7 @@ class _ReservasTableState extends State<ReservasTable> {
     // Construir las columnas dinámicamente
     final List<DataColumn> columns = [
       const DataColumn(label: Text('Acción')),
+      const DataColumn(label: Text('Turno')),
       const DataColumn(label: Text('Número')),
       const DataColumn(label: Text('Hotel')),
       const DataColumn(label: Text('Nombre')),
@@ -197,6 +223,7 @@ class _ReservasTableState extends State<ReservasTable> {
               DataRow(
                 color: WidgetStateProperty.all(Colors.grey.shade200),
                 cells: [
+                  const DataCell(Text('')), // Celda de acción vacía
                   const DataCell(Text('')), // Celda de acción vacía
                   const DataCell(Text('')), // Celda de número vacía
                   const DataCell(Text('')), // Celda de hotel vacía
@@ -336,7 +363,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   .collection('reservas')
                   .doc(r.id)
                   .update({'whatsappContactado': false});
-              setState(() => r = r.copyWith(whatsappContactado: false));
+              // No es necesario setState aquí, el stream de Firestore lo actualizará
               return;
             }
             // 1️⃣ Intentar el esquema nativo
@@ -346,7 +373,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   .collection('reservas')
                   .doc(r.id)
                   .update({'whatsappContactado': true});
-              setState(() => r = r.copyWith(whatsappContactado: true));
+              // No es necesario setState aquí, el stream de Firestore lo actualizará
               await launchUrl(uriApp, mode: LaunchMode.externalApplication);
               return;
             }
@@ -356,7 +383,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   .collection('reservas')
                   .doc(r.id)
                   .update({'whatsappContactado': true});
-              setState(() => r = r.copyWith(whatsappContactado: true));
+              // No es necesario setState aquí, el stream de Firestore lo actualizará
               await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
               return;
             }
@@ -371,6 +398,9 @@ class _ReservasTableState extends State<ReservasTable> {
             }
           },
         ),
+      ),
+      DataCell(
+        Text(r.turno.toString().split('.').last), // Mostrar el turno como texto
       ),
       // Celda de número
       DataCell(
@@ -424,7 +454,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   onTap: () async {
                     final selectedDate = await showDatePicker(
                       context: context,
-                      initialDate: _fechaValues[r.id] ?? r.fecha,
+                      initialDate: _fechaValues[r.id] ?? r.fecha, // CORREGIDO: Usar r.fecha
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
@@ -438,7 +468,7 @@ class _ReservasTableState extends State<ReservasTable> {
                     child: TextField(
                       controller: TextEditingController(
                         text: Formatters.formatDate(
-                          _fechaValues[r.id] ?? r.fecha,
+                          _fechaValues[r.id] ?? r.fecha, // CORREGIDO: Usar r.fecha
                         ),
                       ),
                       decoration: const InputDecoration(
@@ -449,7 +479,7 @@ class _ReservasTableState extends State<ReservasTable> {
                     ),
                   ),
                 )
-              : Text(Formatters.formatDate(r.fecha)),
+              : Text(Formatters.formatDate(r.fecha)), // CORREGIDO: Usar r.fecha
         ),
       );
     }
@@ -498,6 +528,7 @@ class _ReservasTableState extends State<ReservasTable> {
       DataCell(
         GestureDetector(
           onTap: () async {
+            // Lógica para marcar como PAGADA o PENDIENTE
             if (ra.reserva.estado == EstadoReserva.pagada) {
               // Si ya está pagada, preguntar si queremos volver a pendiente
               final ok = await showDialog<bool>(
@@ -520,12 +551,12 @@ class _ReservasTableState extends State<ReservasTable> {
               if (ok == true) {
                 final updated = ra.reserva.copyWith(
                   estado: EstadoReserva.pendiente,
+                  // NO MODIFICAR EL SALDO
                 );
                 await _controller.updateReserva(ra.id, updated);
-                // widget.onUpdate();
               }
-            } else if (ra.reserva.deuda > 0) {
-              // Lógica existente para marcar como pagada
+            } else {
+              // Si no está pagada, preguntar si queremos marcar como pagada
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -548,9 +579,10 @@ class _ReservasTableState extends State<ReservasTable> {
               if (ok == true) {
                 final updated = ra.reserva.copyWith(
                   estado: EstadoReserva.pagada,
+                  // saldo: 0.0, 
                 );
                 await _controller.updateReserva(ra.id, updated);
-                // widget.onUpdate();
+                // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
               }
             }
           },
@@ -674,7 +706,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   observacion: controller.text,
                 );
                 await _controller.updateReserva(ra.id, updated);
-                // widget.onUpdate();
+                // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
               },
               child: const Text('Guardar'),
             ),
@@ -703,7 +735,7 @@ class _ReservasTableState extends State<ReservasTable> {
               final messenger = ScaffoldMessenger.of(context);
               try {
                 await _controller.deleteReserva(reserva.id);
-                // widget.onUpdate();
+                // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
                 messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Reserva eliminada exitosamente'),
