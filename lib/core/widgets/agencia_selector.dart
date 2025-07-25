@@ -211,136 +211,160 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
     _searchController.clear();
     _filterAgencias(''); // Aplicar filtro vacío para mostrar todas las agencias
     _showAddForm = false;
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Permite que el modal ocupe casi toda la altura
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.business, color: Colors.blue.shade600),
-              const SizedBox(width: 8),
-              const Text('Seleccionar Agencia'),
-            ],
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 500,
-            child: Column(
+        builder: (context, setDialogState) => DraggableScrollableSheet(
+          initialChildSize: 0.8, // Inicia ocupando el 80% de la pantalla
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false, // No expandir a la altura máxima automáticamente
+          builder: (_, scrollController) {
+            return Column(
               children: [
-                // Barra de búsqueda
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar agencia...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _filterAgencias('');
-                              setDialogState(() {});
-                            },
-                          )
-                        : null,
+                // Handle para arrastrar el modal
+                Container(
+                  height: 4,
+                  width: 40,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  onChanged: (value) {
-                    _filterAgencias(value);
-                    setDialogState(() {});
-                  },
                 ),
-                const SizedBox(height: 16),
-                // Formulario para agregar nueva agencia
-                if (_showAddForm) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.shade200),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.business, color: Colors.blue.shade600),
+                      const SizedBox(width: 8),
+                      const Text('Seleccionar Agencia', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Barra de búsqueda
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar agencia...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filterAgencias('');
+                                setDialogState(() {});
+                              },
+                            )
+                          : null,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.add_business,
-                              color: Colors.blue.shade600,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Nueva Agencia',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade700,
+                    onChanged: (value) {
+                      _filterAgencias(value);
+                      setDialogState(() {});
+                    },
+                  ),
+                ),
+                // Formulario para agregar nueva agencia
+                if (_showAddForm)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.add_business,
+                                color: Colors.blue.shade600,
+                                size: 20,
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _newAgenciaController,
-                          decoration: const InputDecoration(
-                            hintText: 'Nombre de la nueva agencia',
-                            border: OutlineInputBorder(),
-                            isDense: true,
+                              const SizedBox(width: 8),
+                              Text(
+                                'Nueva Agencia',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                            ],
                           ),
-                          onSubmitted: (_) => _addNewAgencia(),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _isAddingAgencia
-                                    ? null
-                                    : () async {
-                                        await _addNewAgencia();
-                                        setDialogState(() {}); // Actualizar el estado del diálogo después de añadir
-                                      },
-                                icon: _isAddingAgencia
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.add, size: 16),
-                                label: Text(
-                                  _isAddingAgencia ? 'Agregando...' : 'Agregar',
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _newAgenciaController,
+                            decoration: const InputDecoration(
+                              hintText: 'Nombre de la nueva agencia',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onSubmitted: (_) => _addNewAgencia(),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isAddingAgencia
+                                      ? null
+                                      : () async {
+                                          await _addNewAgencia();
+                                          setDialogState(() {}); // Actualizar el estado del diálogo después de añadir
+                                        },
+                                  icon: _isAddingAgencia
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.add, size: 16),
+                                  label: Text(
+                                    _isAddingAgencia ? 'Agregando...' : 'Agregar',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _isAddingAgencia
-                                    ? null
-                                    : () {
-                                        setDialogState(() {
-                                          _showAddForm = false;
-                                          _newAgenciaController.clear();
-                                        });
-                                      },
-                                icon: const Icon(Icons.close, size: 16),
-                                label: const Text('Cancelar'),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _isAddingAgencia
+                                      ? null
+                                      : () {
+                                          setDialogState(() {
+                                            _showAddForm = false;
+                                            _newAgenciaController.clear();
+                                          });
+                                        },
+                                  icon: const Icon(Icons.close, size: 16),
+                                  label: const Text('Cancelar'),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
                 // Lista de agencias
                 Expanded(
                   child: _isLoading
@@ -348,13 +372,14 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                       : _filteredAgencias.isEmpty
                           ? _buildEmptyState(setDialogState)
                           : ListView.builder(
+                              controller: scrollController, // Asociar el controlador de scroll
                               itemCount: _filteredAgencias.length,
                               itemBuilder: (context, index) {
                                 final agencia = _filteredAgencias[index];
                                 final isSelected =
                                     agencia.id == widget.selectedAgenciaId;
                                 return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
+                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                                   color: isSelected ? Colors.blue.shade50 : null,
                                   child: ListTile(
                                     leading: CircleAvatar(
@@ -410,14 +435,8 @@ class _AgenciaSelectorState extends State<AgenciaSelector> {
                             ),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
