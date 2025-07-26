@@ -1,5 +1,8 @@
+import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
+import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
@@ -26,7 +29,8 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   bool _isLoading = false;
   bool _agencyError = false;
   String? _selectedAgenciaId;
-  double _precioPorAsientoGlobal = 0.0; // Renombrado para claridad
+  bool _turnoError = false;
+  TurnoType? _selectedTurno;
 
   // Instancia de TextParser
   final TextParser _textParser = TextParser();
@@ -34,15 +38,26 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   @override
   void initState() {
     super.initState();
-    /// addpostFrameCallback para asegurarnos de que la configuración esté cargada
+    _selectedTurno = widget.turno;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final config = context.read<ConfiguracionController>().configuracion;
-      final precio = config?.precioPorAsiento;
+      if (!mounted) return;
 
-      if (precio != null && precio > 0.0) {
-        setState(() {
-          _precioPorAsientoGlobal = precio;
-        });
+      // 1) Obtén config y agencia (o null si aún no elegida)
+      final config = context.read<ConfiguracionController>().configuracion;
+      final agencia = _selectedAgenciaId != null
+          ? context.read<AgenciasController>().getAgenciaById(
+              _selectedAgenciaId!,
+            )
+          : null;
+
+      // 2) Llama a la función única
+      final precio = obtenerPrecioAsiento(
+        turno: _selectedTurno,
+        config: config,
+        agencia: agencia,
+      );
+
+      if (precio > 0) {
       }
 
       _parseText();
@@ -53,6 +68,27 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   void dispose() {
     _textController.dispose();
     super.dispose();
+  }
+
+  double obtenerPrecioAsiento({
+    TurnoType? turno,
+    Configuracion? config,
+    Agencia? agencia,
+  }) {
+    // primero precio de agencia, si lo tiene y es >0
+    if (agencia != null) {
+      final precioAg = turno == TurnoType.manana
+          ? agencia.precioPorAsientoTurnoManana
+          : agencia.precioPorAsientoTurnoTarde;
+      if (precioAg != null && precioAg > 0) return precioAg;
+    }
+    // si no, precio global según turno
+    if (config != null) {
+      return turno == TurnoType.manana
+          ? config.precioGeneralAsientoTemprano
+          : config.precioGeneralAsientoTarde;
+    }
+    return 0.0;
   }
 
   void _parseText() {
@@ -86,10 +122,28 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     debugPrint('Submitting reserva with data: $_parsedData');
 
     if (_selectedAgenciaId == null) {
-      setState(() => _agencyError = true);
+      // Mostrar mensaje emergente si no hay agencia seleccionada
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Agencia requerida'),
+          content: const Text('Por favor selecciona una agencia.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
       return;
     }
     final fechaRaw = _parsedData?['fechaReserva'] as String?;
+    final nombreCliente = _parsedData?['nombreCliente'] as String?;
+    final telefono = _parsedData?['telefono'] as String?;
+    final hotel = _parsedData?['hotel'] as String?; 
+    final turno = _selectedTurno;
+
     if (fechaRaw == null) {
       await showDialog(
         context: context,
@@ -105,27 +159,83 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
         ),
       );
       return;
+    } else if (nombreCliente == null || nombreCliente.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Nombre requerido'),
+          content: const Text('Por favor ingresa el nombre del cliente.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      return;
+    } else if (telefono == null || telefono.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Teléfono requerido'),
+          content: const Text('Por favor ingresa el teléfono del cliente.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      return;
+    } else if (hotel == null || hotel.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Hotel requerido'),
+          content: const Text('Por favor ingresa el hotel del cliente.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      return;
+    } else if (turno == null) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Turno requerido'),
+          content: const Text('Por favor selecciona un turno.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      return;
     }
 
     // Obtener la agencia seleccionada para verificar su precio específico
-    final agenciasController = Provider.of<AgenciasController>(
-      context,
-      listen: false,
-    );
-    final selectedAgencia = agenciasController.getAgenciaById(
-      _selectedAgenciaId!,
-    );
+    // final agenciasController = Provider.of<AgenciasController>(
+    //   context,
+    //   listen: false,
+    // );
+    // Obtener agencia seleccionada (si existe)
+    final selectedAgencia = _selectedAgenciaId != null
+        ? context.read<AgenciasController>().getAgenciaById(_selectedAgenciaId!)
+        : null;
 
-    // Determinar el costo por asiento y validar su valor
-    double costoAsiento;
-    // Usar precio por turno (mañana o tarde) si existe, si no usar global
-    if (widget.turno == TurnoType.manana) {
-      costoAsiento = selectedAgencia?.precioPorAsientoTurnoManana ?? _precioPorAsientoGlobal;
-    } else if (widget.turno == TurnoType.tarde) {
-      costoAsiento = selectedAgencia?.precioPorAsientoTurnoTarde ?? _precioPorAsientoGlobal;
-    } else {
-      costoAsiento = _precioPorAsientoGlobal;
-    }
+    final costoAsiento = obtenerPrecioAsiento(
+      turno: _selectedTurno,
+      config: context.read<ConfiguracionController>().configuracion,
+      agencia: selectedAgencia,
+    );
     if (costoAsiento <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -156,7 +266,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     // final estado = saldo > 0
     //     ? EstadoReserva.pagada
     //     : EstadoReserva.pendiente;
-    final telefono = (_parsedData!['telefono'] as String?)?.trim() ?? '';
+    // final telefono = (_parsedData!['telefono'] as String?)?.trim() ?? '';
 
     final newReserva = Reserva(
       id: '',
@@ -172,7 +282,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       estado: estado,
       costoAsiento: costoAsiento, // Usar el costoAsiento determinado
       telefono: telefono,
-      turno: widget.turno,
+      turno: turno,
     );
 
     try {
@@ -203,26 +313,48 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
         : null;
 
     // Precio global definido en configuración
-    final globalPrecio = context
-            .watch<ConfiguracionController>()
-            .configuracion
-            ?.precioPorAsiento ??
-        0.0;
-    // Calcular precio a mostrar según turno y existencia de precio en agencia
-    double usedPrice;
-    String priceSource;
-    if (widget.turno == TurnoType.manana) {
-      usedPrice = selectedAgencia?.precioPorAsientoTurnoManana ?? globalPrecio;
-      priceSource = (selectedAgencia != null && selectedAgencia.precioPorAsientoTurnoManana != null)
-          ? 'Agencia (mañana)' : 'Global';
-    } else if (widget.turno == TurnoType.tarde) {
-      usedPrice = selectedAgencia?.precioPorAsientoTurnoTarde ?? globalPrecio;
-      priceSource = (selectedAgencia != null && selectedAgencia.precioPorAsientoTurnoTarde != null)
-          ? 'Agencia (tarde)' : 'Global';
-    } else {
-      usedPrice = globalPrecio;
-      priceSource = 'Global';
-    }
+    // final globalPrecio = context
+    //         .watch<ConfiguracionController>()
+    //         .configuracion
+    //         ?.precioPorAsiento ??
+    //     0.0;
+    // Obtenemos configuración y agencia
+  final config  = context.watch<ConfiguracionController>().configuracion;
+     // Usamos la función helper para determinar el precio a mostrar
+    final usedPrice = obtenerPrecioAsiento(
+    turno:   _selectedTurno,
+    config:  config,
+    agencia: selectedAgencia,
+  );
+    // // Calcular precio a mostrar según turno y existencia de precio en agencia
+    // double usedPrice;
+    // String priceSource;
+    // if (widget.turno == TurnoType.manana) {
+    //   usedPrice = selectedAgencia?.precioPorAsientoTurnoManana ?? globalPrecio;
+    //   priceSource =
+    //       (selectedAgencia != null &&
+    //           selectedAgencia.precioPorAsientoTurnoManana != null)
+    //       ? 'Agencia (mañana)'
+    //       : 'Global';
+    // } else if (widget.turno == TurnoType.tarde) {
+    //   usedPrice = selectedAgencia?.precioPorAsientoTurnoTarde ?? globalPrecio;
+    //   priceSource =
+    //       (selectedAgencia != null &&
+    //           selectedAgencia.precioPorAsientoTurnoTarde != null)
+    //       ? 'Agencia (tarde)'
+    //       : 'Global';
+    // } else {
+    //   usedPrice = globalPrecio;
+    //   priceSource = 'Global';
+    // }
+
+    // Fuente de precio para la etiqueta
+  final priceSource = (selectedAgencia != null &&
+      ((_selectedTurno == TurnoType.manana && selectedAgencia.precioPorAsientoTurnoManana != null && selectedAgencia.precioPorAsientoTurnoManana! > 0) ||
+       (_selectedTurno == TurnoType.tarde  && selectedAgencia.precioPorAsientoTurnoTarde  != null && selectedAgencia.precioPorAsientoTurnoTarde!  > 0)))
+    ? 'Agencia'
+    : 'Global';
+
     final priceLabel = 'Precio asiento ($priceSource)';
 
     final computedEstado = _parsedData != null
@@ -280,11 +412,51 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                         });
                       },
                     ),
+                    // Mostrar error si no hay agencia seleccionada
                     if (_agencyError)
                       Padding(
                         padding: const EdgeInsets.only(top: 4, left: 4),
                         child: Text(
                           'Debes seleccionar una agencia',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    // Selector de turno justo debajo de la agencia
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Turno *',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<TurnoType>(
+                      value: _selectedTurno,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        errorText: _turnoError ? 'Debes seleccionar un turno' : null,
+                      ),
+                      items: TurnoType.values.map((t) {
+                        return DropdownMenuItem(
+                          value: t,
+                          child: Text(t.label),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() {
+                        _selectedTurno = value;
+                        _turnoError = false;
+                      }),
+                    ),
+                    // Mostrar error si no hay turno seleccionado
+                    if (_turnoError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          'Debes seleccionar un turno',
                           style: TextStyle(
                             color: Colors.red.shade700,
                             fontSize: 12,
@@ -374,8 +546,8 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
 
                                 _buildPreviewItem(
                                   'Turno',
-                                  widget.turno != null
-                                      ? widget.turno.toString().split('.').last
+                                  _selectedTurno != null
+                                      ? _selectedTurno!.label
                                       : 'No seleccionado',
                                 ),
                                 _buildPreviewItem(

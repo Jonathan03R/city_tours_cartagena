@@ -28,7 +28,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   String? _selectedAgenciaId;
   bool _isLoading = false;
 
-  double _precioPorAsiento = 0.0;
+  // double _precioPorAsiento = 0.0;
+  double _globalAsientoTarde = 0.0;
+  double _globalAsientoTemprano = 0.0;
 
   @override
   void dispose() {
@@ -54,7 +56,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
     final config = await ConfiguracionService.getConfiguracion();
     if (config != null) {
       setState(() {
-        _precioPorAsiento = config.precioPorAsiento;
+        // _precioPorAsiento = config.precioPorAsiento;
+        _globalAsientoTarde = config.precioGeneralAsientoTarde;
+        _globalAsientoTemprano = config.precioGeneralAsientoTemprano;
       });
     }
   }
@@ -77,7 +81,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
           saldo: double.parse(_saldoController.text),
           agenciaId: _selectedAgenciaId!,
           observacion: _observacionController.text,
-          costoAsiento: _precioPorAsiento,
+          costoAsiento: 00.0, // Aquí puedes calcular el costo según la agencia o turno
           telefono: _telefonoController.text.trim(), 
           turno: null, // Aquí puedes asignar el turno si es necesario
         );

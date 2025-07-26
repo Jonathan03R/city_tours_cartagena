@@ -3,13 +3,16 @@ import 'package:citytourscartagena/core/utils/parsers/parser_rule.dart';
 import 'package:citytourscartagena/core/utils/parsers/parser_utils.dart';
 
 class PaxRule extends ParserRule {
+  // unificamos las claves aquí
+  static const _keys = ['pax', 'personas', 'huéspedes', 'guests'];
+
   @override
   bool matches(String cleanLine) {
     final lower = cleanLine.toLowerCase().trim();
-    const keys = ['pax', 'personas', 'huéspedes', 'guests'];
-    // detecta tanto "key:" como "key " sin dos puntos
-    for (var key in keys) {
-      if (lower.startsWith('$key:') || lower.startsWith('$key ')) {
+    for (var key in _keys) {
+      // escapamos por si hubiera caracteres especiales
+      final pattern = RegExp(r'\b' + RegExp.escape(key) + r'\b');
+      if (pattern.hasMatch(lower)) {
         return true;
       }
     }
@@ -19,16 +22,12 @@ class PaxRule extends ParserRule {
   @override
   void apply(String rawLine, ParsedReserva out) {
     final lower = rawLine.toLowerCase();
-    const keys = ['pax', 'personas', 'huéspedes', 'guests'];
-    String value;
+    String value = '';
 
     if (rawLine.contains(':')) {
-      // usa extractValue cuando hay ":"
       value = extractValue(rawLine);
     } else {
-      // busca la clave y extrae el texto que sigue
-      value = '';
-      for (var key in keys) {
+      for (var key in _keys) {
         final idx = lower.indexOf(key);
         if (idx != -1) {
           value = rawLine.substring(idx + key.length).trim();
