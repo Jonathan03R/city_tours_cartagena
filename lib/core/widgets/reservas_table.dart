@@ -1,6 +1,7 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
+import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Importar DateFilterType
 import 'package:citytourscartagena/screens/main_screens.dart';
@@ -403,7 +404,7 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       ),
       DataCell(
-        Text(r.turno.toString().split('.').last), // Mostrar el turno como texto
+        Text(r.turno?.label ?? ''), // Mostrar el turno como texto
       ),
       // Celda de número
       DataCell(

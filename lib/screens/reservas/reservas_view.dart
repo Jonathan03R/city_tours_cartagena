@@ -570,7 +570,7 @@ class _ReservasViewState extends State<ReservasView> {
       context: context,
       isScrollControlled: true,
       builder: (context) => AddReservaProForm(
-        turno: widget.turno!,
+        turno: reservasController.turnoFilter,
         onAdd: () {
           reservasController.updateFilter(
             reservasController.selectedFilter,
