@@ -155,11 +155,14 @@ class _ReservasTableState extends State<ReservasTable> {
     // Obtener el controlador a través de Provider
     _controller = Provider.of<ReservasController>(context);
 
-    final reservasFiltradas = widget.turno != null
-        ? widget.reservas
-              .where((rca) => rca.reserva.turno.toString().split('.').last == widget.turno.toString().split('.').last) // Comparar con string
-              .toList()
-        : widget.reservas;
+    // final reservasFiltradas = widget.turno != null
+    //     ? widget.reservas
+    //           .where((rca) => rca.reserva.turno.toString().split('.').last == widget.turno.toString().split('.').last) // Comparar con string
+    //           .toList()
+    //     : widget.reservas;
+    final reservasFiltradas = widget.reservas;
+    debugPrint('Página recibida: ${widget.reservas.length}, a mostrar: ${reservasFiltradas.length}');
+
     // debugPrint('📋filtro prueba Reservas en tabla: ${reservasFiltradas.map((r) => r.reserva.nombreCliente + " " + r.reserva.turno.toString().split('.').last).toList()}');
     final totalPax = reservasFiltradas.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
 
