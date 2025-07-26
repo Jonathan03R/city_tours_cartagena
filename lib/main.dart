@@ -25,7 +25,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider<ConfiguracionController>(
-          create: (_) => ConfiguracionController()..cargarConfiguracion(),
+          create: (_) => ConfiguracionController(),
         ),
         ChangeNotifierProvider<ReservasController>(
           create: (_) => ReservasController(),

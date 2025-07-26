@@ -1,3 +1,5 @@
+import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
@@ -34,15 +36,26 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   @override
   void initState() {
     super.initState();
-    /// addpostFrameCallback para asegurarnos de que la configuración esté cargada
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final config = context.read<ConfiguracionController>().configuracion;
-      final precio = config?.precioPorAsiento;
+      if (!mounted) return;
 
-      if (precio != null && precio > 0.0) {
-        setState(() {
-          _precioPorAsientoGlobal = precio;
-        });
+      // 1) Obtén config y agencia (o null si aún no elegida)
+      final config = context.read<ConfiguracionController>().configuracion;
+      final agencia = _selectedAgenciaId != null
+          ? context.read<AgenciasController>().getAgenciaById(
+              _selectedAgenciaId!,
+            )
+          : null;
+
+      // 2) Llama a la función única
+      final precio = obtenerPrecioAsiento(
+        turno: widget.turno,
+        config: config,
+        agencia: agencia,
+      );
+
+      if (precio > 0) {
+        setState(() => _precioPorAsientoGlobal = precio);
       }
 
       _parseText();
@@ -53,6 +66,27 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   void dispose() {
     _textController.dispose();
     super.dispose();
+  }
+
+  double obtenerPrecioAsiento({
+    TurnoType? turno,
+    Configuracion? config,
+    Agencia? agencia,
+  }) {
+    // primero precio de agencia, si lo tiene y es >0
+    if (agencia != null) {
+      final precioAg = turno == TurnoType.manana
+          ? agencia.precioPorAsientoTurnoManana
+          : agencia.precioPorAsientoTurnoTarde;
+      if (precioAg != null && precioAg > 0) return precioAg;
+    }
+    // si no, precio global según turno
+    if (config != null) {
+      return turno == TurnoType.manana
+          ? config.precioGeneralAsientoTemprano
+          : config.precioGeneralAsientoTarde;
+    }
+    return 0.0;
   }
 
   void _parseText() {
@@ -108,24 +142,20 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     }
 
     // Obtener la agencia seleccionada para verificar su precio específico
-    final agenciasController = Provider.of<AgenciasController>(
-      context,
-      listen: false,
-    );
-    final selectedAgencia = agenciasController.getAgenciaById(
-      _selectedAgenciaId!,
-    );
+    // final agenciasController = Provider.of<AgenciasController>(
+    //   context,
+    //   listen: false,
+    // );
+    // Obtener agencia seleccionada (si existe)
+    final selectedAgencia = _selectedAgenciaId != null
+        ? context.read<AgenciasController>().getAgenciaById(_selectedAgenciaId!)
+        : null;
 
-    // Determinar el costo por asiento y validar su valor
-    double costoAsiento;
-    // Usar precio por turno (mañana o tarde) si existe, si no usar global
-    if (widget.turno == TurnoType.manana) {
-      costoAsiento = selectedAgencia?.precioPorAsientoTurnoManana ?? _precioPorAsientoGlobal;
-    } else if (widget.turno == TurnoType.tarde) {
-      costoAsiento = selectedAgencia?.precioPorAsientoTurnoTarde ?? _precioPorAsientoGlobal;
-    } else {
-      costoAsiento = _precioPorAsientoGlobal;
-    }
+    final costoAsiento = obtenerPrecioAsiento(
+      turno: widget.turno,
+      config: context.read<ConfiguracionController>().configuracion,
+      agencia: selectedAgencia,
+    );
     if (costoAsiento <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -203,26 +233,48 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
         : null;
 
     // Precio global definido en configuración
-    final globalPrecio = context
-            .watch<ConfiguracionController>()
-            .configuracion
-            ?.precioPorAsiento ??
-        0.0;
-    // Calcular precio a mostrar según turno y existencia de precio en agencia
-    double usedPrice;
-    String priceSource;
-    if (widget.turno == TurnoType.manana) {
-      usedPrice = selectedAgencia?.precioPorAsientoTurnoManana ?? globalPrecio;
-      priceSource = (selectedAgencia != null && selectedAgencia.precioPorAsientoTurnoManana != null)
-          ? 'Agencia (mañana)' : 'Global';
-    } else if (widget.turno == TurnoType.tarde) {
-      usedPrice = selectedAgencia?.precioPorAsientoTurnoTarde ?? globalPrecio;
-      priceSource = (selectedAgencia != null && selectedAgencia.precioPorAsientoTurnoTarde != null)
-          ? 'Agencia (tarde)' : 'Global';
-    } else {
-      usedPrice = globalPrecio;
-      priceSource = 'Global';
-    }
+    // final globalPrecio = context
+    //         .watch<ConfiguracionController>()
+    //         .configuracion
+    //         ?.precioPorAsiento ??
+    //     0.0;
+    // Obtenemos configuración y agencia
+  final config  = context.watch<ConfiguracionController>().configuracion;
+     // Usamos la función helper para determinar el precio a mostrar
+  final usedPrice = obtenerPrecioAsiento(
+    turno:   widget.turno,
+    config:  config,
+    agencia: selectedAgencia,
+  );
+    // // Calcular precio a mostrar según turno y existencia de precio en agencia
+    // double usedPrice;
+    // String priceSource;
+    // if (widget.turno == TurnoType.manana) {
+    //   usedPrice = selectedAgencia?.precioPorAsientoTurnoManana ?? globalPrecio;
+    //   priceSource =
+    //       (selectedAgencia != null &&
+    //           selectedAgencia.precioPorAsientoTurnoManana != null)
+    //       ? 'Agencia (mañana)'
+    //       : 'Global';
+    // } else if (widget.turno == TurnoType.tarde) {
+    //   usedPrice = selectedAgencia?.precioPorAsientoTurnoTarde ?? globalPrecio;
+    //   priceSource =
+    //       (selectedAgencia != null &&
+    //           selectedAgencia.precioPorAsientoTurnoTarde != null)
+    //       ? 'Agencia (tarde)'
+    //       : 'Global';
+    // } else {
+    //   usedPrice = globalPrecio;
+    //   priceSource = 'Global';
+    // }
+
+    // Fuente de precio para la etiqueta
+  final priceSource = (selectedAgencia != null &&
+      ((widget.turno == TurnoType.manana && selectedAgencia.precioPorAsientoTurnoManana != null && selectedAgencia.precioPorAsientoTurnoManana! > 0) ||
+       (widget.turno == TurnoType.tarde  && selectedAgencia.precioPorAsientoTurnoTarde  != null && selectedAgencia.precioPorAsientoTurnoTarde!  > 0)))
+    ? 'Agencia'
+    : 'Global';
+
     final priceLabel = 'Precio asiento ($priceSource)';
 
     final computedEstado = _parsedData != null
