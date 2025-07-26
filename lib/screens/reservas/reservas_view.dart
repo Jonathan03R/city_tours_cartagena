@@ -7,6 +7,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/mvvc/agencias_controller.dart';
 import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
+import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
@@ -40,9 +41,9 @@ class _ReservasViewState extends State<ReservasView> {
   final TextEditingController _precioController = TextEditingController();
   final TextEditingController _precioMananaController = TextEditingController();
   final TextEditingController _precioTardeController = TextEditingController();
-  
+
   String? _editingTurno; // 'manana' o 'tarde'
-  
+
   AgenciaConReservas? _currentAgencia;
   StreamSubscription<List<AgenciaConReservas>>? _agenciasSub;
 
@@ -132,26 +133,27 @@ class _ReservasViewState extends State<ReservasView> {
         initialImagenUrl: agencia.imagenUrl,
         initialPrecioPorAsientoTurnoManana: agencia.precioPorAsientoTurnoManana,
         initialPrecioPorAsientoTurnoTarde: agencia.precioPorAsientoTurnoTarde,
-        onCrear: (
-          nuevoNombre,
-          nuevaImagenFile,
-          nuevoPrecioManana,
-          nuevoPrecioTarde,
-        ) async {
-          final agenciasController = Provider.of<AgenciasController>(
-            context,
-            listen: false,
-          );
-          await agenciasController.updateAgencia(
-            agencia.id,
-            nuevoNombre,
-            nuevaImagenFile?.path,
-            agencia.imagenUrl,
-            newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
-            newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
-          );
-          Navigator.of(context).pop();
-        },
+        onCrear:
+            (
+              nuevoNombre,
+              nuevaImagenFile,
+              nuevoPrecioManana,
+              nuevoPrecioTarde,
+            ) async {
+              final agenciasController = Provider.of<AgenciasController>(
+                context,
+                listen: false,
+              );
+              await agenciasController.updateAgencia(
+                agencia.id,
+                nuevoNombre,
+                nuevaImagenFile?.path,
+                agencia.imagenUrl,
+                newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
+                newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
+              );
+              Navigator.of(context).pop();
+            },
       ),
     );
   }
@@ -261,7 +263,8 @@ class _ReservasViewState extends State<ReservasView> {
                             _buildRightControls(
                               reservasController.currentReservas,
                               configuracion,
-                              reservasController.turnoFilter, // NUEVO: Pasar turno filtrado
+                              reservasController
+                                  .turnoFilter, // NUEVO: Pasar turno filtrado
                             ),
                           ],
                         )
@@ -271,7 +274,8 @@ class _ReservasViewState extends State<ReservasView> {
                             _buildRightControls(
                               reservasController.currentReservas,
                               configuracion,
-                              reservasController.turnoFilter, // NUEVO: Pasar turno filtrado
+                              reservasController
+                                  .turnoFilter, // NUEVO: Pasar turno filtrado
                             ),
                             Text(
                               _getFilterTitle(
@@ -301,7 +305,8 @@ class _ReservasViewState extends State<ReservasView> {
                 }
                 final currentReservas = snapshot.data ?? [];
 
-                if (currentReservas.isEmpty && !reservasController.isFetchingPage) {
+                if (currentReservas.isEmpty &&
+                    !reservasController.isFetchingPage) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -323,6 +328,7 @@ class _ReservasViewState extends State<ReservasView> {
                         ? ReservasTable(
                             turno: reservasController.turnoFilter,
                             reservas: currentReservas,
+                            agenciaId: widget.agencia?.id,
                             onUpdate: () {
                               reservasController.updateFilter(
                                 reservasController.selectedFilter,
@@ -341,7 +347,8 @@ class _ReservasViewState extends State<ReservasView> {
                             itemBuilder: (ctx, i) {
                               return ReservaCardItem(
                                 reserva: currentReservas[i],
-                                onTap: () => _showReservaDetails(currentReservas[i]),
+                                onTap: () =>
+                                    _showReservaDetails(currentReservas[i]),
                               );
                             },
                           ),
@@ -352,16 +359,20 @@ class _ReservasViewState extends State<ReservasView> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           ElevatedButton(
-                            onPressed: reservasController.canGoPrevious &&
+                            onPressed:
+                                reservasController.canGoPrevious &&
                                     !reservasController.isFetchingPage
                                 ? reservasController.previousPage
                                 : null,
-                            child: reservasController.isFetchingPage &&
+                            child:
+                                reservasController.isFetchingPage &&
                                     reservasController.canGoPrevious
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Text('Anterior'),
                           ),
@@ -375,16 +386,20 @@ class _ReservasViewState extends State<ReservasView> {
                           ),
                           const SizedBox(width: 16),
                           ElevatedButton(
-                            onPressed: reservasController.canGoNext &&
+                            onPressed:
+                                reservasController.canGoNext &&
                                     !reservasController.isFetchingPage
                                 ? reservasController.nextPage
                                 : null,
-                            child: reservasController.isFetchingPage &&
+                            child:
+                                reservasController.isFetchingPage &&
                                     reservasController.canGoNext
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Text('Siguiente'),
                           ),
@@ -497,10 +512,20 @@ class _ReservasViewState extends State<ReservasView> {
     TurnoType? selectedTurno,
   ) {
     final meses = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
     ];
-    
+
     String formatearFecha(DateTime fecha) {
       return '${fecha.day} de ${meses[fecha.month - 1]} del ${fecha.year}';
     }
@@ -517,7 +542,9 @@ class _ReservasViewState extends State<ReservasView> {
         dateText = formatearFecha(DateTime.now());
         break;
       case DateFilterType.yesterday:
-        dateText = formatearFecha(DateTime.now().subtract(const Duration(days: 1)));
+        dateText = formatearFecha(
+          DateTime.now().subtract(const Duration(days: 1)),
+        );
         break;
       case DateFilterType.tomorrow:
         dateText = formatearFecha(DateTime.now().add(const Duration(days: 1)));
@@ -531,8 +558,8 @@ class _ReservasViewState extends State<ReservasView> {
 
     String turnoText = '';
     if (selectedTurno != null) {
-      turnoText = selectedTurno == TurnoType.manana 
-          ? ' 🌅 (Mañana)' 
+      turnoText = selectedTurno == TurnoType.manana
+          ? ' 🌅 (Mañana)'
           : ' 🌆 (Tarde)';
     }
     return '$dateText$turnoText';
@@ -638,9 +665,9 @@ class _ReservasViewState extends State<ReservasView> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error exportando: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
       }
     }
   }
@@ -655,18 +682,20 @@ class _ReservasViewState extends State<ReservasView> {
       final tText = _precioTardeController.text.trim();
       final double? manana = mText.isEmpty ? null : double.tryParse(mText);
       final double? tarde = tText.isEmpty ? null : double.tryParse(tText);
-      
+
       if ((mText.isNotEmpty && (manana == null || manana <= 0)) ||
           (tText.isNotEmpty && (tarde == null || tarde <= 0))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Ingresa precios válidos o deja vacío para usar global'),
+            content: Text(
+              'Ingresa precios válidos o deja vacío para usar global',
+            ),
             backgroundColor: Colors.orange,
           ),
         );
         return;
       }
-      
+
       try {
         await agenciasController.updateAgencia(
           widget.agencia!.id,
@@ -682,7 +711,7 @@ class _ReservasViewState extends State<ReservasView> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         setState(() {
           final old = _currentAgencia ?? widget.agencia!;
           final updatedAg = old.agencia.copyWith(
@@ -707,10 +736,13 @@ class _ReservasViewState extends State<ReservasView> {
     }
   }
 
-  void _guardarNuevoPrecioGlobal(String turno, Configuracion? configuracion) async {
+  void _guardarNuevoPrecioGlobal(
+    String turno,
+    Configuracion? configuracion,
+  ) async {
     final input = _precioController.text.trim();
     final nuevoPrecio = double.tryParse(input);
-    
+
     if (nuevoPrecio == null || nuevoPrecio <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -726,20 +758,20 @@ class _ReservasViewState extends State<ReservasView> {
         context,
         listen: false,
       );
-      
+
       if (turno == 'manana') {
         await configController.actualizarPrecioManana(nuevoPrecio);
       } else {
         await configController.actualizarPrecioTarde(nuevoPrecio);
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Precio global de $turno actualizado correctamente'),
           backgroundColor: Colors.green,
         ),
       );
-      
+
       setState(() {
         _editandoPrecio = false;
         _editingTurno = null;
@@ -760,19 +792,28 @@ class _ReservasViewState extends State<ReservasView> {
     Configuracion? configuracion,
     TurnoType? turnoFilter, // NUEVO: Recibir el turno filtrado
   ) {
+    // Obtener el controlador de reservas
+    final reservasController = Provider.of<ReservasController>(context, listen: false);
     final ac = _currentAgencia ?? widget.agencia;
     final ag = ac?.agencia;
-    
+
     // ARREGLADO: Lógica de filtrado por turno
-    final showManana = ag != null && (turnoFilter == null || turnoFilter == TurnoType.manana);
-    final showTarde = ag != null && (turnoFilter == null || turnoFilter == TurnoType.tarde);
-    
+    final showManana =
+        ag != null && (turnoFilter == null || turnoFilter == TurnoType.manana);
+    final showTarde =
+        ag != null && (turnoFilter == null || turnoFilter == TurnoType.tarde);
+
     // ARREGLADO: Usar los precios correctos
-    final double? globalPriceManana = configuracion?.precioGeneralAsientoTemprano;
+    final double? globalPriceManana =
+        configuracion?.precioGeneralAsientoTemprano;
     final double? globalPriceTarde = configuracion?.precioGeneralAsientoTarde;
 
-    debugPrint('🔍 Filtro turno: $turnoFilter, showManana: $showManana, showTarde: $showTarde');
-    debugPrint('💰 Precios globales - Mañana: $globalPriceManana, Tarde: $globalPriceTarde');
+    debugPrint(
+      '🔍 Filtro turno: $turnoFilter, showManana: $showManana, showTarde: $showTarde',
+    );
+    debugPrint(
+      '💰 Precios globales - Mañana: $globalPriceManana, Tarde: $globalPriceTarde',
+    );
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -796,14 +837,34 @@ class _ReservasViewState extends State<ReservasView> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              
               ElevatedButton.icon(
-                onPressed: () => _exportToExcel(currentReservas),
+                onPressed: () async {
+                  // ✅ USAR EL CONTROLADOR EXISTENTE CON FILTROS
+                  final allReservas = await reservasController.getAllFilteredReservasSinPaginacion();
+                  
+                  if (!mounted) return;
+
+                  final pdfService = PdfExportService();
+                  await pdfService.exportarReservasConAgencia(
+                    reservasConAgencia: allReservas,
+                    context: context,
+                    // ✅ PASAR TODOS LOS FILTROS APLICADOS
+                    filtroFecha: reservasController.selectedFilter,
+                    fechaPersonalizada: reservasController.customDate,
+                    turnoFiltrado: reservasController.turnoFilter,
+                    agenciaEspecifica: widget.agencia?.agencia, // Pasar la agencia si existe
+                  );
+                },
                 icon: const Icon(Icons.file_download, size: 20),
                 label: const Text("Exportar"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   textStyle: const TextStyle(fontSize: 12),
                 ),
               ),
@@ -840,10 +901,14 @@ class _ReservasViewState extends State<ReservasView> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'Precio mañana',
-                    hintText: 'Vacío = usar global (${globalPriceManana?.toStringAsFixed(2) ?? '0.00'})',
+                    hintText:
+                        'Vacío = usar global (${globalPriceManana?.toStringAsFixed(2) ?? '0.00'})',
                     isDense: true,
                     border: const OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.wb_sunny, color: Colors.orange.shade600),
+                    prefixIcon: Icon(
+                      Icons.wb_sunny,
+                      color: Colors.orange.shade600,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -854,10 +919,14 @@ class _ReservasViewState extends State<ReservasView> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'Precio tarde',
-                    hintText: 'Vacío = usar global (${globalPriceTarde?.toStringAsFixed(2) ?? '0.00'})',
+                    hintText:
+                        'Vacío = usar global (${globalPriceTarde?.toStringAsFixed(2) ?? '0.00'})',
                     isDense: true,
                     border: const OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.wb_twilight, color: Colors.blue.shade600),
+                    prefixIcon: Icon(
+                      Icons.wb_twilight,
+                      color: Colors.blue.shade600,
+                    ),
                   ),
                 ),
               ],
@@ -894,9 +963,15 @@ class _ReservasViewState extends State<ReservasView> {
                       onPressed: () {
                         setState(() {
                           _precioMananaController.text =
-                              ag.precioPorAsientoTurnoManana?.toStringAsFixed(2) ?? '';
+                              ag.precioPorAsientoTurnoManana?.toStringAsFixed(
+                                2,
+                              ) ??
+                              '';
                           _precioTardeController.text =
-                              ag.precioPorAsientoTurnoTarde?.toStringAsFixed(2) ?? '';
+                              ag.precioPorAsientoTurnoTarde?.toStringAsFixed(
+                                2,
+                              ) ??
+                              '';
                           _editandoPrecio = true;
                         });
                       },
@@ -905,8 +980,8 @@ class _ReservasViewState extends State<ReservasView> {
           ] else ...[
             // GLOBAL: Mostrar precios globales según filtro
             _buildGlobalPriceSection(
-              configuracion, 
-              globalPriceManana, 
+              configuracion,
+              globalPriceManana,
               globalPriceTarde,
               turnoFilter, // NUEVO: Pasar el filtro de turno
             ),
@@ -948,10 +1023,7 @@ class _ReservasViewState extends State<ReservasView> {
               ),
               child: Text(
                 'Global',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
               ),
             ),
         ],
@@ -975,13 +1047,10 @@ class _ReservasViewState extends State<ReservasView> {
       children: [
         const Text(
           'Precios Globales:',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        
+
         // Precio Mañana Global - Solo si debe mostrarse
         if (showManana)
           Row(
@@ -1002,7 +1071,8 @@ class _ReservasViewState extends State<ReservasView> {
                           ),
                           border: OutlineInputBorder(),
                         ),
-                        onSubmitted: (_) => _guardarNuevoPrecioGlobal('manana', configuracion),
+                        onSubmitted: (_) =>
+                            _guardarNuevoPrecioGlobal('manana', configuracion),
                       )
                     : Text(
                         'Mañana: \$${globalPriceManana?.toStringAsFixed(2) ?? '0.00'}',
@@ -1014,7 +1084,9 @@ class _ReservasViewState extends State<ReservasView> {
               ),
               IconButton(
                 icon: Icon(
-                  _editandoPrecio && _editingTurno == 'manana' ? Icons.check : Icons.edit,
+                  _editandoPrecio && _editingTurno == 'manana'
+                      ? Icons.check
+                      : Icons.edit,
                   color: Colors.grey.shade800,
                   size: 18,
                 ),
@@ -1023,7 +1095,8 @@ class _ReservasViewState extends State<ReservasView> {
                     _guardarNuevoPrecioGlobal('manana', configuracion);
                   } else {
                     setState(() {
-                      _precioController.text = globalPriceManana?.toStringAsFixed(2) ?? '0.00';
+                      _precioController.text =
+                          globalPriceManana?.toStringAsFixed(2) ?? '0.00';
                       _editandoPrecio = true;
                       _editingTurno = 'manana';
                     });
@@ -1032,10 +1105,10 @@ class _ReservasViewState extends State<ReservasView> {
               ),
             ],
           ),
-        
+
         // Espaciado solo si ambos se muestran
         if (showManana && showTarde) const SizedBox(height: 8),
-        
+
         // Precio Tarde Global - Solo si debe mostrarse
         if (showTarde)
           Row(
@@ -1056,7 +1129,8 @@ class _ReservasViewState extends State<ReservasView> {
                           ),
                           border: OutlineInputBorder(),
                         ),
-                        onSubmitted: (_) => _guardarNuevoPrecioGlobal('tarde', configuracion),
+                        onSubmitted: (_) =>
+                            _guardarNuevoPrecioGlobal('tarde', configuracion),
                       )
                     : Text(
                         'Tarde: \$${globalPriceTarde?.toStringAsFixed(2) ?? '0.00'}',
@@ -1068,7 +1142,9 @@ class _ReservasViewState extends State<ReservasView> {
               ),
               IconButton(
                 icon: Icon(
-                  _editandoPrecio && _editingTurno == 'tarde' ? Icons.check : Icons.edit,
+                  _editandoPrecio && _editingTurno == 'tarde'
+                      ? Icons.check
+                      : Icons.edit,
                   color: Colors.grey.shade800,
                   size: 18,
                 ),
@@ -1077,7 +1153,8 @@ class _ReservasViewState extends State<ReservasView> {
                     _guardarNuevoPrecioGlobal('tarde', configuracion);
                   } else {
                     setState(() {
-                      _precioController.text = globalPriceTarde?.toStringAsFixed(2) ?? '0.00';
+                      _precioController.text =
+                          globalPriceTarde?.toStringAsFixed(2) ?? '0.00';
                       _editandoPrecio = true;
                       _editingTurno = 'tarde';
                     });
@@ -1110,8 +1187,18 @@ class CompactDateFilterButtons extends StatelessWidget {
 
   String _getButtonText(DateFilterType filter, DateTime? date) {
     final meses = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
     ];
     String formatearFecha(DateTime fecha) {
       return '${fecha.day} de ${meses[fecha.month - 1]}';
@@ -1161,14 +1248,16 @@ class CompactDateFilterButtons extends StatelessWidget {
             DateFilterType.today,
             _getButtonText(DateFilterType.today, null),
             selectedFilter == DateFilterType.today,
-            onPressed: () => onFilterChanged(DateFilterType.today, null, turno: null),
+            onPressed: () =>
+                onFilterChanged(DateFilterType.today, null, turno: null),
           ),
           _buildFilterButton(
             context,
             DateFilterType.all,
             _getButtonText(DateFilterType.all, null),
             selectedFilter == DateFilterType.all,
-            onPressed: () => onFilterChanged(DateFilterType.all, null, turno: null),
+            onPressed: () =>
+                onFilterChanged(DateFilterType.all, null, turno: null),
           ),
           _buildFilterButton(
             context,
@@ -1203,20 +1292,27 @@ class CompactDateFilterButtons extends StatelessWidget {
                   break;
               }
             },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<MoreFilterOption>>[
-              PopupMenuItem<MoreFilterOption>(
-                value: MoreFilterOption.yesterday,
-                child: Text(_getMoreFilterOptionText(MoreFilterOption.yesterday)),
-              ),
-              PopupMenuItem<MoreFilterOption>(
-                value: MoreFilterOption.tomorrow,
-                child: Text(_getMoreFilterOptionText(MoreFilterOption.tomorrow)),
-              ),
-              PopupMenuItem<MoreFilterOption>(
-                value: MoreFilterOption.lastWeek,
-                child: Text(_getMoreFilterOptionText(MoreFilterOption.lastWeek)),
-              ),
-            ],
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<MoreFilterOption>>[
+                  PopupMenuItem<MoreFilterOption>(
+                    value: MoreFilterOption.yesterday,
+                    child: Text(
+                      _getMoreFilterOptionText(MoreFilterOption.yesterday),
+                    ),
+                  ),
+                  PopupMenuItem<MoreFilterOption>(
+                    value: MoreFilterOption.tomorrow,
+                    child: Text(
+                      _getMoreFilterOptionText(MoreFilterOption.tomorrow),
+                    ),
+                  ),
+                  PopupMenuItem<MoreFilterOption>(
+                    value: MoreFilterOption.lastWeek,
+                    child: Text(
+                      _getMoreFilterOptionText(MoreFilterOption.lastWeek),
+                    ),
+                  ),
+                ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(

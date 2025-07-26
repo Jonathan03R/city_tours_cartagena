@@ -13,10 +13,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'reserva_details.dart'; // Importar ReservaDetails
 
 class ReservasTable extends StatefulWidget {
+  // final
   final List<ReservaConAgencia> reservas;
   final VoidCallback onUpdate;
   final DateFilterType currentFilter;
   final TurnoType? turno;
+
+  final String? agenciaId;
 
   const ReservasTable({
     super.key,
@@ -24,6 +27,7 @@ class ReservasTable extends StatefulWidget {
     required this.onUpdate,
     required this.currentFilter, // Requerir el filtro actual
     required this.turno,
+    required this.agenciaId,
   });
 
   @override
@@ -106,17 +110,38 @@ class _ReservasTableState extends State<ReservasTable> {
   Future<void> _saveChanges() async {
     if (_editingReservaId == null) return;
     try {
-      final reservaCA = widget.reservas.firstWhere((r) => r.id == _editingReservaId);
+      final reservaCA = widget.reservas.firstWhere(
+        (r) => r.id == _editingReservaId,
+      );
       final updatedReserva = reservaCA.reserva.copyWith(
-        nombreCliente: _controllers['${_editingReservaId}_cliente']?.text ?? reservaCA.nombreCliente,
-        hotel: _controllers['${_editingReservaId}_hotel']?.text ?? reservaCA.hotel,
-        telefono: _controllers['${_editingReservaId}_telefono']?.text ?? reservaCA.telefono,
+        nombreCliente:
+            _controllers['${_editingReservaId}_cliente']?.text ??
+            reservaCA.nombreCliente,
+        hotel:
+            _controllers['${_editingReservaId}_hotel']?.text ?? reservaCA.hotel,
+        telefono:
+            _controllers['${_editingReservaId}_telefono']?.text ??
+            reservaCA.telefono,
         estado: _estadoValues[_editingReservaId] ?? reservaCA.estado,
-        fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha, // CORREGIDO: Usar 'fecha'
-        pax: int.tryParse(_controllers['${_editingReservaId}_pax']?.text ?? '') ?? reservaCA.pax,
-        saldo: double.tryParse(_controllers['${_editingReservaId}_saldo']?.text ?? '') ?? reservaCA.saldo,
-        agenciaId: _agenciaValues[_editingReservaId] ?? reservaCA.agencia.id, // Usar agencia.id
-        observacion: _controllers['${_editingReservaId}_observacion']?.text ?? reservaCA.observacion,
+        fecha:
+            _fechaValues[_editingReservaId] ??
+            reservaCA.fecha, // CORREGIDO: Usar 'fecha'
+        pax:
+            int.tryParse(
+              _controllers['${_editingReservaId}_pax']?.text ?? '',
+            ) ??
+            reservaCA.pax,
+        saldo:
+            double.tryParse(
+              _controllers['${_editingReservaId}_saldo']?.text ?? '',
+            ) ??
+            reservaCA.saldo,
+        agenciaId:
+            _agenciaValues[_editingReservaId] ??
+            reservaCA.agencia.id, // Usar agencia.id
+        observacion:
+            _controllers['${_editingReservaId}_observacion']?.text ??
+            reservaCA.observacion,
       );
       await _controller.updateReserva(_editingReservaId!, updatedReserva);
       _cancelEditing();
@@ -154,6 +179,27 @@ class _ReservasTableState extends State<ReservasTable> {
   @override
   Widget build(BuildContext context) {
     // Obtener el controlador a través de Provider
+
+    // debugPrint('Agencia ID: ${widget.agenciaId}');
+    // debugPrint(
+    //   '>>> ReservasTable: recibidos ${widget.reservas.length} items <<<',
+    // );
+    // // 2) Detalle de cada ReservaConAgencia
+    // for (var ra in widget.reservas) {
+    //   debugPrint(
+    //     '– reserva.id=${ra.reserva.id}, '
+    //     'cliente=${ra.reserva.nombreCliente}, '
+    //     'hotel=${ra.reserva.hotel}, '
+    //     'pax=${ra.reserva.pax}, '
+    //     'saldo=${ra.reserva.saldo}, '
+    //     'observación=${ra.reserva.observacion}, '
+    //     'fecha=${ra.reserva.fecha}, '
+    //     'turno=${ra.reserva.turno}, '
+    //     'agencia.id=${ra.agencia.id}, '
+    //     'agencia.nombre=${ra.agencia.nombre}',
+    //   );
+    // }
+
     _controller = Provider.of<ReservasController>(context);
 
     // final reservasFiltradas = widget.turno != null
@@ -162,16 +208,48 @@ class _ReservasTableState extends State<ReservasTable> {
     //           .toList()
     //     : widget.reservas;
     final reservasFiltradas = widget.reservas;
-    debugPrint('Página recibida: ${widget.reservas.length}, a mostrar: ${reservasFiltradas.length}');
+    debugPrint(
+      'Página recibida: ${widget.reservas.length}, a mostrar: ${reservasFiltradas.length}',
+    );
 
     // debugPrint('📋filtro prueba Reservas en tabla: ${reservasFiltradas.map((r) => r.reserva.nombreCliente + " " + r.reserva.turno.toString().split('.').last).toList()}');
-    final totalPax = reservasFiltradas.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
+    // final totalPax = reservasFiltradas.fold<int>(
+    //   0,
+    //   (sum, ra) => sum + ra.reserva.pax,
+    // );
 
+    int totalPax = 0;
+    double totalSaldo = 0.0;
+    double totalDeuda = 0.0;
     final unpaid = reservasFiltradas
         .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
         .toList();
-    final totalSaldo = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
-    final totalDeuda = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
+    if (widget.agenciaId != null) {
+      totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
+      totalSaldo = unpaid.fold<double>(
+        0.0,
+        (sum, ra) => sum + ra.reserva.saldo,
+      );
+      totalDeuda = unpaid.fold<double>(
+        0.0,
+        (sum, ra) => sum + ra.reserva.deuda,
+      );
+    }else {
+      totalPax = reservasFiltradas.fold<int>(
+        0,
+        (sum, ra) => sum + ra.reserva.pax,
+      );
+      totalSaldo = reservasFiltradas.fold<double>(
+        0.0,
+        (sum, ra) => sum + ra.reserva.saldo,
+      );
+      totalDeuda = unpaid.fold<double>(
+        0.0,
+        (sum, ra) => sum + ra.reserva.deuda,
+      );
+    }
+
+
 
     if (reservasFiltradas.isEmpty) {
       return const Center(
@@ -458,7 +536,9 @@ class _ReservasTableState extends State<ReservasTable> {
                   onTap: () async {
                     final selectedDate = await showDatePicker(
                       context: context,
-                      initialDate: _fechaValues[r.id] ?? r.fecha, // CORREGIDO: Usar r.fecha
+                      initialDate:
+                          _fechaValues[r.id] ??
+                          r.fecha, // CORREGIDO: Usar r.fecha
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
@@ -472,7 +552,8 @@ class _ReservasTableState extends State<ReservasTable> {
                     child: TextField(
                       controller: TextEditingController(
                         text: Formatters.formatDate(
-                          _fechaValues[r.id] ?? r.fecha, // CORREGIDO: Usar r.fecha
+                          _fechaValues[r.id] ??
+                              r.fecha, // CORREGIDO: Usar r.fecha
                         ),
                       ),
                       decoration: const InputDecoration(
@@ -583,7 +664,7 @@ class _ReservasTableState extends State<ReservasTable> {
               if (ok == true) {
                 final updated = ra.reserva.copyWith(
                   estado: EstadoReserva.pagada,
-                  // saldo: 0.0, 
+                  // saldo: 0.0,
                 );
                 await _controller.updateReserva(ra.id, updated);
                 // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
