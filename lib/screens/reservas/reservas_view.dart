@@ -441,22 +441,36 @@ class _ReservasViewState extends State<ReservasView> {
           ],
         ),
       ),
-      floatingActionButton: widget.agencia == null
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton.extended(
-                  onPressed: _showAddReservaProForm,
-                  backgroundColor: Colors.purple.shade600,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('registro rapido'),
-                  heroTag: "pro_button",
-                ),
-                const SizedBox(height: 16),
-              ],
-            )
-          : null,
+      // floatingActionButton: widget.agencia == null
+      //     ? Column(
+      //         mainAxisAlignment: MainAxisAlignment.end,
+      //         children: [
+      //           FloatingActionButton.extended(
+      //             onPressed: _showAddReservaProForm,
+      //             backgroundColor: Colors.purple.shade600,
+      //             foregroundColor: Colors.white,
+      //             icon: const Icon(Icons.auto_awesome),
+      //             label: const Text('registro rapido'),
+      //             heroTag: "pro_button",
+      //           ),
+      //           const SizedBox(height: 16),
+      //         ],
+      //       )
+      //     : null,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            onPressed: _showAddReservaProForm,
+            backgroundColor: Colors.purple.shade600,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('registro rapido'),
+            heroTag: "pro_button",
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 
@@ -593,10 +607,12 @@ class _ReservasViewState extends State<ReservasView> {
       listen: false,
     );
 
+    debugPrint('la agencia es ${widget.agencia?.agencia.nombre}');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => AddReservaProForm(
+        agencia: widget.agencia?.agencia,
         turno: reservasController.turnoFilter,
         onAdd: () {
           reservasController.updateFilter(
@@ -793,7 +809,10 @@ class _ReservasViewState extends State<ReservasView> {
     TurnoType? turnoFilter, // NUEVO: Recibir el turno filtrado
   ) {
     // Obtener el controlador de reservas
-    final reservasController = Provider.of<ReservasController>(context, listen: false);
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
     final ac = _currentAgencia ?? widget.agencia;
     final ag = ac?.agencia;
 
@@ -837,12 +856,13 @@ class _ReservasViewState extends State<ReservasView> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              
+
               ElevatedButton.icon(
                 onPressed: () async {
                   // ✅ USAR EL CONTROLADOR EXISTENTE CON FILTROS
-                  final allReservas = await reservasController.getAllFilteredReservasSinPaginacion();
-                  
+                  final allReservas = await reservasController
+                      .getAllFilteredReservasSinPaginacion();
+
                   if (!mounted) return;
 
                   final pdfService = PdfExportService();
@@ -853,7 +873,8 @@ class _ReservasViewState extends State<ReservasView> {
                     filtroFecha: reservasController.selectedFilter,
                     fechaPersonalizada: reservasController.customDate,
                     turnoFiltrado: reservasController.turnoFilter,
-                    agenciaEspecifica: widget.agencia?.agencia, // Pasar la agencia si existe
+                    agenciaEspecifica:
+                        widget.agencia?.agencia, // Pasar la agencia si existe
                   );
                 },
                 icon: const Icon(Icons.file_download, size: 20),

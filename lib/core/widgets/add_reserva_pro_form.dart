@@ -16,7 +16,8 @@ import '../mvvc/reservas_controller.dart';
 class AddReservaProForm extends StatefulWidget {
   final TurnoType? turno;
   final VoidCallback onAdd;
-  const AddReservaProForm({super.key, required this.onAdd, this.turno});
+  final Agencia? agencia;
+  const AddReservaProForm({super.key, required this.onAdd, this.turno, this.agencia});
 
   @override
   State<AddReservaProForm> createState() => _AddReservaProFormState();
@@ -38,6 +39,9 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   @override
   void initState() {
     super.initState();
+    if (widget.agencia != null) {
+      _selectedAgenciaId = widget.agencia!.id;
+    }
     _selectedTurno = widget.turno;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
