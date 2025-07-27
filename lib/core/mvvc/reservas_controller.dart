@@ -213,8 +213,15 @@ class ReservasController extends ChangeNotifier {
         .first;
 
     final raw = snapshot.docs.map((d) => d.data()).toList();
+    final todayEnd = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    ).add(Duration(days: 1));
     final valid = raw
         .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
+        .where((r) => r.estado != EstadoReserva.pagada)
+        .where((r) => r.fecha.isBefore(todayEnd))
         .toList();
 
     return valid.map((r) {
