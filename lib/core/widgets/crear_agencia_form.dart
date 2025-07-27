@@ -130,6 +130,7 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                 controller: _nombreController,
                 decoration: const InputDecoration(
                   labelText: 'Nombre de la Agencia',
+                  labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.business),
                 ),
@@ -165,8 +166,10 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
               TextFormField(
                 controller: _precioMananaController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio por Asiento (Turno Mañana)',
+                  labelText: 'Precio Asiento (Mañana)',
+                  labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), 
                   hintText: 'Ej: 50.000 o 50,000.00',
+                  hintStyle: TextStyle(fontSize: 11), 
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
                 ),
@@ -186,8 +189,10 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
               TextFormField(
                 controller: _precioTardeController,
                 decoration: const InputDecoration(
-                  labelText: 'Precio por Asiento (Turno Tarde)',
+                  labelText: 'Precio Asiento (Tarde)',
+                  labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), 
                   hintText: 'Ej: 50.000 o 50,000.00',
+                  hintStyle: TextStyle(fontSize: 11), 
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
                 ),

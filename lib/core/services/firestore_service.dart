@@ -135,59 +135,52 @@ class FirestoreService {
   //   );
   // }
 
-  // NUEVO MÉTODO: Para obtener reservas con paginación
-  Stream<QuerySnapshot<Reserva>> getPaginatedReservasFiltered({
-    TurnoType? turno,
-    DateFilterType filter = DateFilterType.all,
-    DateTime? customDate,
-    String? agenciaId,
-    required int limit,
-    DocumentSnapshot? startAfterDocument,
-  }) {
-    // 🐞 DEBUG: imprime TODO lo que llega al servicio
-    debugPrint(
-      ' 🔎 filtro prueba  🔥 FirestoreService.getPaginatedReservasFiltered → '
-      'turno=${turno?.toString() ?? "null"}, '
-      'filter=$filter, '
-      'customDate=${customDate?.toIso8601String() ?? "null"}, '
-      'agenciaId=${agenciaId ?? "null"}, '
-      'limit=$limit, '
-      'startAfterDoc=${startAfterDocument != null}',
-    );
-    var query =
-        _db
-                .collection('reservas')
-                .withConverter<Reserva>(
-                  fromFirestore: (snap, _) =>
-                      Reserva.fromFirestore(snap.data()!, snap.id),
-                  toFirestore: (res, _) => res.toFirestore(),
-                )
-            as Query<Reserva>;
+  /// Obtiene reservas filtradas por turno, fecha y agencia, sin paginación.
+  Stream<QuerySnapshot<Reserva>> getReservasFiltered({
+  TurnoType? turno,
+  DateFilterType filter = DateFilterType.all,
+  DateTime? customDate,
+  String? agenciaId,
+}) async* {
+    // 1) traer TODAS las agencias para saber cuáles están eliminadas
+    final todasAgencias = await getAllAgencias();
+    final eliminadasIds = todasAgencias
+        .where((a) => a.eliminada)
+        .map((a) => a.id)
+        .toList();
 
+    // 2) construir consulta base
+    var query = _db
+        .collection('reservas')
+        .withConverter<Reserva>(
+          fromFirestore: (snap, _) => Reserva.fromFirestore(snap.data()!, snap.id),
+          toFirestore: (res, _) => res.toFirestore(),
+        ) as Query<Reserva>;
+
+    // 3) filtros de turno y agencia explícita
     if (turno != null) {
       final t = turno.toString().split('.').last;
       query = query.where('turno', isEqualTo: t);
     }
-
     if (agenciaId != null && agenciaId.isNotEmpty) {
       query = query.where('agenciaId', isEqualTo: agenciaId);
     }
 
-    query = _applyDateFilter(
-      query,
-      filter,
-      customDate,
-    ); // Usar el método auxiliar
-
-    query = query.orderBy('fechaReserva', descending: true);
-
-    if (startAfterDocument != null) {
-      query = query.startAfterDocument(startAfterDocument);
+    // 4) excluir agencias eliminadas: NOT‐IN + ORDER BY campo de inequality
+    if (eliminadasIds.isNotEmpty) {
+      query = query
+        .where('agenciaId', whereNotIn: eliminadasIds)
+        .orderBy('agenciaId');
     }
 
-    query = query.limit(limit);
+    // 5) filtros de fecha
+    query = _applyDateFilter(query, filter, customDate);
 
-    return query.snapshots();
+    // 6) orden default por fechaReserva
+    query = query.orderBy('fechaReserva', descending: true);
+
+    // 7) entregar stream completo al controlador
+    yield* query.snapshots();
   }
 
   /// Obtiene todas las reservas.

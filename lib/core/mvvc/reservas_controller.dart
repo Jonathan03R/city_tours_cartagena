@@ -7,7 +7,6 @@ import 'package:citytourscartagena/core/services/firestore_service.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart'; // Importar la extensión compartida
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Para DateFilterType
 import 'package:citytourscartagena/screens/main_screens.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Importar para DocumentSnapshot
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -25,9 +24,6 @@ class ReservasController extends ChangeNotifier {
   // --- Paginación ---
   int _itemsPerPage = 10; // Default items per page
   int _currentPageIndex = 0; // 0-indexed current page
-  List<DocumentSnapshot?> _pageLastDocuments = [
-    null,
-  ]; // Stores the last document of each loaded page
   bool _isFetchingPage = false; // To prevent multiple simultaneous fetches
   bool _hasMorePages =
       true; // Indicates if there are more pages after the current one
@@ -125,7 +121,7 @@ class ReservasController extends ChangeNotifier {
               agencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
               Agencia(
                 id: r.agenciaId,
-                nombre: 'Agencia Desconocida',
+                nombre: 'Agencia DesconocidaAA',
                 eliminada: true,
               ); // Fallback
           return ReservaConAgencia(reserva: r, agencia: ag);
@@ -206,6 +202,27 @@ class ReservasController extends ChangeNotifier {
     _updateFilteredReservasStream(resetPagination: false);
   }
 
+  Future<List<ReservaConAgencia>> getAllFilteredReservasSinPaginacion() async {
+    final snapshot = await _firestoreService
+        .getReservasFiltered(
+          turno: _turnoFilter,
+          filter: _selectedFilter,
+          customDate: _customDate,
+          agenciaId: _agenciaIdFilter,
+        )
+        .first;
+
+    final raw = snapshot.docs.map((d) => d.data()).toList();
+    final valid = raw
+        .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
+        .toList();
+
+    return valid.map((r) {
+      final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
+      return ReservaConAgencia(reserva: r, agencia: ag);
+    }).toList();
+  }
+
   // Lógica para construir el stream de reservas basado en el filtro y paginación
   void _updateFilteredReservasStream({bool resetPagination = false}) {
     _reservasSubscription
@@ -214,97 +231,50 @@ class ReservasController extends ChangeNotifier {
     if (resetPagination) {
       _allLoadedReservas = [];
       _currentPageIndex = 0;
-      _pageLastDocuments = [null]; // Reset to start from the beginning
       _hasMorePages = true;
       _filteredReservasSubject.add([]);
     }
 
     _isFetchingPage = true;
-    _isLoading = true; // Indicar que se está cargando
+    _isLoading = true;
     notifyListeners();
 
-    DocumentSnapshot? startAfterDoc = _pageLastDocuments[_currentPageIndex];
+    _reservasSubscription?.cancel();
 
     _reservasSubscription = _firestoreService
-        .getPaginatedReservasFiltered(
+        .getReservasFiltered(
           turno: _turnoFilter,
           filter: _selectedFilter,
           customDate: _customDate,
           agenciaId: _agenciaIdFilter,
-          limit:
-              _itemsPerPage +
-              1, // Fetch one extra to check if there's a next page
-          startAfterDocument: startAfterDoc,
         )
         .listen(
           (snapshot) {
-            final fetchedDocs = snapshot.docs;
-
-            _hasMorePages = fetchedDocs.length > _itemsPerPage;
-
-            final currentReservasDocs = fetchedDocs
-                .take(_itemsPerPage)
+            // Extraer reservas y filtrar por agencias válidas
+            final raw = snapshot.docs.map((d) => d.data()).toList();
+            final valid = raw
+                .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
                 .toList();
-
-            // Update _pageLastDocuments for the next page if we are moving forward
-            // and there are actual documents on the current page.
-            if (_hasMorePages &&
-                _currentPageIndex + 1 == _pageLastDocuments.length) {
-              if (currentReservasDocs.isNotEmpty) {
-                _pageLastDocuments.add(currentReservasDocs.last);
-              } else {
-                // This case means we thought there was a next page, but the current page
-                // is actually empty. This might happen if data was deleted.
-                // We should mark no more pages and potentially trim _pageLastDocuments.
-                _hasMorePages = false;
-                // Trim _pageLastDocuments to current index + 1 if it's longer
-                if (_pageLastDocuments.length > _currentPageIndex + 1) {
-                  _pageLastDocuments = _pageLastDocuments.sublist(
-                    0,
-                    _currentPageIndex + 1,
-                  );
-                }
-              }
-            } else if (!_hasMorePages &&
-                _pageLastDocuments.length > _currentPageIndex + 1) {
-              // If we are on the last page and there are no more, ensure _pageLastDocuments
-              // doesn't contain stale markers for non-existent future pages.
-              _pageLastDocuments = _pageLastDocuments.sublist(
-                0,
-                _currentPageIndex + 1,
-              );
-            }
-
-            // Map fetched reservations to ReservaConAgencia, ensuring agency data is available
-            _allLoadedReservas = currentReservasDocs
-                .map((doc) {
-                  // CORRECCIÓN: doc.data() ya es un objeto Reserva debido al withConverter en FirestoreService
-                  final r = doc.data();
-                  // Safely get the agency, providing a fallback if not found in _allAgencias
-                  final ag =
-                      _allAgencias.firstWhereOrNull(
-                        (a) => a.id == r.agenciaId,
-                      ) ??
-                      Agencia(
-                        id: r.agenciaId,
-                        nombre: 'Agencia Desconocida',
-                        eliminada: true,
-                      );
-                  return ReservaConAgencia(reserva: r, agencia: ag);
-                })
-                .where((rca) => !rca.agencia.eliminada)
-                .toList();
-
+            // Paginación local
+            final total = valid.length;
+            final start = _currentPageIndex * _itemsPerPage;
+            final end = (start + _itemsPerPage).clamp(0, total);
+            _hasMorePages = end < total;
+            final slice = valid.sublist(start, end);
+            // Mapear a ReservaConAgencia
+            _allLoadedReservas = slice.map((r) {
+              final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
+              return ReservaConAgencia(reserva: r, agencia: ag);
+            }).toList();
             _isFetchingPage = false;
-            _isLoading = false; // Finalizar carga
+            _isLoading = false;
             _filteredReservasSubject.add(_allLoadedReservas);
             notifyListeners();
-            // debugPrint('🔄 Reservas cargadas en vista: ${_allLoadedReservas.length}');
           },
           onError: (e) {
             debugPrint('Error en ReservasController stream: $e');
             _isFetchingPage = false;
-            _isLoading = false; // Finalizar carga con error
+            _isLoading = false;
             _filteredReservasSubject.addError(e);
             notifyListeners();
           },
@@ -335,7 +305,7 @@ class ReservasController extends ChangeNotifier {
   @override
   void dispose() {
     _reservasSubscription?.cancel(); // Cancelar la suscripción al disponer
-    _agenciasSub?.cancel(); 
+    _agenciasSub?.cancel();
     _filteredReservasSubject.close(); // Es crucial cerrar el BehaviorSubject
     super.dispose();
   }
