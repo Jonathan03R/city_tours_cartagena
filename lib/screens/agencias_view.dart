@@ -116,7 +116,7 @@ class _AgenciasViewState extends State<AgenciasView> {
               onPressed: _deleteSelected,
             ),
         ],
-        backgroundColor: Colors.green.shade600,
+        backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -137,7 +137,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: StreamBuilder<List<AgenciaConReservas>>(
@@ -147,7 +147,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                         return Text(
                           '${agencias.length} agencia${agencias.length != 1 ? 's' : ''}',
                           style: TextStyle(
-                            color: Colors.green.shade700,
+                            color: Colors.blue.shade700,
                             fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.end,

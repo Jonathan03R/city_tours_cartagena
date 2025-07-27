@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart'; // Importar ConfiguracionController
 import 'package:citytourscartagena/core/controller/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/core/models/agencia.dart';
@@ -20,10 +21,12 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   int _currentIndex = 0; // 0=Reservas,1=Agencias,2=Colaboradores
   TurnoType? _turnoSeleccionado; // turno elegido
-  StreamSubscription<List<AgenciaConReservas>>? _agenciasPreloadSubscription; 
-  
+  StreamSubscription<List<AgenciaConReservas>>? _agenciasPreloadSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -35,17 +38,27 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    _agenciasPreloadSubscription?.cancel(); // Cancelar la suscripción al cerrar la app
+    _agenciasPreloadSubscription
+        ?.cancel(); // Cancelar la suscripción al cerrar la app
     super.dispose();
   }
 
   void _startGlobalImagePreloading(BuildContext context) {
-    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
-    _agenciasPreloadSubscription = agenciasController.agenciasConReservasStream.listen((agencias) {
-      _precacheAgencyImages(agencias);
-    }, onError: (error) {
-      debugPrint('Error en el stream de agencias para precarga global: $error');
-    });
+    final agenciasController = Provider.of<AgenciasController>(
+      context,
+      listen: false,
+    );
+    _agenciasPreloadSubscription = agenciasController.agenciasConReservasStream
+        .listen(
+          (agencias) {
+            _precacheAgencyImages(agencias);
+          },
+          onError: (error) {
+            debugPrint(
+              'Error en el stream de agencias para precarga global: $error',
+            );
+          },
+        );
   }
 
   void _precacheAgencyImages(List<AgenciaConReservas> agencias) {
@@ -55,7 +68,9 @@ class _MainScreenState extends State<MainScreen> {
           precacheImage(NetworkImage(agencia.imagenUrl!), context);
           // debugPrint('✅ Global precargando imagen de agencia: ${agencia.nombre}');
         } catch (e) {
-          debugPrint('❌ Error global precargando imagen de ${agencia.nombre}: $e');
+          debugPrint(
+            '❌ Error global precargando imagen de ${agencia.nombre}: $e',
+          );
         }
       }
     }
@@ -70,13 +85,92 @@ class _MainScreenState extends State<MainScreen> {
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
       ],
       child: Scaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 2,
+          iconTheme: const IconThemeData(
+            color: Color(0xFF06142F),
+          ), // azul oscuro
+          title: const Text(
+            'CITY TOURS CLIMATIZADO',
+            style: TextStyle(
+              color: Color(0xFF06142F),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              letterSpacing: 1.0,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        drawer: Drawer(
+          child: Consumer<AuthController>(
+            builder: (_, auth, __) {
+              final usuario = auth.appUser?.usuario ?? 'Invitado';
+              final email = auth.user?.email ?? '';
+              return Column(
+                children: [
+                  Container(
+                    color: const Color(0xFF06142F), // color de fondo completo
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24,
+                      horizontal: 16,
+                    ),
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.white,
+                          backgroundImage: const AssetImage(
+                            'assets/images/logo.png',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          usuario,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          email,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Color(0xFFF41720)),
+                    title: const Text(
+                      'Cerrar sesión',
+                      style: TextStyle(
+                        color: Color(0xFF06142F),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () => auth.logout(),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
         body: IndexedStack(
           index: _currentIndex,
           children: [
             // Siempre existe el slot 0
             _currentIndex == 0
                 ? (_turnoSeleccionado == null
-                      ? TurnoSelectorWidget( // Usar la nueva pantalla de selección de turno
+                      ? TurnoSelectorWidget(
+                          // Usar la nueva pantalla de selección de turno
                           onTurnoSelected: (turno) => setState(() {
                             _turnoSeleccionado = turno;
                           }),
