@@ -202,6 +202,27 @@ class ReservasController extends ChangeNotifier {
     _updateFilteredReservasStream(resetPagination: false);
   }
 
+  Future<List<ReservaConAgencia>> getAllFilteredReservasSinPaginacion() async {
+    final snapshot = await _firestoreService
+        .getReservasFiltered(
+          turno: _turnoFilter,
+          filter: _selectedFilter,
+          customDate: _customDate,
+          agenciaId: _agenciaIdFilter,
+        )
+        .first;
+
+    final raw = snapshot.docs.map((d) => d.data()).toList();
+    final valid = raw
+        .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
+        .toList();
+
+    return valid.map((r) {
+      final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
+      return ReservaConAgencia(reserva: r, agencia: ag);
+    }).toList();
+  }
+
   // Lógica para construir el stream de reservas basado en el filtro y paginación
   void _updateFilteredReservasStream({bool resetPagination = false}) {
     _reservasSubscription
@@ -218,9 +239,8 @@ class ReservasController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    _reservasSubscription
-      ?.cancel();
-    
+    _reservasSubscription?.cancel();
+
     _reservasSubscription = _firestoreService
         .getReservasFiltered(
           turno: _turnoFilter,
@@ -228,32 +248,37 @@ class ReservasController extends ChangeNotifier {
           customDate: _customDate,
           agenciaId: _agenciaIdFilter,
         )
-        .listen((snapshot) {
-      // Extraer reservas y filtrar por agencias válidas
-      final raw = snapshot.docs.map((d) => d.data()).toList();
-      final valid = raw.where((r) => _allAgencias.any((a) => a.id == r.agenciaId)).toList();
-      // Paginación local
-      final total = valid.length;
-      final start = _currentPageIndex * _itemsPerPage;
-      final end = (start + _itemsPerPage).clamp(0, total);
-      _hasMorePages = end < total;
-      final slice = valid.sublist(start, end);
-      // Mapear a ReservaConAgencia
-      _allLoadedReservas = slice.map((r) {
-        final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
-        return ReservaConAgencia(reserva: r, agencia: ag);
-      }).toList();
-      _isFetchingPage = false;
-      _isLoading = false;
-      _filteredReservasSubject.add(_allLoadedReservas);
-      notifyListeners();
-    }, onError: (e) {
-      debugPrint('Error en ReservasController stream: $e');
-      _isFetchingPage = false;
-      _isLoading = false;
-      _filteredReservasSubject.addError(e);
-      notifyListeners();
-    });
+        .listen(
+          (snapshot) {
+            // Extraer reservas y filtrar por agencias válidas
+            final raw = snapshot.docs.map((d) => d.data()).toList();
+            final valid = raw
+                .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
+                .toList();
+            // Paginación local
+            final total = valid.length;
+            final start = _currentPageIndex * _itemsPerPage;
+            final end = (start + _itemsPerPage).clamp(0, total);
+            _hasMorePages = end < total;
+            final slice = valid.sublist(start, end);
+            // Mapear a ReservaConAgencia
+            _allLoadedReservas = slice.map((r) {
+              final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
+              return ReservaConAgencia(reserva: r, agencia: ag);
+            }).toList();
+            _isFetchingPage = false;
+            _isLoading = false;
+            _filteredReservasSubject.add(_allLoadedReservas);
+            notifyListeners();
+          },
+          onError: (e) {
+            debugPrint('Error en ReservasController stream: $e');
+            _isFetchingPage = false;
+            _isLoading = false;
+            _filteredReservasSubject.addError(e);
+            notifyListeners();
+          },
+        );
   }
 
   // Métodos CRUD que delegan a FirestoreService (ya no fuerzan recarga)

@@ -117,60 +117,124 @@ class _TableOnlyViewScreenState extends State<TableOnlyViewScreen> {
           tooltip: 'Regresar',
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-              child: Text(
-                // Obtener los filtros del controlador
-                'fecha - ${_getFilterTitle(reservasController.selectedFilter, reservasController.customDate)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+            child: Text(
+              'fecha - ${_getFilterTitle(reservasController.selectedFilter, reservasController.customDate)}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
-            StreamBuilder<List<ReservaConAgencia>>(
-              stream: reservasController.filteredReservasStream, // Usar el stream del controlador
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Column(
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  StreamBuilder<List<ReservaConAgencia>>(
+                    stream: reservasController.filteredReservasStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.table_chart, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text(
+                                'No hay reservas para mostrar en esta vista',
+                                style: TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return ReservasTable(
+                        reservas: snapshot.data!,
+                        turno: widget.turno,
+                        agenciaId: widget.agenciaId,
+                        onUpdate: () {
+                          reservasController.updateFilter(
+                            reservasController.selectedFilter,
+                            date: reservasController.customDate,
+                            agenciaId: widget.agenciaId,
+                          );
+                        },
+                        currentFilter: reservasController.selectedFilter,
+                      );
+                    },
+                  ),
+                  // Botones de paginación
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.table_chart, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: reservasController.canGoPrevious && !reservasController.isFetchingPage
+                              ? reservasController.previousPage
+                              : null,
+                          child: reservasController.isFetchingPage && reservasController.canGoPrevious
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Anterior'),
+                        ),
+                        const SizedBox(width: 16),
                         Text(
-                          'No hay reservas para mostrar en esta vista',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                          'Página ${reservasController.currentPage}',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: reservasController.canGoNext && !reservasController.isFetchingPage
+                              ? reservasController.nextPage
+                              : null,
+                          child: reservasController.isFetchingPage && reservasController.canGoNext
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Siguiente'),
                         ),
                       ],
                     ),
-                  );
-                }
-                return ReservasTable(
-                  reservas: snapshot.data!, // Pasar la lista del snapshot
-                  turno: widget.turno, // Pasar el turno si aplica
-                  onUpdate: () {
-                    // Al actualizar desde la tabla, forzar una recarga en el controlador
-                    reservasController.updateFilter(
-                      reservasController.selectedFilter,
-                      date: reservasController.customDate,
-                      agenciaId: widget.agenciaId,
-                    );
-                  },
-                  currentFilter: reservasController.selectedFilter, // Pasar del controlador
-                );
-              },
+                  ),
+                  // Selector de elementos por página
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Elementos por página:'),
+                        const SizedBox(width: 8),
+                        DropdownButton<int>(
+                          value: reservasController.itemsPerPage,
+                          items: const [10, 20, 50].map((value) => DropdownMenuItem<int>(
+                                value: value,
+                                child: Text('$value'),
+                              )).toList(),
+                          onChanged: (newValue) {
+                            if (newValue != null) reservasController.setItemsPerPage(newValue);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 30),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
