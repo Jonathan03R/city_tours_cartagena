@@ -2,7 +2,7 @@ import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:flutter/material.dart';
 
-import '../mvvc/reservas_controller.dart';
+import '../controller/reservas_controller.dart';
 import '../utils/formatters.dart';
 import 'agencia_selector.dart';
 

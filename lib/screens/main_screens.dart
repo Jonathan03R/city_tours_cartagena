@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/configuracion_controller.dart'; // Importar ConfiguracionController
+import 'package:citytourscartagena/core/controller/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/core/models/agencia.dart';
-import 'package:citytourscartagena/core/mvvc/agencias_controller.dart';
-import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart'; // Importar ConfiguracionController
-import 'package:citytourscartagena/core/mvvc/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/colaboradores_view.dart'; // Asegúrate de que esta vista exista
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';

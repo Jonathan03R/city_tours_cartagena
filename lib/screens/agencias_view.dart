@@ -1,11 +1,11 @@
 import 'dart:async'; // Importar para StreamSubscription
 
+import 'package:citytourscartagena/core/controller/agencias_controller.dart'; // Importar el nuevo AgenciasController
+import 'package:citytourscartagena/core/controller/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
-import 'package:citytourscartagena/core/mvvc/agencias_controller.dart'; // Importar el nuevo AgenciasController
-import 'package:citytourscartagena/core/mvvc/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/core/utils/formatters.dart'; // Importar Formatters
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';

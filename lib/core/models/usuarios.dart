@@ -1,18 +1,21 @@
+import 'package:citytourscartagena/core/models/roles.dart';
+
 class Usuarios {
   String? id;
   String? nombre;
   String? email;
   String? telefono;
-  String? fotoUrl;
+  List<String> roles;
+  
+  Usuarios({this.id, this.nombre, this.email, this.telefono , List<String>? roles})
+      : roles = roles ?? [Roles.colaborador]; 
 
-  Usuarios({this.id, this.nombre, this.email, this.telefono, this.fotoUrl});
-
-  Usuarios.fromJson(Map<String, dynamic> json) {
+  Usuarios.fromJson(Map<String, dynamic> json)
+      : roles = (json['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [Roles.colaborador] {
     id = json['id'];
     nombre = json['nombre'];
     email = json['email'];
     telefono = json['telefono'];
-    fotoUrl = json['fotoUrl'];
   }
 
   Map<String, dynamic> toJson() {
@@ -21,7 +24,7 @@ class Usuarios {
     data['nombre'] = nombre;
     data['email'] = email;
     data['telefono'] = telefono;
-    data['fotoUrl'] = fotoUrl;
+    data['rol'] = roles;
     return data;
   }
 }
