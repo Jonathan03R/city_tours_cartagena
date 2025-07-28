@@ -144,6 +144,8 @@ class AgenciasController extends ChangeNotifier {
     }
   }
 
+  /// Elimina una agencia (en realidad la marca como eliminada).
+  /// sofDeleteAgencias en español es "eliminar agencias suavemente"
   Future<void> softDeleteAgencias(Set<String> ids) async {
     for (var id in ids) {
       // En lugar de eliminar, actualizamos el campo 'eliminada'

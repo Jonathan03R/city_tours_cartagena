@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
@@ -8,14 +7,11 @@ import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
-import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
-import 'package:excel/excel.dart' as xls;
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/controller/reservas_controller.dart';
@@ -626,67 +622,67 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  Future<void> _exportToExcel(List<ReservaConAgencia> reservas) async {
-    try {
-      var status = await Permission.manageExternalStorage.request();
-      if (!status.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Permiso denegado. No se puede guardar el archivo'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-      final excel = xls.Excel.createExcel();
-      final sheet = excel['Reservas'];
-      sheet.appendRow([
-        xls.TextCellValue('HOTEL'),
-        xls.TextCellValue('CLIENTE'),
-        xls.TextCellValue('FECHA'),
-        xls.TextCellValue('PAX'),
-        xls.TextCellValue('SALDO'),
-        xls.TextCellValue('AGENCIA'),
-        xls.TextCellValue('OBSERVACIONES'),
-        xls.TextCellValue('ESTADO'),
-      ]);
-      for (var r in reservas) {
-        sheet.appendRow([
-          xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
-          xls.TextCellValue(r.nombreCliente),
-          xls.TextCellValue(Formatters.formatDate(r.fecha)),
-          xls.IntCellValue(r.pax),
-          xls.DoubleCellValue(r.saldo),
-          xls.TextCellValue(r.nombreAgencia),
-          xls.TextCellValue(
-            r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
-          ),
-          xls.TextCellValue(Formatters.getEstadoText(r.estado)),
-        ]);
-      }
-      final bytes = excel.encode();
-      if (bytes == null) return;
-      final directory = Directory('/storage/emulated/0/Download');
-      if (!directory.existsSync()) {
-        directory.createSync(recursive: true);
-      }
-      final filePath =
-          '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-      final file = File(filePath);
-      await file.writeAsBytes(bytes);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Archivo guardado en Descargas')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
-      }
-    }
-  }
+  // Future<void> _exportToExcel(List<ReservaConAgencia> reservas) async {
+  //   try {
+  //     var status = await Permission.manageExternalStorage.request();
+  //     if (!status.isGranted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Permiso denegado. No se puede guardar el archivo'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //       return;
+  //     }
+  //     final excel = xls.Excel.createExcel();
+  //     final sheet = excel['Reservas'];
+  //     sheet.appendRow([
+  //       xls.TextCellValue('HOTEL'),
+  //       xls.TextCellValue('CLIENTE'),
+  //       xls.TextCellValue('FECHA'),
+  //       xls.TextCellValue('PAX'),
+  //       xls.TextCellValue('SALDO'),
+  //       xls.TextCellValue('AGENCIA'),
+  //       xls.TextCellValue('OBSERVACIONES'),
+  //       xls.TextCellValue('ESTADO'),
+  //     ]);
+  //     for (var r in reservas) {
+  //       sheet.appendRow([
+  //         xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
+  //         xls.TextCellValue(r.nombreCliente),
+  //         xls.TextCellValue(Formatters.formatDate(r.fecha)),
+  //         xls.IntCellValue(r.pax),
+  //         xls.DoubleCellValue(r.saldo),
+  //         xls.TextCellValue(r.nombreAgencia),
+  //         xls.TextCellValue(
+  //           r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
+  //         ),
+  //         xls.TextCellValue(Formatters.getEstadoText(r.estado)),
+  //       ]);
+  //     }
+  //     final bytes = excel.encode();
+  //     if (bytes == null) return;
+  //     final directory = Directory('/storage/emulated/0/Download');
+  //     if (!directory.existsSync()) {
+  //       directory.createSync(recursive: true);
+  //     }
+  //     final filePath =
+  //         '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+  //     final file = File(filePath);
+  //     await file.writeAsBytes(bytes);
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Archivo guardado en Descargas')),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
+  //     }
+  //   }
+  // }
 
   void _guardarNuevoPrecio(Configuracion? configuracion) async {
     if (widget.agencia != null) {

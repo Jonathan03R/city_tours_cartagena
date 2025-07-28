@@ -8,6 +8,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/utils/formatters.dart'; // Importar Formatters
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
+import 'package:citytourscartagena/core/widgets/search_input.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Necesario para consumir el controlador
@@ -22,6 +23,7 @@ class AgenciasView extends StatefulWidget {
 class _AgenciasViewState extends State<AgenciasView> {
   bool _selectionMode = false;
   final Set<String> _selectedIds = {};
+  String _searchTerm = ''; 
   // Eliminado: StreamSubscription<List<AgenciaConReservas>>? _agenciasSubscription; // Suscripción para precarga
 
   @override
@@ -119,62 +121,80 @@ class _AgenciasViewState extends State<AgenciasView> {
         backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total de Agencias',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: StreamBuilder<List<AgenciaConReservas>>(
-                      stream: agenciasController.agenciasConReservasStream,
-                      builder: (context, snapshot) {
-                        final agencias = snapshot.data ?? [];
-                        return Text(
-                          '${agencias.length} agencia${agencias.length != 1 ? 's' : ''}',
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.end,
-                          overflow: TextOverflow.ellipsis,
-                        );
-                      },
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          children: [
+            SearchInput(
+              hintText: 'Buscar agencia...',
+              onChanged: (value) => setState(() {
+                _searchTerm = value;
+              }),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total de Agencias',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: StreamBuilder<List<AgenciaConReservas>>(
+                        stream: agenciasController.agenciasConReservasStream,
+                        builder: (context, snapshot) {
+                          final agencias = snapshot.data ?? [];
+                          return Text(
+                            '${agencias.length} agencia${agencias.length != 1 ? 's' : ''}',
+                            style: TextStyle(
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: StreamBuilder<List<AgenciaConReservas>>(
-              stream: agenciasController.agenciasConReservasStream,
-              builder: (context, agenciasSnapshot) {
-                if (agenciasSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (agenciasSnapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${agenciasSnapshot.error}'),
-                  );
-                }
-                final agencias = agenciasSnapshot.data ?? [];
+            Expanded(
+              child: StreamBuilder<List<AgenciaConReservas>>(
+                stream: agenciasController.agenciasConReservasStream,
+                builder: (context, agenciasSnapshot) {
+                  if (agenciasSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (agenciasSnapshot.hasError) {
+                    return Center(
+                      child: Text('Error: ${agenciasSnapshot.error}'),
+                    );
+                  }
+                  final agencias = agenciasSnapshot.data ?? [];
+                  // Filtrar agencias según término de búsqueda
+                  final filteredAgencias = _searchTerm.isEmpty
+                      ? agencias
+                      : agencias
+                          .where((a) => a.nombre
+                              .toLowerCase()
+                              .contains(_searchTerm.toLowerCase()))
+                          .toList();
 
+                // Si no hay agencias en total
                 if (agencias.isEmpty) {
                   return const Center(
                     child: Column(
@@ -190,262 +210,274 @@ class _AgenciasViewState extends State<AgenciasView> {
                     ),
                   );
                 }
+                // Si la búsqueda no produce resultados
+                if (filteredAgencias.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No se encontraron agencias',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  );
+                }
 
-                // NUEVO: StreamBuilder anidado para obtener TODAS las reservas
-                return StreamBuilder<List<ReservaConAgencia>>(
-                  stream: reservasController.getAllReservasConAgenciaStream(),
-                  builder: (context, allReservasSnapshot) {
-                    if (allReservasSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (allReservasSnapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error cargando todas las reservas: ${allReservasSnapshot.error}',
-                        ),
-                      );
-                    }
-                    final allReservas = allReservasSnapshot.data ?? [];
-
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.83,
+                  // NUEVO: StreamBuilder anidado para obtener TODAS las reservas
+                      return StreamBuilder<List<ReservaConAgencia>>(
+                    stream: reservasController.getAllReservasConAgenciaStream(),
+                    builder: (context, allReservasSnapshot) {
+                      if (allReservasSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (allReservasSnapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Error cargando todas las reservas: ${allReservasSnapshot.error}',
                           ),
-                      itemCount: agencias.length,
-                      itemBuilder: (context, index) {
-                        final agencia = agencias[index];
-                        final selected = _selectedIds.contains(agencia.id);
+                        );
+                      }
+                      final allReservas = allReservasSnapshot.data ?? [];
 
-                        // Calcular la deuda de la agencia usando TODAS las reservas
-                        final totalDeuda = allReservas
-                            .where(
-                              (rca) =>
-                                  rca.agencia.id == agencia.id &&
-                                  rca.reserva.estado !=
-                                      EstadoReserva.pagada, // ← excluye pagadas
-                            )
-                            .fold<double>(
-                              0.0,
-                              (sum, rca) => sum + rca.reserva.deuda,
-                            );
-
-                        return GestureDetector(
-                          onLongPress: () => _toggleSelection(agencia.id),
-                          onTap: () {
-                            if (_selectionMode) {
-                              _toggleSelection(agencia.id);
-                            } else {
-                              _navigateToAgenciaReservas(agencia);
-                            }
-                          },
-                          child: Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: selected
-                                  ? BorderSide(
-                                      color: Colors.blue.shade400,
-                                      width: 2,
-                                    )
-                                  : BorderSide.none,
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 0.83,
                             ),
-                            color: selected
-                                ? Colors.blue.shade50
-                                : Colors.white,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        // MODIFICADO: Usar Image.network con loadingBuilder y errorBuilder
-                                        CircleAvatar(
-                                          radius: 50,
-                                          backgroundColor: Colors
-                                              .grey
-                                              .shade200, // Fondo mientras carga
-                                          child:
-                                              (agencia.imagenUrl != null &&
-                                                  agencia.imagenUrl!.isNotEmpty)
-                                              ? ClipOval(
-                                                  // Asegura que la imagen sea circular
-                                                  child: Image.network(
-                                                    agencia.imagenUrl!,
-                                                    fit: BoxFit.cover,
-                                                    width: 100, // 2 * radius
-                                                    height: 100, // 2 * radius
-                                                    loadingBuilder:
-                                                        (
-                                                          BuildContext context,
-                                                          Widget child,
-                                                          ImageChunkEvent?
-                                                          loadingProgress,
-                                                        ) {
-                                                          if (loadingProgress ==
-                                                              null) {
-                                                            return child; // La imagen ya cargó
-                                                          }
-                                                          return Center(
-                                                            child: CircularProgressIndicator(
-                                                              value:
-                                                                  loadingProgress
-                                                                          .expectedTotalBytes !=
-                                                                      null
-                                                                  ? loadingProgress
-                                                                            .cumulativeBytesLoaded /
-                                                                        loadingProgress
-                                                                            .expectedTotalBytes!
-                                                                  : null,
+                        itemCount: filteredAgencias.length,
+                        itemBuilder: (context, index) {
+                          final agencia = filteredAgencias[index];
+                          final selected = _selectedIds.contains(agencia.id);
+
+                          // Calcular la deuda de la agencia usando TODAS las reservas
+                          final totalDeuda = allReservas
+                              .where(
+                                (rca) =>
+                                    rca.agencia.id == agencia.id &&
+                                    rca.reserva.estado !=
+                                        EstadoReserva.pagada, // ← excluye pagadas
+                              )
+                              .fold<double>(
+                                0.0,
+                                (sum, rca) => sum + rca.reserva.deuda,
+                              );
+
+                          return GestureDetector(
+                            onLongPress: () => _toggleSelection(agencia.id),
+                            onTap: () {
+                              // Desenfocar SearchInput antes de navegar para no mantenerlo activo al volver
+                              FocusScope.of(context).unfocus();
+                              if (_selectionMode) {
+                                _toggleSelection(agencia.id);
+                              } else {
+                                _navigateToAgenciaReservas(agencia);
+                              }
+                            },
+                            child: Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: selected
+                                    ? BorderSide(
+                                        color: Colors.blue.shade400,
+                                        width: 2,
+                                      )
+                                    : BorderSide.none,
+                              ),
+                              color: selected
+                                  ? Colors.blue.shade50
+                                  : Colors.white,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          // MODIFICADO: Usar Image.network con loadingBuilder y errorBuilder
+                                          CircleAvatar(
+                                            radius: 50,
+                                            backgroundColor: Colors
+                                                .grey
+                                                .shade200, // Fondo mientras carga
+                                            child:
+                                                (agencia.imagenUrl != null &&
+                                                    agencia.imagenUrl!.isNotEmpty)
+                                                ? ClipOval(
+                                                    // Asegura que la imagen sea circular
+                                                    child: Image.network(
+                                                      agencia.imagenUrl!,
+                                                      fit: BoxFit.cover,
+                                                      width: 100, // 2 * radius
+                                                      height: 100, // 2 * radius
+                                                      loadingBuilder:
+                                                          (
+                                                            BuildContext context,
+                                                            Widget child,
+                                                            ImageChunkEvent?
+                                                            loadingProgress,
+                                                          ) {
+                                                            if (loadingProgress ==
+                                                                null) {
+                                                              return child; // La imagen ya cargó
+                                                            }
+                                                            return Center(
+                                                              child: CircularProgressIndicator(
+                                                                value:
+                                                                    loadingProgress
+                                                                            .expectedTotalBytes !=
+                                                                        null
+                                                                    ? loadingProgress
+                                                                              .cumulativeBytesLoaded /
+                                                                          loadingProgress
+                                                                              .expectedTotalBytes!
+                                                                    : null,
+                                                                color: Colors
+                                                                    .green
+                                                                    .shade600, // Color del indicador
+                                                              ),
+                                                            );
+                                                          },
+                                                      errorBuilder:
+                                                          (
+                                                            context,
+                                                            error,
+                                                            stackTrace,
+                                                          ) {
+                                                            // En caso de error al cargar la imagen, muestra el icono de negocio
+                                                            return Icon(
+                                                              Icons.business,
+                                                              size: 50,
                                                               color: Colors
                                                                   .green
-                                                                  .shade600, // Color del indicador
-                                                            ),
-                                                          );
-                                                        },
-                                                    errorBuilder:
-                                                        (
-                                                          context,
-                                                          error,
-                                                          stackTrace,
-                                                        ) {
-                                                          // En caso de error al cargar la imagen, muestra el icono de negocio
-                                                          return Icon(
-                                                            Icons.business,
-                                                            size: 50,
-                                                            color: Colors
-                                                                .green
-                                                                .shade600,
-                                                          );
-                                                        },
+                                                                  .shade600,
+                                                            );
+                                                          },
+                                                    ),
+                                                  )
+                                                : Icon(
+                                                    // Si no hay URL de imagen, muestra el icono de negocio
+                                                    Icons.business,
+                                                    size: 50,
+                                                    color: Colors.green.shade600,
                                                   ),
-                                                )
-                                              : Icon(
-                                                  // Si no hay URL de imagen, muestra el icono de negocio
-                                                  Icons.business,
-                                                  size: 50,
-                                                  color: Colors.green.shade600,
-                                                ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          agencia.nombre,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
                                           ),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5,
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            agencia.nombre,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 5,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  '${agencia.totalReservas} reservas',
+                                                  style: const TextStyle(
+                                                    color: Colors.blue,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 8,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.blue.shade50,
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                '${agencia.totalReservas} reservas',
-                                                style: const TextStyle(
-                                                  color: Colors.blue,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 8,
                                                 ),
                                               ),
-                                            ),
-                                            // if (agencia.precioPorAsiento != null) ...[
-                                            //   const SizedBox(width: 8),
-                                            //   Container(
-                                            //     padding: const EdgeInsets.symmetric(
-                                            //       horizontal: 10,
-                                            //       vertical: 5,
-                                            //     ),
-                                            //     decoration: BoxDecoration(
-                                            //       color: Colors.green.shade50,
-                                            //       borderRadius: BorderRadius.circular(20),
-                                            //     ),
-                                            //     // child: Text(
-                                            //     //   'Precio: ${Formatters.formatCurrency(agencia.precioPorAsiento!)}',
-                                            //     //   style: TextStyle(
-                                            //     //     fontSize: 13,
-                                            //     //     color: Colors.green.shade700,
-                                            //     //     fontWeight: FontWeight.w600,
-                                            //     //   ),
-                                            //     // ),
-                                            //   ),
-                                            // ],
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        // Mostrar total de deuda calculado al momento
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
+                                              // if (agencia.precioPorAsiento != null) ...[
+                                              //   const SizedBox(width: 8),
+                                              //   Container(
+                                              //     padding: const EdgeInsets.symmetric(
+                                              //       horizontal: 10,
+                                              //       vertical: 5,
+                                              //     ),
+                                              //     decoration: BoxDecoration(
+                                              //       color: Colors.green.shade50,
+                                              //       borderRadius: BorderRadius.circular(20),
+                                              //     ),
+                                              //     // child: Text(
+                                              //     //   'Precio: ${Formatters.formatCurrency(agencia.precioPorAsiento!)}',
+                                              //     //   style: TextStyle(
+                                              //     //     fontSize: 13,
+                                              //     //     color: Colors.green.shade700,
+                                              //     //     fontWeight: FontWeight.w600,
+                                              //     //   ),
+                                              //     // ),
+                                              //   ),
+                                              // ],
+                                            ],
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: totalDeuda > 0
-                                                ? Colors.red.shade50
-                                                : Colors.green.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              20,
+                                          const SizedBox(height: 4),
+                                          // Mostrar total de deuda calculado al momento
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
                                             ),
-                                          ),
-                                          child: Text(
-                                            'Deuda: ${Formatters.formatCurrency(totalDeuda)}',
-                                            style: TextStyle(
+                                            decoration: BoxDecoration(
                                               color: totalDeuda > 0
-                                                  ? Colors.red.shade700
-                                                  : Colors.green.shade700,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 8,
+                                                  ? Colors.red.shade50
+                                                  : Colors.green.shade50,
+                                              borderRadius: BorderRadius.circular(
+                                                20,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Deuda: ${Formatters.formatCurrency(totalDeuda)}',
+                                              style: TextStyle(
+                                                color: totalDeuda > 0
+                                                    ? Colors.red.shade700
+                                                    : Colors.green.shade700,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 8,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
                                 if (selected)
-                                  const Positioned(
+                                  Positioned(
                                     top: 8,
                                     right: 8,
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.check_circle,
                                       color: Colors.blue,
                                       size: 24,
                                     ),
                                   ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _mostrarFormularioAgregarAgencia,

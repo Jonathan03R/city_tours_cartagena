@@ -5,6 +5,10 @@ import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart'; // Importar ConfiguracionController
 import 'package:citytourscartagena/core/controller/reservas_controller.dart'; // Importar ReservasController
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/reserva.dart';
+import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
+    hide AgenciaConReservas;
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/colaboradores_view.dart'; // Asegúrate de que esta vista exista
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
@@ -146,6 +150,109 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  Consumer<AgenciasController>(
+                    builder: (_, agCtrl, __) {
+                      return StreamBuilder<List<AgenciaConReservas>>(
+                        stream: agCtrl.agenciasConReservasStream,
+                        builder: (_, snapshot) {
+                          final count = snapshot.data?.length ?? 0;
+                          return Visibility(
+                            visible: _currentIndex == 1,
+                            child: ListTile(
+                              leading: const Icon(Icons.business),
+                              title: Text(
+                                '$count agencia${count != 1 ? 's' : ''}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  Consumer<ReservasController>(
+                    builder: (_, resCtrl, __) {
+                      return StreamBuilder<List<ReservaConAgencia>>(
+                        stream: resCtrl
+                            .getAllReservasConAgenciaStream(), // <-- STREAM de todas
+                        builder: (_, snap) {
+                          if (!snap.hasData) return const SizedBox.shrink();
+                          final all = snap.data!;
+                          // sólo las pendientes
+                          final unpaid = all
+                              .where(
+                                (ra) =>
+                                    ra.reserva.estado != EstadoReserva.pagada,
+                              )
+                              .toList();
+                          // suma total de deuda
+                          final totalDebt = unpaid.fold<double>(
+                            0.0,
+                            (sum, ra) => sum + ra.reserva.deuda,
+                          );
+                          // nombres únicos de agencias que deben
+                          final agencyDebtMap = <String, double>{};
+                          for (var ra in unpaid) {
+                            agencyDebtMap.update(
+                              ra.agencia.nombre,
+                              (prev) => prev + ra.reserva.deuda,
+                              ifAbsent: () => ra.reserva.deuda,
+                            );
+                          }
+
+                          final filteredAgencies = agencyDebtMap.entries
+                              .where((e) => e.value != 0)
+                              .toList();
+
+                          return Visibility(
+                            visible: _currentIndex == 1,
+                            child: ListTile(
+                              // leading: const Icon(
+                              //   Icons.account_balance_wallet,
+                              //   color: Colors.red,
+                              // ),
+                              title: Text(
+                                'Deuda total: \$${Formatters.formatCurrency(totalDebt)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: filteredAgencies.isEmpty
+                                  ? null
+                                  : Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: filteredAgencies.map((e) {
+                                        final color = e.value > 0
+                                            ? Colors.red
+                                            : Colors.green;
+                                        return Row(
+                                          children: [
+                                            Icon(
+                                              Icons.circle,
+                                              color: color,
+                                              size: 8,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              '${e.key} (\$${Formatters.formatCurrency(e.value)})',
+                                              style: const TextStyle(
+                                                fontSize: 8,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }).toList(),
+                                    ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Color(0xFFF41720)),
