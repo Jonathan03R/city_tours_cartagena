@@ -15,7 +15,7 @@ class Configuracion {
     required this.actualizadoEn,
     required this.tipoDocumento,
     required this.numeroDocumento,
-    required this.nombreBeneficiario,
+   this.nombreBeneficiario,
   });
 
   factory Configuracion.fromMap(Map<String, dynamic> data) {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 import 'package:flutter/material.dart';
 
 class ConfiguracionController extends ChangeNotifier {
@@ -46,6 +47,36 @@ class ConfiguracionController extends ChangeNotifier {
       // No necesitamos recargar manualmente, el stream lo hará
     } catch (e) {
       debugPrint('❌ Error actualizando precio tarde: $e');
+      rethrow;
+    }
+  }
+  
+  /// Actualizar tipo de documento
+  Future<void> actualizarTipoDocumento(TipoDocumento tipo) async {
+    try {
+      await ConfiguracionService.actualizarTipoDocumento(tipo);
+    } catch (e) {
+      debugPrint('❌ Error actualizando tipo de documento: $e');
+      rethrow;
+    }
+  }
+
+  /// Actualizar número de documento
+  Future<void> actualizarNumeroDocumento(String numero) async {
+    try {
+      await ConfiguracionService.actualizarNumeroDocumento(numero);
+    } catch (e) {
+      debugPrint('❌ Error actualizando número de documento: $e');
+      rethrow;
+    }
+  }
+
+  /// Actualizar nombre beneficiario
+  Future<void> actualizarNombreBeneficiario(String nombre) async {
+    try {
+      await ConfiguracionService.actualizarNombreBeneficiario(nombre);
+    } catch (e) {
+      debugPrint('❌ Error actualizando nombre beneficiario: $e');
       rethrow;
     }
   }

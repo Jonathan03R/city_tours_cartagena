@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/auth/LoginScreen.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
+// import 'package:citytourscartagena/core/test/pdfpreview.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,6 +25,8 @@ class AuthGate extends StatelessWidget {
     }
 
     // 3) Ya autenticado y con usuario cargado
+    // return const MainScreen();
+    // return PdfPreviewScreen();
     return const MainScreen();
   }
 }

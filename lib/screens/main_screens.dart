@@ -11,6 +11,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/colaboradores_view.dart'; // Asegúrate de que esta vista exista
+import 'package:citytourscartagena/screens/config_empresa_view.dart';  // Nueva pantalla de configuración
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart'; // Importar el nuevo TurnoSelectorScreen
 import 'package:flutter/material.dart';
@@ -106,9 +107,23 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
           centerTitle: true,
+          actions: [  // Icono de configuración
+            IconButton(
+              icon: const Icon(Icons.settings, color: Color(0xFF06142F)),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ConfigEmpresaView(),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
-        drawer: Drawer(
-          child: Consumer<AuthController>(
+        drawer: SizedBox(
+          width: MediaQuery.of(context).size.width * 4/5,
+          child: Drawer(
+            child: Consumer<AuthController>(
             builder: (_, auth, __) {
               final usuario = auth.appUser?.usuario ?? 'Invitado';
               final email = auth.user?.email ?? '';
@@ -193,18 +208,21 @@ class _MainScreenState extends State<MainScreen> {
                             0.0,
                             (sum, ra) => sum + ra.reserva.deuda,
                           );
-                          // nombres únicos de agencias que deben
-                          final agencyDebtMap = <String, double>{};
+                          // Agrupar deuda por agencia
+                          final Map<String, double> agencyDebtMap = {};
+                          final Map<String, Agencia> agencyById = {};
                           for (var ra in unpaid) {
+                            agencyById[ra.agencia.id] = ra.agencia;
                             agencyDebtMap.update(
-                              ra.agencia.nombre,
+                              ra.agencia.id,
                               (prev) => prev + ra.reserva.deuda,
                               ifAbsent: () => ra.reserva.deuda,
                             );
                           }
-
+                          // Filtrar agencias con deuda y crear lista de tuplas
                           final filteredAgencies = agencyDebtMap.entries
                               .where((e) => e.value != 0)
+                              .map((e) => MapEntry(agencyById[e.key]!, e.value))
                               .toList();
 
                           return Visibility(
@@ -223,28 +241,53 @@ class _MainScreenState extends State<MainScreen> {
                               subtitle: filteredAgencies.isEmpty
                                   ? null
                                   : Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
-                                      children: filteredAgencies.map((e) {
-                                        final color = e.value > 0
-                                            ? Colors.red
-                                            : Colors.green;
-                                        return Row(
-                                          children: [
-                                            Icon(
-                                              Icons.circle,
-                                              color: color,
-                                              size: 8,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              '${e.key} (\$${Formatters.formatCurrency(e.value)})',
-                                              style: const TextStyle(
-                                                fontSize: 8,
+                                      children: filteredAgencies.map((entry) {
+                                        final Agencia agencia = entry.key;
+                                        final double deuda = entry.value;
+                                        final badgeColor = deuda > 0 ? Colors.red : Colors.green;
+                                        return Container(
+                                          margin: const EdgeInsets.symmetric(vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: badgeColor.shade50,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 10,
+                                                backgroundImage: agencia.imagenUrl != null
+                                                    ? NetworkImage(agencia.imagenUrl!)
+                                                    : null,
+                                                backgroundColor: badgeColor.shade700,
+                                                child: agencia.imagenUrl == null
+                                                    ? Text(
+                                                        agencia.nombre[0].toUpperCase(),
+                                                        style: const TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.white,
+                                                        ),
+                                                      )
+                                                    : null,
                                               ),
-                                            ),
-                                          ],
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '${agencia.nombre}: \$${Formatters.formatCurrency(deuda)}',
+                                                style: TextStyle(
+                                                  color: badgeColor.shade700,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         );
                                       }).toList(),
                                     ),
@@ -254,6 +297,7 @@ class _MainScreenState extends State<MainScreen> {
                       );
                     },
                   ),
+                  const Spacer(),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Color(0xFFF41720)),
                     title: const Text(
@@ -269,6 +313,7 @@ class _MainScreenState extends State<MainScreen> {
               );
             },
           ),
+        ),
         ),
         body: IndexedStack(
           index: _currentIndex,
