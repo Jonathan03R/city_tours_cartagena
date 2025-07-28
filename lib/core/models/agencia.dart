@@ -1,3 +1,5 @@
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
+
 class Agencia {
   final String id;
   final String nombre;
@@ -7,6 +9,10 @@ class Agencia {
   final double? precioPorAsientoTurnoManana;
   final double? precioPorAsientoTurnoTarde;
 
+  final TipoDocumento? tipoDocumento;
+  final String? numeroDocumento;
+  final String? nombreBeneficiario;
+
   Agencia({
     required this.id,
     required this.nombre,
@@ -15,6 +21,9 @@ class Agencia {
     // this.precioPorAsiento,
     this.precioPorAsientoTurnoManana,
     this.precioPorAsientoTurnoTarde,
+     this.tipoDocumento,
+     this.numeroDocumento,
+     this.nombreBeneficiario,
   });
 
   // Añadir el método copyWith para facilitar la creación de nuevas instancias con ID
@@ -26,6 +35,9 @@ class Agencia {
     // double? precioPorAsiento,
     double? precioPorAsientoTurnoManana,
     double? precioPorAsientoTurnoTarde,
+    TipoDocumento? tipoDocumento,
+    String? numeroDocumento,
+    String? nombreBeneficiario,
   }) {
     return Agencia(
       id: id ?? this.id,
@@ -35,6 +47,10 @@ class Agencia {
       precioPorAsientoTurnoManana: precioPorAsientoTurnoManana ?? this.precioPorAsientoTurnoManana,
       precioPorAsientoTurnoTarde: precioPorAsientoTurnoTarde ?? this.precioPorAsientoTurnoTarde,
       // precioPorAsiento: precioPorAsiento ?? this.precioPorAsiento,
+
+      tipoDocumento: tipoDocumento ?? this.tipoDocumento,
+      numeroDocumento: numeroDocumento ?? this.numeroDocumento,
+      nombreBeneficiario: nombreBeneficiario ?? this.nombreBeneficiario,
     );
   }
 
@@ -51,9 +67,21 @@ class Agencia {
       precioPorAsientoTurnoTarde: (data['precioPorAsientoTurnoTarde'] is num)
           ? data['precioPorAsientoTurnoTarde'].toDouble()
           : null,
+
+      tipoDocumento: data['tipoDocumento'] != null
+          ? TipoDocumento.values.firstWhere(
+              (e) => e.name == data['tipoDocumento'],
+              orElse: () => TipoDocumento.cc,
+            )
+          : null,
+      numeroDocumento: data['numeroDocumento'],
+      nombreBeneficiario: data['nombreBeneficiario'], 
     );
   }
 
+  ///esto me sirve para guardar en Firestore
+  ///para que no se confunda con el de la agencia
+  ///que es el que se usa para mostrar en la pantalla
   Map<String, dynamic> toFirestore() {
     return {
       'nombre': nombre,
@@ -62,7 +90,10 @@ class Agencia {
       'fechaRegistro': DateTime.now().toIso8601String(),
       // 'precioPorAsiento': precioPorAsiento,
       'precioPorAsientoTurnoManana': precioPorAsientoTurnoManana,
-      'precioPorAsientoTurnoTarde': precioPorAsientoTurnoTarde
+      'precioPorAsientoTurnoTarde': precioPorAsientoTurnoTarde,
+      if (tipoDocumento != null) 'tipoDocumento': tipoDocumento!.name,
+      'numeroDocumento': numeroDocumento,
+      'nombreBeneficiario': nombreBeneficiario,
     };
   }
 }
@@ -84,4 +115,7 @@ class AgenciaConReservas {
   // double? get precioPorAsiento => agencia.precioPorAsiento;
   double? get precioPorAsientoTurnoManana => agencia.precioPorAsientoTurnoManana;
   double? get precioPorAsientoTurnoTarde => agencia.precioPorAsientoTurnoTarde;
+  TipoDocumento? get tipoDocumento => agencia.tipoDocumento;
+  String? get numeroDocumento => agencia.numeroDocumento;
+  String? get nombreBeneficiario => agencia.nombreBeneficiario;
 }

@@ -129,12 +129,18 @@ class _ReservasViewState extends State<ReservasView> {
         initialImagenUrl: agencia.imagenUrl,
         initialPrecioPorAsientoTurnoManana: agencia.precioPorAsientoTurnoManana,
         initialPrecioPorAsientoTurnoTarde: agencia.precioPorAsientoTurnoTarde,
+        initialTipoDocumento: agencia.tipoDocumento,
+        initialNumeroDocumento: agencia.numeroDocumento,
+        initialNombreBeneficiario: agencia.nombreBeneficiario,
         onCrear:
             (
               nuevoNombre,
               nuevaImagenFile,
               nuevoPrecioManana,
               nuevoPrecioTarde,
+              nuevoTipoDocumento,
+              nuevoNumeroDocumento,
+              nuevoNombreBeneficiario,
             ) async {
               final agenciasController = Provider.of<AgenciasController>(
                 context,
@@ -147,6 +153,9 @@ class _ReservasViewState extends State<ReservasView> {
                 agencia.imagenUrl,
                 newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
                 newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
+                tipoDocumento: nuevoTipoDocumento,
+                numeroDocumento: nuevoNumeroDocumento,
+                nombreBeneficiario: nuevoNombreBeneficiario,
               );
               Navigator.of(context).pop();
             },
@@ -716,6 +725,9 @@ class _ReservasViewState extends State<ReservasView> {
           widget.agencia!.imagenUrl,
           newPrecioPorAsientoTurnoManana: manana,
           newPrecioPorAsientoTurnoTarde: tarde,
+          tipoDocumento: widget.agencia!.tipoDocumento,
+          numeroDocumento: widget.agencia!.numeroDocumento,
+          nombreBeneficiario: widget.agencia!.nombreBeneficiario,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

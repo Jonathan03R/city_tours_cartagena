@@ -1,12 +1,21 @@
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
+
 class Configuracion {
   final double precioGeneralAsientoTarde;
   final double precioGeneralAsientoTemprano;
   final DateTime actualizadoEn;
 
+  final TipoDocumento tipoDocumento;
+  final String? numeroDocumento;
+  final String? nombreBeneficiario;
+
   Configuracion({
     required this.precioGeneralAsientoTarde,
     required this.precioGeneralAsientoTemprano,
     required this.actualizadoEn,
+    required this.tipoDocumento,
+    required this.numeroDocumento,
+    required this.nombreBeneficiario,
   });
 
   factory Configuracion.fromMap(Map<String, dynamic> data) {
@@ -27,6 +36,12 @@ class Configuracion {
       actualizadoEn: DateTime.parse(
         data['actualizado_en'] ?? DateTime.now().toIso8601String()
       ),
+      tipoDocumento: TipoDocumento.values.firstWhere(
+        (e) => e.toString() == 'TipoDocumento.${data['tipo_documento']}',
+        orElse: () => TipoDocumento.cc,
+      ),
+      numeroDocumento: data['numero_documento'],
+      nombreBeneficiario: data['nombre_beneficiario'],
     );
   }
 
@@ -35,6 +50,10 @@ class Configuracion {
       'precio_general_asiento_tarde': precioGeneralAsientoTarde,
       'precio_general_asiento_temprano': precioGeneralAsientoTemprano,
       'actualizado_en': actualizadoEn.toIso8601String(),
+
+      'tipo_documento': tipoDocumento.toString().split('.').last,
+      'numero_documento': numeroDocumento,
+      'nombre_beneficiario': nombreBeneficiario,
     };
   }
 

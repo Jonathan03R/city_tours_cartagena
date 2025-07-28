@@ -492,7 +492,7 @@ class _AgenciasViewState extends State<AgenciasView> {
   showDialog(
     context: context,
     builder: (_) => CrearAgenciaForm(
-      onCrear: (nombre, imagenFile, precioManana, precioTarde) async {
+      onCrear: (nombre, imagenFile, precioManana, precioTarde, tipoDocumento, numeroDocumento, nombreBeneficiario) async {
         final agenciasController = Provider.of<AgenciasController>(
           context,
           listen: false,
@@ -502,6 +502,9 @@ class _AgenciasViewState extends State<AgenciasView> {
           imagenFile?.path,
           precioPorAsientoTurnoManana: precioManana,
           precioPorAsientoTurnoTarde: precioTarde,
+          tipoDocumento: tipoDocumento,
+          numeroDocumento: numeroDocumento,
+          nombreBeneficiario: nombreBeneficiario,
         );
         Navigator.of(context).pop(); // Cerrar el diálogo
       },
