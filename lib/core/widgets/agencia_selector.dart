@@ -4,7 +4,7 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Importar Provider
 
-import '../mvvc/agencias_controller.dart'; // Importar AgenciasController
+import '../controller/agencias_controller.dart'; // Importar AgenciasController
 
 class AgenciaSelector extends StatefulWidget {
   final String? selectedAgenciaId;

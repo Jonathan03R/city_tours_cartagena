@@ -1,4 +1,5 @@
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
@@ -20,6 +21,9 @@ class PdfPreviewScreen extends StatelessWidget {
       eliminada: false,
       precioPorAsientoTurnoManana: 50.0,
       precioPorAsientoTurnoTarde:  75.0,
+      tipoDocumento: TipoDocumento.cc,
+      numeroDocumento: '123456789',
+      nombreBeneficiario: 'Nombre de prueba lorend input',
     );
 
     return Scaffold(

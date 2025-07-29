@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 import 'package:citytourscartagena/core/models/reserva.dart'; // Necesario para contar reservas
 import 'package:citytourscartagena/core/services/cloudinaryService.dart'; // Para subir imágenes
 import 'package:citytourscartagena/core/services/firestore_service.dart';
@@ -71,6 +72,10 @@ class AgenciasController extends ChangeNotifier {
     String? imagePath, {
     double? precioPorAsientoTurnoManana,
     double? precioPorAsientoTurnoTarde,
+    TipoDocumento? tipoDocumento,
+    String? numeroDocumento,
+    String? nombreBeneficiario,
+    
   }) async {
     String? imageUrl;
     if (imagePath != null) {
@@ -83,6 +88,9 @@ class AgenciasController extends ChangeNotifier {
       // precioPorAsiento: precioPorAsiento
       precioPorAsientoTurnoManana:precioPorAsientoTurnoManana, // Asignar un valor por defecto si no se proporciona
       precioPorAsientoTurnoTarde: precioPorAsientoTurnoTarde,
+      tipoDocumento: tipoDocumento,
+      numeroDocumento: numeroDocumento,
+      nombreBeneficiario: nombreBeneficiario,
     ); // NUEVO
     final addedAgencia = await _firestoreService.addAgencia(nuevaAgencia);
     return addedAgencia;
@@ -96,6 +104,10 @@ class AgenciasController extends ChangeNotifier {
     // double? newPrecioPorAsiento,
     double? newPrecioPorAsientoTurnoManana,
     double? newPrecioPorAsientoTurnoTarde,
+
+    required TipoDocumento? tipoDocumento,
+    required String? numeroDocumento,
+    required String? nombreBeneficiario,
   }) async {
     // MODIFICADO: Añadir newPrecioPorAsiento
     String? imageUrl = currentImageUrl;
@@ -116,6 +128,9 @@ class AgenciasController extends ChangeNotifier {
           currentAgencia?.eliminada ?? false, // Mantener el estado de eliminada
       precioPorAsientoTurnoManana: newPrecioPorAsientoTurnoManana, // NUEVO
       precioPorAsientoTurnoTarde: newPrecioPorAsientoTurnoTarde, // NUEVO
+      tipoDocumento: tipoDocumento,
+      numeroDocumento: numeroDocumento ?? currentAgencia?.numeroDocumento,
+      nombreBeneficiario: nombreBeneficiario ?? currentAgencia?.nombreBeneficiario,
     );
 
     await _firestoreService.updateAgencia(id, updatedAgencia);
@@ -144,6 +159,8 @@ class AgenciasController extends ChangeNotifier {
     }
   }
 
+  /// Elimina una agencia (en realidad la marca como eliminada).
+  /// sofDeleteAgencias en español es "eliminar agencias suavemente"
   Future<void> softDeleteAgencias(Set<String> ids) async {
     for (var id in ids) {
       // En lugar de eliminar, actualizamos el campo 'eliminada'

@@ -1,19 +1,21 @@
-import 'dart:async'; // Importar para StreamSubscription
+import 'dart:async';
 
+import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
-import 'package:citytourscartagena/core/mvvc/agencias_controller.dart'; // Importar el nuevo AgenciasController
-import 'package:citytourscartagena/core/mvvc/reservas_controller.dart'; // Importar ReservasController
-import 'package:citytourscartagena/core/utils/formatters.dart'; // Importar Formatters
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Necesario para consumir el controlador
+import 'package:provider/provider.dart';
 
 class AgenciasView extends StatefulWidget {
-  const AgenciasView({super.key});
+  final String searchTerm; // Recibir el término de búsqueda desde MainScreen
+  
+  const AgenciasView({super.key, this.searchTerm = ''});
 
   @override
   State<AgenciasView> createState() => _AgenciasViewState();
@@ -22,43 +24,16 @@ class AgenciasView extends StatefulWidget {
 class _AgenciasViewState extends State<AgenciasView> {
   bool _selectionMode = false;
   final Set<String> _selectedIds = {};
-  // Eliminado: StreamSubscription<List<AgenciaConReservas>>? _agenciasSubscription; // Suscripción para precarga
 
   @override
   void initState() {
     super.initState();
-    // Eliminado: WidgetsBinding.instance.addPostFrameCallback((_) {
-    // Eliminado:   _setupImagePreloading();
-    // Eliminado: });
   }
 
   @override
   void dispose() {
-    // Eliminado: _agenciasSubscription?.cancel(); // Cancelar la suscripción al salir
     super.dispose();
   }
-
-  // Eliminado: void _setupImagePreloading() {
-  // Eliminado:   final agenciasController = Provider.of<AgenciasController>(context, listen: false);
-  // Eliminado:   _agenciasSubscription = agenciasController.agenciasConReservasStream.listen((agencias) {
-  // Eliminado:     _precacheAgencyImages(agencias);
-  // Eliminado:   }, onError: (error) {
-  // Eliminado:     debugPrint('Error en el stream de agencias para precarga: $error');
-  // Eliminado:   });
-  // Eliminado: }
-
-  // Eliminado: void _precacheAgencyImages(List<AgenciaConReservas> agencias) {
-  // Eliminado:   for (var agencia in agencias) {
-  // Eliminado:     if (agencia.imagenUrl != null && agencia.imagenUrl!.isNotEmpty) {
-  // Eliminado:       try {
-  // Eliminado:         precacheImage(NetworkImage(agencia.imagenUrl!), context);
-  // Eliminado:         debugPrint('✅ Precargando imagen de agencia: ${agencia.nombre}');
-  // Eliminado:       } catch (e) {
-  // Eliminado:         debugPrint('❌ Error precargando imagen de ${agencia.nombre}: $e');
-  // Eliminado:       }
-  // Eliminado:     }
-  // Eliminado:   }
-  // Eliminado: }
 
   void _toggleSelection(String id) {
     setState(() {
@@ -76,9 +51,7 @@ class _AgenciasViewState extends State<AgenciasView> {
       context,
       listen: false,
     );
-    await agenciasController.softDeleteAgencias(
-      _selectedIds,
-    ); // Delegar al controlador
+    await agenciasController.softDeleteAgencias(_selectedIds);
     setState(() {
       _selectionMode = false;
       _selectedIds.clear();
@@ -88,84 +61,59 @@ class _AgenciasViewState extends State<AgenciasView> {
   @override
   Widget build(BuildContext context) {
     final agenciasController = context.watch<AgenciasController>();
-    final reservasController = context
-        .watch<ReservasController>(); // Observar ReservasController
+    final reservasController = context.watch<ReservasController>();
 
     return Scaffold(
-      appBar: AppBar(
-        leading: _selectionMode
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  setState(() {
-                    _selectionMode = false;
-                    _selectedIds.clear();
-                  });
-                },
-              )
-            : null,
-        title: Text(
-          _selectionMode
-              ? '${_selectedIds.length} seleccionada(s)'
-              : 'Agencias',
-        ),
-        actions: [
-          if (_selectionMode)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteSelected,
-            ),
-        ],
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
-      ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total de Agencias',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: StreamBuilder<List<AgenciaConReservas>>(
-                      stream: agenciasController.agenciasConReservasStream,
-                      builder: (context, snapshot) {
-                        final agencias = snapshot.data ?? [];
-                        return Text(
-                          '${agencias.length} agencia${agencias.length != 1 ? 's' : ''}',
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.end,
-                          overflow: TextOverflow.ellipsis,
-                        );
-                      },
+          // Header solo para modo selección
+          if (_selectionMode)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.shade200,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _selectionMode = false;
+                        _selectedIds.clear();
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${_selectedIds.length} seleccionada${_selectedIds.length != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.white),
+                    onPressed: _deleteSelected,
+                  ),
+                ],
+              ),
             ),
-          ),
+          
           Expanded(
             child: StreamBuilder<List<AgenciaConReservas>>(
               stream: agenciasController.agenciasConReservasStream,
               builder: (context, agenciasSnapshot) {
-                if (agenciasSnapshot.connectionState ==
-                    ConnectionState.waiting) {
+                if (agenciasSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (agenciasSnapshot.hasError) {
@@ -174,7 +122,16 @@ class _AgenciasViewState extends State<AgenciasView> {
                   );
                 }
                 final agencias = agenciasSnapshot.data ?? [];
-
+                
+                // Filtrar agencias según término de búsqueda desde MainScreen
+                final filteredAgencias = widget.searchTerm.isEmpty
+                    ? agencias
+                    : agencias
+                        .where((a) => a.nombre
+                            .toLowerCase()
+                            .contains(widget.searchTerm.toLowerCase()))
+                        .toList();
+              
                 if (agencias.isEmpty) {
                   return const Center(
                     child: Column(
@@ -190,13 +147,20 @@ class _AgenciasViewState extends State<AgenciasView> {
                     ),
                   );
                 }
+                
+                if (filteredAgencias.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No se encontraron agencias',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  );
+                }
 
-                // NUEVO: StreamBuilder anidado para obtener TODAS las reservas
                 return StreamBuilder<List<ReservaConAgencia>>(
                   stream: reservasController.getAllReservasConAgenciaStream(),
                   builder: (context, allReservasSnapshot) {
-                    if (allReservasSnapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (allReservasSnapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (allReservasSnapshot.hasError) {
@@ -210,25 +174,22 @@ class _AgenciasViewState extends State<AgenciasView> {
 
                     return GridView.builder(
                       padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.83,
-                          ),
-                      itemCount: agencias.length,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.83,
+                      ),
+                      itemCount: filteredAgencias.length,
                       itemBuilder: (context, index) {
-                        final agencia = agencias[index];
+                        final agencia = filteredAgencias[index];
                         final selected = _selectedIds.contains(agencia.id);
-
-                        // Calcular la deuda de la agencia usando TODAS las reservas
+                        
                         final totalDeuda = allReservas
                             .where(
                               (rca) =>
                                   rca.agencia.id == agencia.id &&
-                                  rca.reserva.estado !=
-                                      EstadoReserva.pagada, // ← excluye pagadas
+                                  rca.reserva.estado != EstadoReserva.pagada,
                             )
                             .fold<double>(
                               0.0,
@@ -264,72 +225,55 @@ class _AgenciasViewState extends State<AgenciasView> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8),
                                     child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        // MODIFICADO: Usar Image.network con loadingBuilder y errorBuilder
                                         CircleAvatar(
                                           radius: 50,
-                                          backgroundColor: Colors
-                                              .grey
-                                              .shade200, // Fondo mientras carga
-                                          child:
-                                              (agencia.imagenUrl != null &&
-                                                  agencia.imagenUrl!.isNotEmpty)
+                                          backgroundColor: Colors.grey.shade200,
+                                          child: (agencia.imagenUrl != null &&
+                                              agencia.imagenUrl!.isNotEmpty)
                                               ? ClipOval(
-                                                  // Asegura que la imagen sea circular
                                                   child: Image.network(
                                                     agencia.imagenUrl!,
                                                     fit: BoxFit.cover,
-                                                    width: 100, // 2 * radius
-                                                    height: 100, // 2 * radius
-                                                    loadingBuilder:
-                                                        (
-                                                          BuildContext context,
-                                                          Widget child,
-                                                          ImageChunkEvent?
-                                                          loadingProgress,
-                                                        ) {
-                                                          if (loadingProgress ==
-                                                              null) {
-                                                            return child; // La imagen ya cargó
-                                                          }
-                                                          return Center(
-                                                            child: CircularProgressIndicator(
-                                                              value:
+                                                    width: 100,
+                                                    height: 100,
+                                                    loadingBuilder: (
+                                                      BuildContext context,
+                                                      Widget child,
+                                                      ImageChunkEvent? loadingProgress,
+                                                    ) {
+                                                      if (loadingProgress == null) {
+                                                        return child;
+                                                      }
+                                                      return Center(
+                                                        child: CircularProgressIndicator(
+                                                          value: loadingProgress
+                                                                      .expectedTotalBytes !=
+                                                                  null
+                                                              ? loadingProgress
+                                                                      .cumulativeBytesLoaded /
                                                                   loadingProgress
-                                                                          .expectedTotalBytes !=
-                                                                      null
-                                                                  ? loadingProgress
-                                                                            .cumulativeBytesLoaded /
-                                                                        loadingProgress
-                                                                            .expectedTotalBytes!
-                                                                  : null,
-                                                              color: Colors
-                                                                  .green
-                                                                  .shade600, // Color del indicador
-                                                            ),
-                                                          );
-                                                        },
-                                                    errorBuilder:
-                                                        (
-                                                          context,
-                                                          error,
-                                                          stackTrace,
-                                                        ) {
-                                                          // En caso de error al cargar la imagen, muestra el icono de negocio
-                                                          return Icon(
-                                                            Icons.business,
-                                                            size: 50,
-                                                            color: Colors
-                                                                .green
-                                                                .shade600,
-                                                          );
-                                                        },
+                                                                      .expectedTotalBytes!
+                                                              : null,
+                                                          color: Colors.green.shade600,
+                                                        ),
+                                                      );
+                                                    },
+                                                    errorBuilder: (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Icon(
+                                                        Icons.business,
+                                                        size: 50,
+                                                        color: Colors.green.shade600,
+                                                      );
+                                                    },
                                                   ),
                                                 )
                                               : Icon(
-                                                  // Si no hay URL de imagen, muestra el icono de negocio
                                                   Icons.business,
                                                   size: 50,
                                                   color: Colors.green.shade600,
@@ -348,19 +292,16 @@ class _AgenciasViewState extends State<AgenciasView> {
                                         ),
                                         const SizedBox(height: 4),
                                         Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                          mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5,
-                                                  ),
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 5,
+                                              ),
                                               decoration: BoxDecoration(
                                                 color: Colors.blue.shade50,
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
+                                                borderRadius: BorderRadius.circular(20),
                                               ),
                                               child: Text(
                                                 '${agencia.totalReservas} reservas',
@@ -371,31 +312,9 @@ class _AgenciasViewState extends State<AgenciasView> {
                                                 ),
                                               ),
                                             ),
-                                            // if (agencia.precioPorAsiento != null) ...[
-                                            //   const SizedBox(width: 8),
-                                            //   Container(
-                                            //     padding: const EdgeInsets.symmetric(
-                                            //       horizontal: 10,
-                                            //       vertical: 5,
-                                            //     ),
-                                            //     decoration: BoxDecoration(
-                                            //       color: Colors.green.shade50,
-                                            //       borderRadius: BorderRadius.circular(20),
-                                            //     ),
-                                            //     // child: Text(
-                                            //     //   'Precio: ${Formatters.formatCurrency(agencia.precioPorAsiento!)}',
-                                            //     //   style: TextStyle(
-                                            //     //     fontSize: 13,
-                                            //     //     color: Colors.green.shade700,
-                                            //     //     fontWeight: FontWeight.w600,
-                                            //     //   ),
-                                            //     // ),
-                                            //   ),
-                                            // ],
                                           ],
                                         ),
                                         const SizedBox(height: 4),
-                                        // Mostrar total de deuda calculado al momento
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 12,
@@ -405,9 +324,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                                             color: totalDeuda > 0
                                                 ? Colors.red.shade50
                                                 : Colors.green.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
+                                            borderRadius: BorderRadius.circular(20),
                                           ),
                                           child: Text(
                                             'Deuda: ${Formatters.formatCurrency(totalDeuda)}',
@@ -425,10 +342,10 @@ class _AgenciasViewState extends State<AgenciasView> {
                                   ),
                                 ),
                                 if (selected)
-                                  const Positioned(
+                                  Positioned(
                                     top: 8,
                                     right: 8,
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.check_circle,
                                       color: Colors.blue,
                                       size: 24,
@@ -457,29 +374,34 @@ class _AgenciasViewState extends State<AgenciasView> {
   }
 
   void _mostrarFormularioAgregarAgencia() {
-  showDialog(
-    context: context,
-    builder: (_) => CrearAgenciaForm(
-      onCrear: (nombre, imagenFile, precioManana, precioTarde) async {
-        final agenciasController = Provider.of<AgenciasController>(
-          context,
-          listen: false,
-        );
-        await agenciasController.addAgencia(
-          nombre,
-          imagenFile?.path,
-          precioPorAsientoTurnoManana: precioManana,
-          precioPorAsientoTurnoTarde: precioTarde,
-        );
-        Navigator.of(context).pop(); // Cerrar el diálogo
-      },
-    ),
-  );
-}
+    showDialog(
+      context: context,
+      builder: (_) => CrearAgenciaForm(
+        onCrear: (nombre, imagenFile, precioManana, precioTarde, tipoDocumento, numeroDocumento, nombreBeneficiario) async {
+          final agenciasController = Provider.of<AgenciasController>(
+            context,
+            listen: false,
+          );
+          await agenciasController.addAgencia(
+            nombre,
+            imagenFile?.path,
+            precioPorAsientoTurnoManana: precioManana,
+            precioPorAsientoTurnoTarde: precioTarde,
+            tipoDocumento: tipoDocumento,
+            numeroDocumento: numeroDocumento,
+            nombreBeneficiario: nombreBeneficiario,
+          );
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
 
   void _navigateToAgenciaReservas(AgenciaConReservas agencia) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => ReservasView(agencia: agencia)));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReservasView(agencia: agencia),
+      ),
+    );
   }
 }

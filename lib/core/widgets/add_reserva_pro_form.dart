@@ -1,7 +1,7 @@
+import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
-import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
@@ -10,13 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../mvvc/agencias_controller.dart';
-import '../mvvc/reservas_controller.dart';
+import '../controller/agencias_controller.dart';
+import '../controller/reservas_controller.dart';
 
 class AddReservaProForm extends StatefulWidget {
   final TurnoType? turno;
   final VoidCallback onAdd;
-  const AddReservaProForm({super.key, required this.onAdd, this.turno});
+  final Agencia? agencia;
+  const AddReservaProForm({super.key, required this.onAdd, this.turno, this.agencia});
 
   @override
   State<AddReservaProForm> createState() => _AddReservaProFormState();
@@ -38,6 +39,9 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   @override
   void initState() {
     super.initState();
+    if (widget.agencia != null) {
+      _selectedAgenciaId = widget.agencia!.id;
+    }
     _selectedTurno = widget.turno;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

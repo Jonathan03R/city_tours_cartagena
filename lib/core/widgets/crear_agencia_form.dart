@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 import 'package:citytourscartagena/core/utils/parsers/parser_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,7 +11,19 @@ class CrearAgenciaForm extends StatefulWidget {
   // final double? initialPrecioPorAsiento;
   final double? initialPrecioPorAsientoTurnoManana;
   final double? initialPrecioPorAsientoTurnoTarde;
-  final Function(String nombre, XFile? imagenFile, double? precioPorAsientoTurnoManana, double? precioPorAsientoTurnoTarde) onCrear;
+  final TipoDocumento? initialTipoDocumento;
+  final String? initialNumeroDocumento;
+  final String? initialNombreBeneficiario;
+  final Function(
+    String nombre,
+    XFile? imagenFile,
+    double? precioPorAsientoTurnoManana,
+    double? precioPorAsientoTurnoTarde,
+    TipoDocumento? tipoDocumento,
+    String numeroDocumento,
+    String nombreBeneficiario,
+  )
+  onCrear;
 
   const CrearAgenciaForm({
     super.key,
@@ -19,6 +32,9 @@ class CrearAgenciaForm extends StatefulWidget {
     // this.initialPrecioPorAsiento,
     this.initialPrecioPorAsientoTurnoManana,
     this.initialPrecioPorAsientoTurnoTarde,
+    this.initialTipoDocumento,
+    this.initialNumeroDocumento,
+    this.initialNombreBeneficiario,
     required this.onCrear,
   });
 
@@ -31,9 +47,15 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   late TextEditingController _nombreController;
   late TextEditingController _precioMananaController;
   late TextEditingController _precioTardeController;
+  // Nuevos controladores
+  // Tipo de documento seleccionado
+  TipoDocumento? _selectedTipoDocumento;
+  late TextEditingController _numeroDocumentoController;
+  late TextEditingController _nombreBeneficiarioController;
   XFile? _selectedImage;
   bool _isSaving = false;
-  bool _clearExistingImage = false; // Nuevo estado para indicar si se debe eliminar la imagen existente
+  bool _clearExistingImage =
+      false; // Nuevo estado para indicar si se debe eliminar la imagen existente
 
   @override
   void initState() {
@@ -47,15 +69,26 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
     // );
     _precioMananaController = TextEditingController(
       text: widget.initialPrecioPorAsientoTurnoManana != null
-          ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsientoTurnoManana!)
+          ? ParserUtils.formatDoubleForInput(
+              widget.initialPrecioPorAsientoTurnoManana!,
+            )
           : '',
     );
     _precioTardeController = TextEditingController(
       text: widget.initialPrecioPorAsientoTurnoTarde != null
-          ? ParserUtils.formatDoubleForInput(widget.initialPrecioPorAsientoTurnoTarde!)
+          ? ParserUtils.formatDoubleForInput(
+              widget.initialPrecioPorAsientoTurnoTarde!,
+            )
           : '',
     );
-  
+    // Inicializar tipo de documento
+    _selectedTipoDocumento = widget.initialTipoDocumento;
+    _numeroDocumentoController = TextEditingController(
+      text: widget.initialNumeroDocumento ?? '',
+    );
+    _nombreBeneficiarioController = TextEditingController(
+      text: widget.initialNombreBeneficiario ?? '',
+    );
   }
 
   @override
@@ -64,6 +97,9 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
     // _precioController.dispose();
     _precioMananaController.dispose();
     _precioTardeController.dispose();
+    // No hay controlador de tipo documento
+    _numeroDocumentoController.dispose();
+    _nombreBeneficiarioController.dispose();
     super.dispose();
   }
 
@@ -72,7 +108,8 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     setState(() {
       _selectedImage = image;
-      _clearExistingImage = false; // Si se selecciona una nueva imagen, no se borra la existente
+      _clearExistingImage =
+          false; // Si se selecciona una nueva imagen, no se borra la existente
     });
   }
 
@@ -89,23 +126,41 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
         _isSaving = true;
       });
       final nombre = _nombreController.text.trim();
-    // Sólo parsear si no está vacío, si no dejar null
-    final double? precioManana = _precioMananaController.text.trim().isEmpty
-        ? null
-        : ParserUtils.parseDouble(_precioMananaController.text.trim());
-    final double? precioTarde = _precioTardeController.text.trim().isEmpty
-        ? null
-        : ParserUtils.parseDouble(_precioTardeController.text.trim());
-
+      // Sólo parsear si no está vacío, si no dejar null
+      final double? precioManana = _precioMananaController.text.trim().isEmpty
+          ? null
+          : ParserUtils.parseDouble(_precioMananaController.text.trim());
+      final double? precioTarde = _precioTardeController.text.trim().isEmpty
+          ? null
+          : ParserUtils.parseDouble(_precioTardeController.text.trim());
+      final TipoDocumento? tipoDocumento = _selectedTipoDocumento;
+      final numeroDocumento = _numeroDocumentoController.text.trim();
+      final nombreBeneficiario = _nombreBeneficiarioController.text.trim();
 
       // Si se marcó para limpiar la imagen existente, pasar null para la URL de la imagen
       XFile? finalImageFile = _selectedImage;
       if (_clearExistingImage && _selectedImage == null) {
         // Si el usuario explícitamente borró la imagen y no seleccionó una nueva
-        await widget.onCrear(nombre, null, precioManana, precioTarde);
+        await widget.onCrear(
+          nombre,
+          null,
+          precioManana,
+          precioTarde,
+          tipoDocumento,
+          numeroDocumento,
+          nombreBeneficiario,
+        );
       } else {
         // Si hay una nueva imagen seleccionada o no se borró la existente
-        await widget.onCrear(nombre, finalImageFile, precioManana, precioTarde);
+        await widget.onCrear(
+          nombre,
+          finalImageFile,
+          precioManana,
+          precioTarde,
+          tipoDocumento,
+          numeroDocumento,
+          nombreBeneficiario,
+        );
       }
 
       if (mounted) {
@@ -119,7 +174,9 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia'),
+      title: Text(
+        widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia',
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -130,7 +187,10 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                 controller: _nombreController,
                 decoration: const InputDecoration(
                   labelText: 'Nombre de la Agencia',
-                  labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.business),
                 ),
@@ -142,6 +202,7 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                 },
               ),
               const SizedBox(height: 20),
+
               // TextFormField(
               //   controller: _precioController,
               //   decoration: const InputDecoration(
@@ -162,18 +223,22 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
               //     return null;
               //   },
               // ),
-
               TextFormField(
                 controller: _precioMananaController,
                 decoration: const InputDecoration(
                   labelText: 'Precio Asiento (Mañana)',
-                  labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), 
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                   hintText: 'Ej: 50.000 o 50,000.00',
-                  hintStyle: TextStyle(fontSize: 11), 
+                  hintStyle: TextStyle(fontSize: 11),
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
@@ -190,14 +255,18 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                 controller: _precioTardeController,
                 decoration: const InputDecoration(
                   labelText: 'Precio Asiento (Tarde)',
-                  labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), 
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                   hintText: 'Ej: 50.000 o 50,000.00',
-                  hintStyle: TextStyle(fontSize: 11), 
+                  hintStyle: TextStyle(fontSize: 11),
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
                     final parsed = ParserUtils.parseDouble(value);
@@ -207,6 +276,68 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 20),
+              // Nuevo: Campo Tipo de Documento
+              // Dropdown para Tipo de Documento
+              DropdownButtonFormField<TipoDocumento?>(
+                value: _selectedTipoDocumento,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de Documento',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.description),
+                ),
+                items: [
+                  // opción nula
+                  const DropdownMenuItem<TipoDocumento?>(
+                    value: null,
+                    child: Text('No especificado'),
+                  ),
+                  // todas las demás
+                  ...TipoDocumento.values.map((td) {
+                    final label = td.name.toUpperCase();
+                    return DropdownMenuItem<TipoDocumento?>(
+                      value: td,
+                      child: Text(label),
+                    );
+                  }),
+                ],
+                onChanged: (td) => setState(() => _selectedTipoDocumento = td),
+                // validator: (td) {
+                //   if (td == null)
+                //     return 'Por favor selecciona un tipo de documento';
+                //   return null;
+                // },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _numeroDocumentoController,
+                decoration: const InputDecoration(
+                  labelText: 'Número de Documento',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.document_scanner),
+                ),
+                // validator: (value) {
+                //   if (value == null || value.isEmpty) {
+                //     return 'Por favor ingresa número de documento';
+                //   }
+                //   return null;
+                // },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _nombreBeneficiarioController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre Beneficiario',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+                // validator: (value) {
+                //   if (value == null || value.isEmpty) {
+                //     return 'Por favor ingresa nombre del beneficiario';
+                //   }
+                //   return null;
+                // },
               ),
               const SizedBox(height: 20),
               // Sección de selección y vista previa de imagen
@@ -247,7 +378,9 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                             ),
                           ),
                         ),
-                        if (_selectedImage != null || (widget.initialImagenUrl != null && !_clearExistingImage))
+                        if (_selectedImage != null ||
+                            (widget.initialImagenUrl != null &&
+                                !_clearExistingImage))
                           Padding(
                             padding: const EdgeInsets.only(left: 8.0),
                             child: IconButton(
@@ -269,19 +402,24 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                           fit: BoxFit.cover,
                         ),
                       )
-                    else if (widget.initialImagenUrl != null && !_clearExistingImage)
+                    else if (widget.initialImagenUrl != null &&
+                        !_clearExistingImage)
                       Center(
                         child: Image.network(
                           widget.initialImagenUrl!,
                           height: 120,
                           width: 120,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            height: 120,
-                            width: 120,
-                            color: Colors.grey.shade200,
-                            child: Icon(Icons.broken_image, color: Colors.grey.shade400),
-                          ),
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                height: 120,
+                                width: 120,
+                                color: Colors.grey.shade200,
+                                child: Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
                         ),
                       )
                     else
@@ -290,7 +428,10 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                           height: 120,
                           width: 120,
                           color: Colors.grey.shade200,
-                          child: Icon(Icons.image_not_supported, color: Colors.grey.shade400),
+                          child: Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey.shade400,
+                          ),
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -298,10 +439,14 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
                       child: Text(
                         _selectedImage != null
                             ? 'Nueva imagen: ${_selectedImage!.name}'
-                            : (widget.initialImagenUrl != null && !_clearExistingImage)
-                                ? 'Imagen actual'
-                                : 'Ninguna imagen seleccionada',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            : (widget.initialImagenUrl != null &&
+                                  !_clearExistingImage)
+                            ? 'Imagen actual'
+                            : 'Ninguna imagen seleccionada',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -327,9 +472,16 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
               ? const SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
                 )
-              : Text(widget.initialNombre != null ? 'Guardar Cambios' : 'Crear Agencia'),
+              : Text(
+                  widget.initialNombre != null
+                      ? 'Guardar Cambios'
+                      : 'Crear Agencia',
+                ),
         ),
       ],
     );
