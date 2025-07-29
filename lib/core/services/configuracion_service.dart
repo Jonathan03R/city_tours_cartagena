@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/configuracion.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 
 class ConfiguracionService {
   static final _doc = FirebaseFirestore.instance
@@ -39,6 +40,33 @@ class ConfiguracionService {
       'actualizado_en': DateTime.now().toIso8601String(),
     });
     debugPrint('✅ Precio tarde actualizado: $nuevoPrecio');
+  }
+  
+  /// Actualiza el tipo de documento
+  static Future<void> actualizarTipoDocumento(TipoDocumento tipo) async {
+    await _doc.update({
+      'tipo_documento': tipo.toString().split('.').last,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Tipo de documento actualizado: $tipo');
+  }
+
+  /// Actualiza el número de documento
+  static Future<void> actualizarNumeroDocumento(String numero) async {
+    await _doc.update({
+      'numero_documento': numero,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Número de documento actualizado: $numero');
+  }
+
+  /// Actualiza el nombre del beneficiario
+  static Future<void> actualizarNombreBeneficiario(String nombre) async {
+    await _doc.update({
+      'nombre_beneficiario': nombre,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Nombre beneficiario actualizado: $nombre');
   }
 
   /// Inicializar configuración con ambos precios

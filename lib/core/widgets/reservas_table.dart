@@ -3,29 +3,27 @@ import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
-import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Importar DateFilterType
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Importar Provider
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'reserva_details.dart'; // Importar ReservaDetails
+import 'reserva_details.dart';
 
 class ReservasTable extends StatefulWidget {
-  // final
   final List<ReservaConAgencia> reservas;
   final VoidCallback onUpdate;
   final DateFilterType currentFilter;
   final TurnoType? turno;
-
   final String? agenciaId;
 
   const ReservasTable({
     super.key,
     required this.reservas,
     required this.onUpdate,
-    required this.currentFilter, // Requerir el filtro actual
+    required this.currentFilter,
     required this.turno,
     required this.agenciaId,
   });
@@ -38,15 +36,14 @@ class _ReservasTableState extends State<ReservasTable> {
   String? _editingReservaId;
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, EstadoReserva> _estadoValues = {};
-  final Map<String, DateTime> _fechaValues = {}; // Para la fecha de la reserva
+  final Map<String, DateTime> _fechaValues = {};
   final Map<String, String> _agenciaValues = {};
 
-  late ReservasController _controller; // Declarar como late
+  late ReservasController _controller;
 
   @override
   void initState() {
     super.initState();
-    // Inicializar el controlador aquí, asegurándose de que el contexto esté disponible
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller = Provider.of<ReservasController>(context, listen: false);
     });
@@ -60,7 +57,6 @@ class _ReservasTableState extends State<ReservasTable> {
     super.dispose();
   }
 
-  /// Inicia la edición de una reserva
   void _startEditing(ReservaConAgencia reserva) {
     setState(() {
       _editingReservaId = reserva.id;
@@ -83,8 +79,8 @@ class _ReservasTableState extends State<ReservasTable> {
         text: reserva.observacion,
       );
       _estadoValues[reserva.id] = reserva.estado;
-      _fechaValues[reserva.id] = reserva.fecha; // Usar reserva.fecha
-      _agenciaValues[reserva.id] = reserva.agencia.id; // Usar agencia.id
+      _fechaValues[reserva.id] = reserva.fecha;
+      _agenciaValues[reserva.id] = reserva.agencia.id;
     });
   }
 
@@ -106,7 +102,6 @@ class _ReservasTableState extends State<ReservasTable> {
     });
   }
 
-  /// Guarda los cambios realizados en la reserva editada
   Future<void> _saveChanges() async {
     if (_editingReservaId == null) return;
     try {
@@ -123,22 +118,16 @@ class _ReservasTableState extends State<ReservasTable> {
             _controllers['${_editingReservaId}_telefono']?.text ??
             reservaCA.telefono,
         estado: _estadoValues[_editingReservaId] ?? reservaCA.estado,
-        fecha:
-            _fechaValues[_editingReservaId] ??
-            reservaCA.fecha, // CORREGIDO: Usar 'fecha'
-        pax:
-            int.tryParse(
+        fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha,
+        pax: int.tryParse(
               _controllers['${_editingReservaId}_pax']?.text ?? '',
             ) ??
             reservaCA.pax,
-        saldo:
-            double.tryParse(
+        saldo: double.tryParse(
               _controllers['${_editingReservaId}_saldo']?.text ?? '',
             ) ??
             reservaCA.saldo,
-        agenciaId:
-            _agenciaValues[_editingReservaId] ??
-            reservaCA.agencia.id, // Usar agencia.id
+        agenciaId: _agenciaValues[_editingReservaId] ?? reservaCA.agencia.id,
         observacion:
             _controllers['${_editingReservaId}_observacion']?.text ??
             reservaCA.observacion,
@@ -171,85 +160,44 @@ class _ReservasTableState extends State<ReservasTable> {
       isScrollControlled: true,
       builder: (context) => ReservaDetails(
         reserva: reserva,
-        onUpdate: widget.onUpdate, // Pasar el callback de actualización
+        onUpdate: widget.onUpdate,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Obtener el controlador a través de Provider
-
-    // debugPrint('Agencia ID: ${widget.agenciaId}');
-    // debugPrint(
-    //   '>>> ReservasTable: recibidos ${widget.reservas.length} items <<<',
-    // );
-    // // 2) Detalle de cada ReservaConAgencia
-    // for (var ra in widget.reservas) {
-    //   debugPrint(
-    //     '– reserva.id=${ra.reserva.id}, '
-    //     'cliente=${ra.reserva.nombreCliente}, '
-    //     'hotel=${ra.reserva.hotel}, '
-    //     'pax=${ra.reserva.pax}, '
-    //     'saldo=${ra.reserva.saldo}, '
-    //     'observación=${ra.reserva.observacion}, '
-    //     'fecha=${ra.reserva.fecha}, '
-    //     'turno=${ra.reserva.turno}, '
-    //     'agencia.id=${ra.agencia.id}, '
-    //     'agencia.nombre=${ra.agencia.nombre}',
-    //   );
-    // }
-
     _controller = Provider.of<ReservasController>(context);
 
-    // final reservasFiltradas = widget.turno != null
-    //     ? widget.reservas
-    //           .where((rca) => rca.reserva.turno.toString().split('.').last == widget.turno.toString().split('.').last) // Comparar con string
-    //           .toList()
-    //     : widget.reservas;
     final reservasFiltradas = widget.reservas;
     debugPrint(
       'Página recibida: ${widget.reservas.length}, a mostrar: ${reservasFiltradas.length}',
     );
 
-    // debugPrint('📋filtro prueba Reservas en tabla: ${reservasFiltradas.map((r) => r.reserva.nombreCliente + " " + r.reserva.turno.toString().split('.').last).toList()}');
-    // final totalPax = reservasFiltradas.fold<int>(
-    //   0,
-    //   (sum, ra) => sum + ra.reserva.pax,
-    // );
-
+    // Calcular totales normales
     int totalPax = 0;
     double totalSaldo = 0.0;
     double totalDeuda = 0.0;
     final unpaid = reservasFiltradas
         .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
         .toList();
+    
     if (widget.agenciaId != null) {
       totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
-      totalSaldo = unpaid.fold<double>(
-        0.0,
-        (sum, ra) => sum + ra.reserva.saldo,
-      );
-      totalDeuda = unpaid.fold<double>(
-        0.0,
-        (sum, ra) => sum + ra.reserva.deuda,
-      );
-    }else {
-      totalPax = reservasFiltradas.fold<int>(
-        0,
-        (sum, ra) => sum + ra.reserva.pax,
-      );
-      totalSaldo = reservasFiltradas.fold<double>(
-        0.0,
-        (sum, ra) => sum + ra.reserva.saldo,
-      );
-      totalDeuda = unpaid.fold<double>(
-        0.0,
-        (sum, ra) => sum + ra.reserva.deuda,
-      );
+      totalSaldo = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
+      totalDeuda = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
+    } else {
+      totalPax = reservasFiltradas.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
+      totalSaldo = reservasFiltradas.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
+      totalDeuda = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
     }
 
-
+    // Si estamos en modo selección, usar los totales de las seleccionadas
+    if (_controller.isSelectionMode && _controller.selectedCount > 0) {
+      totalPax = _controller.getSelectedTotalPax();
+      totalSaldo = _controller.getSelectedTotalSaldo();
+      totalDeuda = _controller.getSelectedTotalDeuda();
+    }
 
     if (reservasFiltradas.isEmpty) {
       return const Center(
@@ -267,20 +215,38 @@ class _ReservasTableState extends State<ReservasTable> {
       );
     }
 
-    // Determinar si la columna de fecha debe mostrarse
-    final showFechaColumn =
-        widget.currentFilter == DateFilterType.all ||
+    final showFechaColumn = widget.currentFilter == DateFilterType.all ||
         widget.currentFilter == DateFilterType.lastWeek;
 
     // Construir las columnas dinámicamente
     final List<DataColumn> columns = [
+      // Nueva columna de selección
+      DataColumn(
+        label: _controller.isSelectionMode
+            ? Row(
+                children: [
+                  Checkbox(
+                    value: _controller.selectedCount == reservasFiltradas.length,
+                    tristate: true,
+                    onChanged: (value) {
+                      if (value == true) {
+                        _controller.selectAllVisible();
+                      } else {
+                        _controller.clearSelection();
+                      }
+                    },
+                  ),
+                  Text('${_controller.selectedCount}'),
+                ],
+              )
+            : const Text('Sel'),
+      ),
       const DataColumn(label: Text('Acción')),
       const DataColumn(label: Text('Turno')),
       const DataColumn(label: Text('Número')),
       const DataColumn(label: Text('Hotel')),
       const DataColumn(label: Text('Nombre')),
-      if (showFechaColumn)
-        const DataColumn(label: Text('Fecha')), // Columna de Fecha condicional
+      if (showFechaColumn) const DataColumn(label: Text('Fecha')),
       const DataColumn(label: Text('Pax')),
       const DataColumn(label: Text('Saldo')),
       const DataColumn(label: Text('Observaciones')),
@@ -297,29 +263,41 @@ class _ReservasTableState extends State<ReservasTable> {
             columnSpacing: 12,
             horizontalMargin: 16,
             headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
-            columns: columns, // Usar las columnas dinámicas
+            columns: columns,
             rows: [
               ...reservasFiltradas.map(
                 (reserva) => _buildDataRow(reserva, showFechaColumn),
-              ), // Pasar showFechaColumn
+              ),
+              // Fila de totales actualizada
               DataRow(
-                color: WidgetStateProperty.all(Colors.grey.shade200),
+                color: WidgetStateProperty.all(
+                  _controller.isSelectionMode && _controller.selectedCount > 0
+                      ? Colors.green.shade100  // Verde si hay selecciones
+                      : Colors.grey.shade200   // Gris normal
+                ),
                 cells: [
+                  const DataCell(Text('')), // Celda de selección vacía
                   const DataCell(Text('')), // Celda de acción vacía
-                  const DataCell(Text('')), // Celda de acción vacía
+                  const DataCell(Text('')), // Celda de turno vacía
                   const DataCell(Text('')), // Celda de número vacía
                   const DataCell(Text('')), // Celda de hotel vacía
                   if (!showFechaColumn)
                     DataCell(
                       Container(
                         padding: const EdgeInsets.all(8),
-                        color: Colors.blue.shade100,
+                        color: _controller.isSelectionMode && _controller.selectedCount > 0
+                            ? Colors.green.shade200
+                            : Colors.blue.shade100,
                         alignment: Alignment.center,
-                        child: const Text(
-                          'TOTAL',
+                        child: Text(
+                          _controller.isSelectionMode && _controller.selectedCount > 0
+                              ? 'SELECCIONADAS (${_controller.selectedCount})'
+                              : 'TOTAL',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue,
+                            color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                ? Colors.green.shade800
+                                : Colors.blue,
                           ),
                         ),
                       ),
@@ -333,13 +311,19 @@ class _ReservasTableState extends State<ReservasTable> {
                           Expanded(
                             child: Container(
                               padding: const EdgeInsets.all(8),
-                              color: Colors.blue.shade100,
+                              color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                  ? Colors.green.shade200
+                                  : Colors.blue.shade100,
                               alignment: Alignment.center,
-                              child: const Text(
-                                'TOTAL',
+                              child: Text(
+                                _controller.isSelectionMode && _controller.selectedCount > 0
+                                    ? 'SELECCIONADAS (${_controller.selectedCount})'
+                                    : 'TOTAL',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF01060A),
+                                  color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                      ? Colors.green.shade800
+                                      : const Color(0xFF01060A),
                                 ),
                               ),
                             ),
@@ -353,12 +337,17 @@ class _ReservasTableState extends State<ReservasTable> {
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            color: Colors.blue.shade100,
+                            color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                ? Colors.green.shade200
+                                : Colors.blue.shade100,
                             alignment: Alignment.center,
                             child: Text(
                               '$totalPax',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
+                                color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                    ? Colors.green.shade800
+                                    : Colors.black,
                               ),
                             ),
                           ),
@@ -366,20 +355,23 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
-
-                  ///esto es para mostrar el total de saldo
                   DataCell(
                     Row(
                       children: [
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            color: Colors.blue.shade100,
+                            color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                ? Colors.green.shade200
+                                : Colors.blue.shade100,
                             alignment: Alignment.center,
                             child: Text(
                               Formatters.formatCurrency(totalSaldo),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
+                                color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                    ? Colors.green.shade800
+                                    : Colors.black,
                               ),
                             ),
                           ),
@@ -387,23 +379,25 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
-
                   const DataCell(Text('')),
                   const DataCell(Text('')),
-
-                  /// esto es para mostrar el total de deuda
                   DataCell(
                     Row(
                       children: [
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            color: Colors.blue.shade100,
+                            color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                ? Colors.green.shade200
+                                : Colors.blue.shade100,
                             alignment: Alignment.center,
                             child: Text(
                               Formatters.formatCurrency(totalDeuda),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
+                                color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                    ? Colors.green.shade800
+                                    : Colors.black,
                               ),
                             ),
                           ),
@@ -422,12 +416,35 @@ class _ReservasTableState extends State<ReservasTable> {
   }
 
   DataRow _buildDataRow(ReservaConAgencia ra, bool showFechaColumn) {
-    // Recibir showFechaColumn
     var r = ra.reserva;
     final isEditing = _editingReservaId == r.id;
+    final isSelected = _controller.isReservaSelected(r.id);
 
     final List<DataCell> cells = [
-      // Celda de acción
+      // Nueva celda de selección - CAMBIADO: solo tap, no long press
+      DataCell(
+        GestureDetector(
+          onTap: () {
+            if (!_controller.isSelectionMode) {
+              // Si no estamos en modo selección, iniciarlo
+              _controller.startSelectionWith(r.id);
+            } else {
+              // Si ya estamos en modo selección, toggle esta reserva
+              _controller.toggleReservaSelection(r.id);
+            }
+          },
+          child: _controller.isSelectionMode
+              ? Checkbox(
+                  value: isSelected,
+                  onChanged: (value) {
+                    _controller.toggleReservaSelection(r.id);
+                  },
+                )
+              : const Icon(Icons.check_box_outline_blank, size: 16, color: Colors.grey),
+        ),
+      ),
+      
+      // Celda de acción (WhatsApp)
       DataCell(
         IconButton(
           icon: Icon(
@@ -439,37 +456,33 @@ class _ReservasTableState extends State<ReservasTable> {
             final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
             final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
             final uriWeb = Uri.parse('https://wa.me/$telefono');
-            // Si ya estaba marcado, desmárcalo directamente
+            
             if (r.whatsappContactado) {
               await FirebaseFirestore.instance
                   .collection('reservas')
                   .doc(r.id)
                   .update({'whatsappContactado': false});
-              // No es necesario setState aquí, el stream de Firestore lo actualizará
               return;
             }
-            // 1️⃣ Intentar el esquema nativo
+            
             if (await canLaunchUrl(uriApp)) {
-              // Marcamos antes de lanzar para que quede verde inmediatamente
               await FirebaseFirestore.instance
                   .collection('reservas')
                   .doc(r.id)
                   .update({'whatsappContactado': true});
-              // No es necesario setState aquí, el stream de Firestore lo actualizará
               await launchUrl(uriApp, mode: LaunchMode.externalApplication);
               return;
             }
-            // 2️⃣ Fallback a web
+            
             if (await canLaunchUrl(uriWeb)) {
               await FirebaseFirestore.instance
                   .collection('reservas')
                   .doc(r.id)
                   .update({'whatsappContactado': true});
-              // No es necesario setState aquí, el stream de Firestore lo actualizará
               await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
               return;
             }
-            // 3️⃣ Ni app ni web disponibles
+            
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -481,10 +494,11 @@ class _ReservasTableState extends State<ReservasTable> {
           },
         ),
       ),
+      
+      // Resto de celdas existentes...
       DataCell(
-        Text(r.turno?.label ?? ''), // Mostrar el turno como texto
+        Text(r.turno?.label ?? ''),
       ),
-      // Celda de número
       DataCell(
         isEditing
             ? TextField(
@@ -501,7 +515,6 @@ class _ReservasTableState extends State<ReservasTable> {
                 ),
               ),
       ),
-      // Celda de hotel
       DataCell(
         isEditing
             ? TextField(
@@ -513,7 +526,6 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(r.hotel),
       ),
-      // Celda de nombre
       DataCell(
         isEditing
             ? TextField(
@@ -536,9 +548,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   onTap: () async {
                     final selectedDate = await showDatePicker(
                       context: context,
-                      initialDate:
-                          _fechaValues[r.id] ??
-                          r.fecha, // CORREGIDO: Usar r.fecha
+                      initialDate: _fechaValues[r.id] ?? r.fecha,
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
@@ -551,10 +561,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   child: AbsorbPointer(
                     child: TextField(
                       controller: TextEditingController(
-                        text: Formatters.formatDate(
-                          _fechaValues[r.id] ??
-                              r.fecha, // CORREGIDO: Usar r.fecha
-                        ),
+                        text: Formatters.formatDate(_fechaValues[r.id] ?? r.fecha),
                       ),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
@@ -564,13 +571,12 @@ class _ReservasTableState extends State<ReservasTable> {
                     ),
                   ),
                 )
-              : Text(Formatters.formatDate(r.fecha)), // CORREGIDO: Usar r.fecha
+              : Text(Formatters.formatDate(r.fecha)),
         ),
       );
     }
 
     cells.addAll([
-      // Celda de Pax
       DataCell(
         isEditing
             ? TextField(
@@ -583,7 +589,6 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text('${r.pax}'),
       ),
-      // Celda de Saldo
       DataCell(
         isEditing
             ? TextField(
@@ -596,7 +601,6 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
-      // Celda de Observaciones
       DataCell(
         IconButton(
           icon: Icon(
@@ -607,15 +611,11 @@ class _ReservasTableState extends State<ReservasTable> {
           onPressed: () => _showObservacionDialog(ra),
         ),
       ),
-      // Celda de Agencia
       DataCell(isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
-      // Celda de Deuda
       DataCell(
         GestureDetector(
           onTap: () async {
-            // Lógica para marcar como PAGADA o PENDIENTE
             if (ra.reserva.estado == EstadoReserva.pagada) {
-              // Si ya está pagada, preguntar si queremos volver a pendiente
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -636,19 +636,15 @@ class _ReservasTableState extends State<ReservasTable> {
               if (ok == true) {
                 final updated = ra.reserva.copyWith(
                   estado: EstadoReserva.pendiente,
-                  // NO MODIFICAR EL SALDO
                 );
                 await _controller.updateReserva(ra.id, updated);
               }
             } else {
-              // Si no está pagada, preguntar si queremos marcar como pagada
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Marcar como pagada'),
-                  content: const Text(
-                    '¿Deseas marcar esta reserva como pagada?',
-                  ),
+                  content: const Text('¿Deseas marcar esta reserva como pagada?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(ctx).pop(false),
@@ -664,10 +660,8 @@ class _ReservasTableState extends State<ReservasTable> {
               if (ok == true) {
                 final updated = ra.reserva.copyWith(
                   estado: EstadoReserva.pagada,
-                  // saldo: 0.0,
                 );
                 await _controller.updateReserva(ra.id, updated);
-                // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
               }
             }
           },
@@ -702,7 +696,6 @@ class _ReservasTableState extends State<ReservasTable> {
           ),
         ),
       ),
-      // Celda de Editar
       DataCell(
         isEditing
             ? Row(
@@ -732,7 +725,13 @@ class _ReservasTableState extends State<ReservasTable> {
       ),
     ]);
 
-    return DataRow(cells: cells);
+    // Aplicar color de fondo si está seleccionada
+    return DataRow(
+      color: isSelected 
+          ? WidgetStateProperty.all(Colors.blue.shade100)
+          : null,
+      cells: cells,
+    );
   }
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {
@@ -791,7 +790,6 @@ class _ReservasTableState extends State<ReservasTable> {
                   observacion: controller.text,
                 );
                 await _controller.updateReserva(ra.id, updated);
-                // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
               },
               child: const Text('Guardar'),
             ),
@@ -820,7 +818,6 @@ class _ReservasTableState extends State<ReservasTable> {
               final messenger = ScaffoldMessenger.of(context);
               try {
                 await _controller.deleteReserva(reserva.id);
-                // No es necesario widget.onUpdate() aquí, el controlador ya lo maneja
                 messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Reserva eliminada exitosamente'),

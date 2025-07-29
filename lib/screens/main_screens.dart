@@ -2,39 +2,44 @@ import 'dart:async';
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
-import 'package:citytourscartagena/core/controller/configuracion_controller.dart'; // Importar ConfiguracionController
-import 'package:citytourscartagena/core/controller/reservas_controller.dart'; // Importar ReservasController
+import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
+import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
-import 'package:citytourscartagena/screens/colaboradores_view.dart'; // Asegúrate de que esta vista exista
+import 'package:citytourscartagena/screens/colaboradores_view.dart';
+import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
-import 'package:citytourscartagena/screens/reservas/turno_selector.dart'; // Importar el nuevo TurnoSelectorScreen
+import 'package:citytourscartagena/screens/reservas/turno_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 enum TurnoType { manana, tarde }
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   int _currentIndex = 0; // 0=Reservas,1=Agencias,2=Colaboradores
   TurnoType? _turnoSeleccionado; // turno elegido
   StreamSubscription<List<AgenciaConReservas>>? _agenciasPreloadSubscription;
+  
+  // Controlador para el search de agencias
+  final TextEditingController _searchController = TextEditingController();
+  String _searchTerm = '';
 
   @override
   void initState() {
     super.initState();
-    // Asegurarse de que el contexto esté disponible para Provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startGlobalImagePreloading(context);
     });
@@ -42,8 +47,8 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    _agenciasPreloadSubscription
-        ?.cancel(); // Cancelar la suscripción al cerrar la app
+    _agenciasPreloadSubscription?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -70,7 +75,6 @@ class _MainScreenState extends State<MainScreen> {
       if (agencia.imagenUrl != null && agencia.imagenUrl!.isNotEmpty) {
         try {
           precacheImage(NetworkImage(agencia.imagenUrl!), context);
-          // debugPrint('✅ Global precargando imagen de agencia: ${agencia.nombre}');
         } catch (e) {
           debugPrint(
             '❌ Error global precargando imagen de ${agencia.nombre}: $e',
@@ -95,27 +99,120 @@ class _MainScreenState extends State<MainScreen> {
           elevation: 2,
           iconTheme: const IconThemeData(
             color: Color(0xFF06142F),
-          ), // azul oscuro
-          title: const Text(
-            'CITY TOURS CLIMATIZADO',
-            style: TextStyle(
-              color: Color(0xFF06142F),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              letterSpacing: 1.0,
-            ),
           ),
+          title: _currentIndex == 1
+              ? Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchTerm = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Buscar agencia...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade500,
+                        size: 20,
+                      ),
+                      suffixIcon: _searchTerm.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade500,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchTerm = '';
+                                });
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                )
+              : const Text(
+                  'CITY TOURS CLIMATIZADO',
+                  style: TextStyle(
+                    color: Color(0xFF06142F),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 1.0,
+                  ),
+                ),
           centerTitle: true,
+          actions: [
+            if (_currentIndex == 1) // Solo mostrar contador en pestaña de agencias
+              Consumer<AgenciasController>(
+                builder: (_, agCtrl, __) {
+                  return StreamBuilder<List<AgenciaConReservas>>(
+                    stream: agCtrl.agenciasConReservasStream,
+                    builder: (_, snapshot) {
+                      final count = snapshot.data?.length ?? 0;
+                      return Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF06142F),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            IconButton(
+              icon: const Icon(Icons.settings, color: Color(0xFF06142F)),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ConfigEmpresaView(),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
-        drawer: Drawer(
-          child: Consumer<AuthController>(
+        drawer: SizedBox(
+          width: MediaQuery.of(context).size.width * 4/5,
+          child: Drawer(
+            child: Consumer<AuthController>(
             builder: (_, auth, __) {
               final usuario = auth.appUser?.usuario ?? 'Invitado';
               final email = auth.user?.email ?? '';
               return Column(
                 children: [
                   Container(
-                    color: const Color(0xFF06142F), // color de fondo completo
+                    color: const Color(0xFF06142F),
                     padding: const EdgeInsets.symmetric(
                       vertical: 24,
                       horizontal: 16,
@@ -176,44 +273,37 @@ class _MainScreenState extends State<MainScreen> {
                   Consumer<ReservasController>(
                     builder: (_, resCtrl, __) {
                       return StreamBuilder<List<ReservaConAgencia>>(
-                        stream: resCtrl
-                            .getAllReservasConAgenciaStream(), // <-- STREAM de todas
+                        stream: resCtrl.getAllReservasConAgenciaStream(),
                         builder: (_, snap) {
                           if (!snap.hasData) return const SizedBox.shrink();
                           final all = snap.data!;
-                          // sólo las pendientes
                           final unpaid = all
                               .where(
                                 (ra) =>
                                     ra.reserva.estado != EstadoReserva.pagada,
                               )
                               .toList();
-                          // suma total de deuda
                           final totalDebt = unpaid.fold<double>(
                             0.0,
                             (sum, ra) => sum + ra.reserva.deuda,
                           );
-                          // nombres únicos de agencias que deben
-                          final agencyDebtMap = <String, double>{};
+                          final Map<String, double> agencyDebtMap = {};
+                          final Map<String, Agencia> agencyById = {};
                           for (var ra in unpaid) {
+                            agencyById[ra.agencia.id] = ra.agencia;
                             agencyDebtMap.update(
-                              ra.agencia.nombre,
+                              ra.agencia.id,
                               (prev) => prev + ra.reserva.deuda,
                               ifAbsent: () => ra.reserva.deuda,
                             );
                           }
-
                           final filteredAgencies = agencyDebtMap.entries
                               .where((e) => e.value != 0)
+                              .map((e) => MapEntry(agencyById[e.key]!, e.value))
                               .toList();
-
                           return Visibility(
                             visible: _currentIndex == 1,
                             child: ListTile(
-                              // leading: const Icon(
-                              //   Icons.account_balance_wallet,
-                              //   color: Colors.red,
-                              // ),
                               title: Text(
                                 'Deuda total: \$${Formatters.formatCurrency(totalDebt)}',
                                 style: const TextStyle(
@@ -222,31 +312,66 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               subtitle: filteredAgencies.isEmpty
                                   ? null
-                                  : Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: filteredAgencies.map((e) {
-                                        final color = e.value > 0
-                                            ? Colors.red
-                                            : Colors.green;
-                                        return Row(
-                                          children: [
-                                            Icon(
-                                              Icons.circle,
-                                              color: color,
-                                              size: 8,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              '${e.key} (\$${Formatters.formatCurrency(e.value)})',
-                                              style: const TextStyle(
-                                                fontSize: 8,
+                                  : SizedBox(
+                                      height: 500.h, // Altura fija más pequeña
+                                      child: SingleChildScrollView(
+                                        primary: false, // Evita conflictos con PrimaryScrollController
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: filteredAgencies.map((entry) {
+                                            final Agencia agencia = entry.key;
+                                            final double deuda = entry.value;
+                                            final badgeColor = deuda > 0 ? Colors.red : Colors.green;
+                                            return Container(
+                                              margin: const EdgeInsets.symmetric(vertical: 2),
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 8,
                                               ),
-                                            ),
-                                          ],
-                                        );
-                                      }).toList(),
+                                              decoration: BoxDecoration(
+                                                color: badgeColor.shade50,
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 10,
+                                                    backgroundImage: agencia.imagenUrl != null
+                                                        ? NetworkImage(agencia.imagenUrl!)
+                                                        : null,
+                                                    backgroundColor: badgeColor.shade700,
+                                                    child: agencia.imagenUrl == null
+                                                        ? Text(
+                                                            agencia.nombre[0].toUpperCase(),
+                                                            style: const TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: Colors.white,
+                                                            ),
+                                                          )
+                                                        : null,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${agencia.nombre}: \$${Formatters.formatCurrency(deuda)}',
+                                                      style: TextStyle(
+                                                        color: badgeColor.shade700,
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 10,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
                                     ),
                             ),
                           );
@@ -254,6 +379,7 @@ class _MainScreenState extends State<MainScreen> {
                       );
                     },
                   ),
+                  const Spacer(),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Color(0xFFF41720)),
                     title: const Text(
@@ -270,38 +396,38 @@ class _MainScreenState extends State<MainScreen> {
             },
           ),
         ),
+        ),
         body: IndexedStack(
           index: _currentIndex,
           children: [
-            // Siempre existe el slot 0
             _currentIndex == 0
                 ? (_turnoSeleccionado == null
-                      ? TurnoSelectorWidget(
-                          // Usar la nueva pantalla de selección de turno
-                          onTurnoSelected: (turno) => setState(() {
-                            _turnoSeleccionado = turno;
-                          }),
-                        )
-                      : ReservasView(
-                          turno: _turnoSeleccionado,
-                          onBack: () => setState(() {
-                            _turnoSeleccionado = null;
-                          }),
-                        ))
+                    ? TurnoSelectorWidget(
+                        onTurnoSelected: (turno) => setState(() {
+                          _turnoSeleccionado = turno;
+                        }),
+                      )
+                    : ReservasView(
+                        turno: _turnoSeleccionado,
+                        onBack: () => setState(() {
+                          _turnoSeleccionado = null;
+                        }),
+                      ))
                 : const SizedBox.shrink(),
-            // Slot 1
-            const AgenciasView(),
-            // Slot 2
+            AgenciasView(searchTerm: _searchTerm), // Pasar el término de búsqueda
             const ColaboradoresView(),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) {
-            // Al pulsar “Reservas” (0) no abrimos dialog, simplemente actualizamos
             setState(() {
               _currentIndex = index;
-              // si retrocedes a Reservas y ya había turno, se muestra ReservasView
+              // Limpiar búsqueda al cambiar de pestaña
+              if (index != 1) {
+                _searchController.clear();
+                _searchTerm = '';
+              }
             });
           },
           items: const [

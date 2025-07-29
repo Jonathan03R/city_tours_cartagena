@@ -121,7 +121,9 @@ class _ReservasViewState extends State<ReservasView> {
   }
 
   void _editarAgencia() {
-    final agencia = widget.agencia!;
+    // final agencia = widget.agencia!;
+    final agencia = _currentAgencia!;
+    final parentCtx = context;
     showDialog(
       context: context,
       builder: (_) => CrearAgenciaForm(
@@ -129,15 +131,21 @@ class _ReservasViewState extends State<ReservasView> {
         initialImagenUrl: agencia.imagenUrl,
         initialPrecioPorAsientoTurnoManana: agencia.precioPorAsientoTurnoManana,
         initialPrecioPorAsientoTurnoTarde: agencia.precioPorAsientoTurnoTarde,
+        initialTipoDocumento: agencia.tipoDocumento,
+        initialNumeroDocumento: agencia.numeroDocumento,
+        initialNombreBeneficiario: agencia.nombreBeneficiario,
         onCrear:
             (
               nuevoNombre,
               nuevaImagenFile,
               nuevoPrecioManana,
               nuevoPrecioTarde,
+              nuevoTipoDocumento,
+              nuevoNumeroDocumento,
+              nuevoNombreBeneficiario,
             ) async {
               final agenciasController = Provider.of<AgenciasController>(
-                context,
+                parentCtx,
                 listen: false,
               );
               await agenciasController.updateAgencia(
@@ -147,8 +155,17 @@ class _ReservasViewState extends State<ReservasView> {
                 agencia.imagenUrl,
                 newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
                 newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
+                tipoDocumento: nuevoTipoDocumento,
+                numeroDocumento: nuevoNumeroDocumento,
+                nombreBeneficiario: nuevoNombreBeneficiario,
               );
-              Navigator.of(context).pop();
+              Navigator.of(parentCtx).pop();
+              ScaffoldMessenger.of(parentCtx).showSnackBar(
+                const SnackBar(
+                  content: Text('Agencia actualizada correctamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
       ),
     );
@@ -169,9 +186,9 @@ class _ReservasViewState extends State<ReservasView> {
               )
             : null,
         automaticallyImplyLeading: widget.onBack == null,
-        title: widget.agencia != null
+        title: _currentAgencia != null
             ? Text(
-                'Reservas de ${widget.agencia!.nombre}',
+                'Reservas de ${_currentAgencia!.nombre}',
                 overflow: TextOverflow.ellipsis,
               )
             : const Text('Reservas'),
@@ -233,7 +250,7 @@ class _ReservasViewState extends State<ReservasView> {
               selectedTurno: reservasController.turnoFilter,
               onFilterChanged: _onFilterChanged,
             ),
-            if (widget.agencia != null) _buildAgencyHeader(widget.agencia!),
+            if (_currentAgencia != null) _buildAgencyHeader(_currentAgencia!),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: LayoutBuilder(
@@ -261,6 +278,7 @@ class _ReservasViewState extends State<ReservasView> {
                               configuracion,
                               reservasController
                                   .turnoFilter, // NUEVO: Pasar turno filtrado
+                              reservasController, 
                             ),
                           ],
                         )
@@ -272,6 +290,7 @@ class _ReservasViewState extends State<ReservasView> {
                               configuracion,
                               reservasController
                                   .turnoFilter, // NUEVO: Pasar turno filtrado
+                              reservasController, 
                             ),
                             Text(
                               _getFilterTitle(
@@ -716,6 +735,9 @@ class _ReservasViewState extends State<ReservasView> {
           widget.agencia!.imagenUrl,
           newPrecioPorAsientoTurnoManana: manana,
           newPrecioPorAsientoTurnoTarde: tarde,
+          tipoDocumento: widget.agencia!.tipoDocumento,
+          numeroDocumento: widget.agencia!.numeroDocumento,
+          nombreBeneficiario: widget.agencia!.nombreBeneficiario,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -802,26 +824,44 @@ class _ReservasViewState extends State<ReservasView> {
   Widget _buildRightControls(
     List<ReservaConAgencia> currentReservas,
     Configuracion? configuracion,
-    TurnoType? turnoFilter, // NUEVO: Recibir el turno filtrado
+    TurnoType? turnoFilter,
+    ReservasController
+    reservasController, // NUEVO: Recibir el controlador completo
   ) {
-    // Obtener el controlador de reservas
-    final reservasController = Provider.of<ReservasController>(
-      context,
-      listen: false,
-    );
     final ac = _currentAgencia ?? widget.agencia;
     final ag = ac?.agencia;
 
-    // ARREGLADO: Lógica de filtrado por turno
     final showManana =
         ag != null && (turnoFilter == null || turnoFilter == TurnoType.manana);
     final showTarde =
         ag != null && (turnoFilter == null || turnoFilter == TurnoType.tarde);
 
-    // ARREGLADO: Usar los precios correctos
     final double? globalPriceManana =
         configuracion?.precioGeneralAsientoTemprano;
     final double? globalPriceTarde = configuracion?.precioGeneralAsientoTarde;
+
+    // NUEVO: Determinar si hay selecciones activas
+    final hasSelections =
+        reservasController.isSelectionMode &&
+        reservasController.selectedCount > 0;
+
+    // NUEVO: Determinar qué texto mostrar en el contador
+    String reservasText;
+    if (hasSelections) {
+      reservasText =
+          '${reservasController.selectedCount} seleccionada${reservasController.selectedCount != 1 ? 's' : ''}';
+    } else {
+      reservasText =
+          '${currentReservas.length} reserva${currentReservas.length != 1 ? 's' : ''}';
+    }
+
+    // NUEVO: Determinar qué texto mostrar en el botón
+    String buttonText;
+    if (hasSelections) {
+      buttonText = "Exportar Seleccionadas";
+    } else {
+      buttonText = "Exportar";
+    }
 
     debugPrint(
       '🔍 Filtro turno: $turnoFilter, showManana: $showManana, showTarde: $showTarde',
@@ -841,42 +881,65 @@ class _ReservasViewState extends State<ReservasView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Reservas y botón export
+          // Reservas y botón export - ACTUALIZADO
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${currentReservas.length} reserva${currentReservas.length != 1 ? 's' : ''}',
-                style: const TextStyle(
+                reservasText, // NUEVO: Texto dinámico
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
+                  color: hasSelections
+                      ? Colors.blue.shade700
+                      : Colors.black, // NUEVO: Color dinámico
                 ),
               ),
 
               ElevatedButton.icon(
                 onPressed: () async {
-                  // ✅ USAR EL CONTROLADOR EXISTENTE CON FILTROS
-                  final allReservas = await reservasController
-                      .getAllFilteredReservasSinPaginacion();
+                  List<ReservaConAgencia> reservasParaExportar;
+
+                  // NUEVA LÓGICA: Decidir qué reservas exportar
+                  if (hasSelections) {
+                    // Si hay selecciones, usar solo las seleccionadas
+                    reservasParaExportar = reservasController.selectedReservas;
+                    debugPrint(
+                      '📄 Exportando ${reservasParaExportar.length} reservas SELECCIONADAS',
+                    );
+                  } else {
+                    // Si no hay selecciones, usar todas las filtradas (comportamiento original)
+                    reservasParaExportar = await reservasController
+                        .getAllFilteredReservasSinPaginacion();
+                    debugPrint(
+                      '📄 Exportando ${reservasParaExportar.length} reservas FILTRADAS',
+                    );
+                  }
 
                   if (!mounted) return;
 
                   final pdfService = PdfExportService();
                   await pdfService.exportarReservasConAgencia(
-                    reservasConAgencia: allReservas,
+                    reservasConAgencia:
+                        reservasParaExportar, // NUEVO: Lista dinámica
                     context: context,
-                    // ✅ PASAR TODOS LOS FILTROS APLICADOS
                     filtroFecha: reservasController.selectedFilter,
                     fechaPersonalizada: reservasController.customDate,
                     turnoFiltrado: reservasController.turnoFilter,
-                    agenciaEspecifica:
-                        widget.agencia?.agencia, // Pasar la agencia si existe
+                    agenciaEspecifica: _currentAgencia?.agencia,
                   );
                 },
-                icon: const Icon(Icons.file_download, size: 20),
-                label: const Text("Exportar"),
+                icon: Icon(
+                  hasSelections
+                      ? Icons.file_download_outlined
+                      : Icons.file_download, // NUEVO: Ícono dinámico
+                  size: 20,
+                ),
+                label: Text(buttonText), // NUEVO: Texto dinámico
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
+                  backgroundColor: hasSelections
+                      ? Colors.blue.shade600
+                      : Colors.green.shade600, // NUEVO: Color dinámico
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -889,9 +952,8 @@ class _ReservasViewState extends State<ReservasView> {
           ),
           const SizedBox(height: 12),
 
-          // Precios según contexto
+          // Resto del código sin cambios...
           if (ag != null) ...[
-            // AGENCIA: Mostrar precios específicos o heredados
             if (showManana)
               _buildPriceRow(
                 'Mañana',
@@ -909,7 +971,6 @@ class _ReservasViewState extends State<ReservasView> {
                 Colors.blue,
               ),
 
-            // Campos de edición para agencia
             if (_editandoPrecio) ...[
               const SizedBox(height: 12),
               if (showManana) ...[
@@ -949,7 +1010,6 @@ class _ReservasViewState extends State<ReservasView> {
               ],
             ],
 
-            // Botones de acción para agencia
             Align(
               alignment: Alignment.centerRight,
               child: _editandoPrecio
@@ -995,12 +1055,11 @@ class _ReservasViewState extends State<ReservasView> {
                     ),
             ),
           ] else ...[
-            // GLOBAL: Mostrar precios globales según filtro
             _buildGlobalPriceSection(
               configuracion,
               globalPriceManana,
               globalPriceTarde,
-              turnoFilter, // NUEVO: Pasar el filtro de turno
+              turnoFilter,
             ),
           ],
         ],
