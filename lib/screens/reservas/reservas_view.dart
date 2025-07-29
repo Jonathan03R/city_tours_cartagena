@@ -121,7 +121,9 @@ class _ReservasViewState extends State<ReservasView> {
   }
 
   void _editarAgencia() {
-    final agencia = widget.agencia!;
+    // final agencia = widget.agencia!;
+    final agencia = _currentAgencia!;
+    final parentCtx = context;
     showDialog(
       context: context,
       builder: (_) => CrearAgenciaForm(
@@ -143,7 +145,7 @@ class _ReservasViewState extends State<ReservasView> {
               nuevoNombreBeneficiario,
             ) async {
               final agenciasController = Provider.of<AgenciasController>(
-                context,
+                parentCtx,
                 listen: false,
               );
               await agenciasController.updateAgencia(
@@ -157,7 +159,13 @@ class _ReservasViewState extends State<ReservasView> {
                 numeroDocumento: nuevoNumeroDocumento,
                 nombreBeneficiario: nuevoNombreBeneficiario,
               );
-              Navigator.of(context).pop();
+              Navigator.of(parentCtx).pop();
+              ScaffoldMessenger.of(parentCtx).showSnackBar(
+                const SnackBar(
+                  content: Text('Agencia actualizada correctamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
       ),
     );
@@ -178,9 +186,9 @@ class _ReservasViewState extends State<ReservasView> {
               )
             : null,
         automaticallyImplyLeading: widget.onBack == null,
-        title: widget.agencia != null
+        title: _currentAgencia != null
             ? Text(
-                'Reservas de ${widget.agencia!.nombre}',
+                'Reservas de ${_currentAgencia!.nombre}',
                 overflow: TextOverflow.ellipsis,
               )
             : const Text('Reservas'),
@@ -242,7 +250,7 @@ class _ReservasViewState extends State<ReservasView> {
               selectedTurno: reservasController.turnoFilter,
               onFilterChanged: _onFilterChanged,
             ),
-            if (widget.agencia != null) _buildAgencyHeader(widget.agencia!),
+            if (_currentAgencia != null) _buildAgencyHeader(_currentAgencia!),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: LayoutBuilder(
@@ -881,8 +889,7 @@ class _ReservasViewState extends State<ReservasView> {
                     filtroFecha: reservasController.selectedFilter,
                     fechaPersonalizada: reservasController.customDate,
                     turnoFiltrado: reservasController.turnoFilter,
-                    agenciaEspecifica:
-                        widget.agencia?.agencia, // Pasar la agencia si existe
+                    agenciaEspecifica: _currentAgencia?.agencia // Pasar la agencia si existe
                   );
                 },
                 icon: const Icon(Icons.file_download, size: 20),
