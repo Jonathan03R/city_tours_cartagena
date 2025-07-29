@@ -15,6 +15,7 @@ import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 enum TurnoType { manana, tarde }
@@ -99,7 +100,7 @@ class _MainScreenState extends State<MainScreen> {
           iconTheme: const IconThemeData(
             color: Color(0xFF06142F),
           ),
-          title: _currentIndex == 1 
+          title: _currentIndex == 1
               ? Container(
                   height: 40,
                   decoration: BoxDecoration(
@@ -311,56 +312,66 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               subtitle: filteredAgencies.isEmpty
                                   ? null
-                                  : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: filteredAgencies.map((entry) {
-                                        final Agencia agencia = entry.key;
-                                        final double deuda = entry.value;
-                                        final badgeColor = deuda > 0 ? Colors.red : Colors.green;
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(vertical: 2),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: badgeColor.shade50,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              CircleAvatar(
-                                                radius: 10,
-                                                backgroundImage: agencia.imagenUrl != null
-                                                    ? NetworkImage(agencia.imagenUrl!)
-                                                    : null,
-                                                backgroundColor: badgeColor.shade700,
-                                                child: agencia.imagenUrl == null
-                                                    ? Text(
-                                                        agencia.nombre[0].toUpperCase(),
-                                                        style: const TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.white,
-                                                        ),
-                                                      )
-                                                    : null,
+                                  : SizedBox(
+                                      height: 500.h, // Altura fija más pequeña
+                                      child: SingleChildScrollView(
+                                        primary: false, // Evita conflictos con PrimaryScrollController
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: filteredAgencies.map((entry) {
+                                            final Agencia agencia = entry.key;
+                                            final double deuda = entry.value;
+                                            final badgeColor = deuda > 0 ? Colors.red : Colors.green;
+                                            return Container(
+                                              margin: const EdgeInsets.symmetric(vertical: 2),
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 8,
                                               ),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                '${agencia.nombre}: \$${Formatters.formatCurrency(deuda)}',
-                                                style: TextStyle(
-                                                  color: badgeColor.shade700,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 10,
-                                                ),
+                                              decoration: BoxDecoration(
+                                                color: badgeColor.shade50,
+                                                borderRadius: BorderRadius.circular(20),
                                               ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 10,
+                                                    backgroundImage: agencia.imagenUrl != null
+                                                        ? NetworkImage(agencia.imagenUrl!)
+                                                        : null,
+                                                    backgroundColor: badgeColor.shade700,
+                                                    child: agencia.imagenUrl == null
+                                                        ? Text(
+                                                            agencia.nombre[0].toUpperCase(),
+                                                            style: const TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: Colors.white,
+                                                            ),
+                                                          )
+                                                        : null,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${agencia.nombre}: \$${Formatters.formatCurrency(deuda)}',
+                                                      style: TextStyle(
+                                                        color: badgeColor.shade700,
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 10,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                      maxLines: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
                                     ),
                             ),
                           );
@@ -391,17 +402,17 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             _currentIndex == 0
                 ? (_turnoSeleccionado == null
-                      ? TurnoSelectorWidget(
-                          onTurnoSelected: (turno) => setState(() {
-                            _turnoSeleccionado = turno;
-                          }),
-                        )
-                      : ReservasView(
-                          turno: _turnoSeleccionado,
-                          onBack: () => setState(() {
-                            _turnoSeleccionado = null;
-                          }),
-                        ))
+                    ? TurnoSelectorWidget(
+                        onTurnoSelected: (turno) => setState(() {
+                          _turnoSeleccionado = turno;
+                        }),
+                      )
+                    : ReservasView(
+                        turno: _turnoSeleccionado,
+                        onBack: () => setState(() {
+                          _turnoSeleccionado = null;
+                        }),
+                      ))
                 : const SizedBox.shrink(),
             AgenciasView(searchTerm: _searchTerm), // Pasar el término de búsqueda
             const ColaboradoresView(),
