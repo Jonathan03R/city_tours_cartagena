@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
@@ -24,6 +26,7 @@ class PdfExportService {
     TurnoType? turnoFiltrado,
     Agencia? agenciaEspecifica, // Si hay una agencia específica
   }) async {
+    final Configuracion? cfg = await ConfiguracionService.getConfiguracion();
     try {
       final byteData = await rootBundle.load('assets/images/logo.png');
       final Uint8List companyLogoBytes = byteData.buffer.asUint8List();
@@ -105,6 +108,7 @@ class PdfExportService {
               _buildAgenciaInfo(
                 agenciaEspecifica,
                 logoBytes: agenciaLogoBytes,
+                config: cfg,
               ), // pasamos el buffer
               pw.SizedBox(height: 20),
             ],
@@ -252,7 +256,7 @@ class PdfExportService {
   }
 
   /// Construye la información de la agencia específica
-  pw.Widget _buildAgenciaInfo(Agencia agencia, {Uint8List? logoBytes}) {
+  pw.Widget _buildAgenciaInfo(Agencia agencia, {Uint8List? logoBytes, Configuracion? config, }) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(15),
       decoration: pw.BoxDecoration(
@@ -301,7 +305,10 @@ class PdfExportService {
               ),
             ),
           pw.SizedBox(width: 20),
+
+          /// primera columna con nombre y reporte
           pw.Expanded(
+            flex: 2,
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -369,6 +376,58 @@ class PdfExportService {
                       color: PdfColors.grey500,
                       fontStyle: pw.FontStyle.italic,
                     ),
+                  ),
+              ],
+            ),
+          ),
+
+          pw.SizedBox(width: 20),
+
+          pw.Expanded(
+            flex: 1,
+            child: pw.Column(
+              crossAxisAlignment:
+                  pw.CrossAxisAlignment.end, // texto alineado a la izquierda
+              mainAxisAlignment:
+                  pw.MainAxisAlignment.start, // contenido al tope
+              children: [
+                if (agencia.tipoDocumento != null)
+                  pw.Text(
+                    'Cuenta de cobro',
+                    textAlign: pw.TextAlign.left,
+                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+                  ),
+                
+                if (agencia.nombreBeneficiario != null)
+                  pw.Text(
+                    '${agencia.nombreBeneficiario}',
+                    textAlign: pw.TextAlign.left,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+                  ),
+                if (agencia.numeroDocumento != null)
+                  pw.Text(
+                    '${agencia.tipoDocumento!.name.toUpperCase()} : ${agencia.numeroDocumento}',
+                    textAlign: pw.TextAlign.left,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+                  ),
+                pw.SizedBox(height: 4),
+                if (agencia.tipoDocumento != null)
+                  pw.Text(
+                    'Debe a',
+                    textAlign: pw.TextAlign.left,
+                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+                  ),
+                if (config?.nombreBeneficiario != null)
+                  pw.Text(
+                    '${config!.nombreBeneficiario}',
+                    textAlign: pw.TextAlign.left,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+                  ),
+                if (config?.numeroDocumento != null)
+                  pw.Text(
+                    '${config!.tipoDocumento.name.toUpperCase()} : ${config.numeroDocumento}',
+                    textAlign: pw.TextAlign.left,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                   ),
               ],
             ),

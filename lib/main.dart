@@ -1,6 +1,8 @@
-import 'package:citytourscartagena/core/mvvc/agencias_controller.dart';
-import 'package:citytourscartagena/core/mvvc/configuracion_controller.dart';
-import 'package:citytourscartagena/core/mvvc/reservas_controller.dart';
+import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
+import 'package:citytourscartagena/core/controller/reservas_controller.dart';
+import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/firebase_options.dart';
 import 'package:citytourscartagena/main_dev.dart';
@@ -24,6 +26,9 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider<AuthController>(
+          create: (_) => AuthController(AuthService()),
+        ),
         ChangeNotifierProvider<ConfiguracionController>(
           create: (_) => ConfiguracionController(),
         ),

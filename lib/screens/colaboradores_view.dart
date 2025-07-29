@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ColaboradoresView extends StatelessWidget {
-  const ColaboradoresView({Key? key}) : super(key: key);
+  const ColaboradoresView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Colaboradores'),
-        backgroundColor: Colors.orange.shade600,
+        backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
       ),
       body: const Center(
