@@ -128,7 +128,7 @@ class AgenciasController extends ChangeNotifier {
           currentAgencia?.eliminada ?? false, // Mantener el estado de eliminada
       precioPorAsientoTurnoManana: newPrecioPorAsientoTurnoManana, // NUEVO
       precioPorAsientoTurnoTarde: newPrecioPorAsientoTurnoTarde, // NUEVO
-      tipoDocumento: tipoDocumento!,
+      tipoDocumento: tipoDocumento,
       numeroDocumento: numeroDocumento ?? currentAgencia?.numeroDocumento,
       nombreBeneficiario: nombreBeneficiario ?? currentAgencia?.nombreBeneficiario,
     );
