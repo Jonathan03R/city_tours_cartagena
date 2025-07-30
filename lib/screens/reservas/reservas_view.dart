@@ -105,7 +105,7 @@ class _ReservasViewState extends State<ReservasView> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TableOnlyViewScreen(
-          turno: widget.turno,
+          turno: reservasController.turnoFilter,
           selectedFilter: reservasController.selectedFilter,
           customDate: reservasController.customDate,
           agenciaId: widget.agencia?.id,
