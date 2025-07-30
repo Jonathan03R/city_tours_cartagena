@@ -27,24 +27,45 @@ class PermissionService {
       // Un colaborador puede editar, ver deuda, contactar, etc., pero no eliminar ni cambiar agencia
     ],
     Roles.agencia: [
-      Permission.contact_whatsapp,
-      Permission.manage_observations,
-      Permission.select_reservas,
+      // Permission.manage_observations,
+      // Permission.select_reservas,
       // Una agencia solo puede contactar, ver observaciones y seleccionar
     ],
     Roles.trabajador: [
       Permission.contact_whatsapp,
-      Permission.manage_observations,
+      // Permission.manage_observations,
       Permission.select_reservas,
       // Permission.edit_agencias,
     ],
-    Roles.reservas: [
-      // Define permisos específicos para el rol 'reservas' si es distinto de 'colaborador'
-      Permission.contact_whatsapp,
-      Permission.manage_observations,
-      Permission.select_reservas,
-      // Ejemplo: quizás 'reservas' solo puede ver, no editar
+
+    Roles.crearAgencias: [
+      Permission.crear_agencias,
+      // Define permisos específicos para el rol 'crearAgencias'
     ],
+    Roles.editarReservas: [
+      Permission.edit_reserva,
+      // Define permisos específicos para el rol 'editarReservas'
+    ],
+
+    
+    // Roles.reservas: [
+    //   // Define permisos específicos para el rol 'reservas' si es distinto de 'colaborador'
+    //   Permission.contact_whatsapp,
+    //   Permission.manage_observations,
+    //   Permission.select_reservas,
+    //   // Ejemplo: quizás 'reservas' solo puede ver, no editar
+    // ],
+    Roles.reportar: [
+      Permission.view_debt,
+      Permission.export_reservas,
+      // Define permisos específicos para el rol 'reportador'
+    ],
+
+    Roles.editarAgencias: [
+      Permission.edit_agencias,
+      // Define permisos específicos para el rol 'editarAgencias'
+    ],
+    
   };
 
   /// Verifica si un rol específico (String) tiene un permiso dado.
