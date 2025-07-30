@@ -25,8 +25,6 @@ class AuthGate extends StatelessWidget {
     }
 
     // 3) Ya autenticado y con usuario cargado
-    // return const MainScreen();
-    // return PdfPreviewScreen();
     return const MainScreen();
   }
 }

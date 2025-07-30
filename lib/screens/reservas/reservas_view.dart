@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
+import 'package:citytourscartagena/core/models/roles.dart';
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
@@ -828,6 +830,12 @@ class _ReservasViewState extends State<ReservasView> {
     ReservasController
     reservasController, // NUEVO: Recibir el controlador completo
   ) {
+    final authController = context.read<AuthController>();
+    final isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
+    final isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
+    final isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
+    final isTrabajador = authController.appUser?.roles.contains(Roles.trabajador) ?? false;
+
     final ac = _currentAgencia ?? widget.agencia;
     final ag = ac?.agencia;
 
@@ -895,7 +903,7 @@ class _ReservasViewState extends State<ReservasView> {
                       : Colors.black, // NUEVO: Color dinámico
                 ),
               ),
-
+              if(isAdmin)
               ElevatedButton.icon(
                 onPressed: () async {
                   List<ReservaConAgencia> reservasParaExportar;
@@ -948,6 +956,8 @@ class _ReservasViewState extends State<ReservasView> {
                   textStyle: const TextStyle(fontSize: 12),
                 ),
               ),
+            
+            
             ],
           ),
           const SizedBox(height: 12),
@@ -1114,6 +1124,12 @@ class _ReservasViewState extends State<ReservasView> {
     double? globalPriceTarde,
     TurnoType? turnoFilter, // NUEVO: Recibir filtro de turno
   ) {
+
+     final authController = context.read<AuthController>();
+    final isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
+    final isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
+    final isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
+    final isTrabajador = authController.appUser?.roles.contains(Roles.trabajador) ?? false;
     // ARREGLADO: Solo mostrar el precio del turno filtrado, o ambos si no hay filtro
     final showManana = turnoFilter == null || turnoFilter == TurnoType.manana;
     final showTarde = turnoFilter == null || turnoFilter == TurnoType.tarde;
@@ -1158,6 +1174,7 @@ class _ReservasViewState extends State<ReservasView> {
                         ),
                       ),
               ),
+              if (isAdmin)
               IconButton(
                 icon: Icon(
                   _editandoPrecio && _editingTurno == 'manana'
@@ -1216,6 +1233,7 @@ class _ReservasViewState extends State<ReservasView> {
                         ),
                       ),
               ),
+              if (isAdmin)
               IconButton(
                 icon: Icon(
                   _editandoPrecio && _editingTurno == 'tarde'

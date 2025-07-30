@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/controller/configuracion_controller.dart
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
+import 'package:citytourscartagena/core/services/user_service.dart' show UserService;
 import 'package:citytourscartagena/firebase_options.dart';
 import 'package:citytourscartagena/main_dev.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,7 +28,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthController>(
-          create: (_) => AuthController(AuthService()),
+          create: (_) => AuthController(AuthService(), UserService()),
         ),
         ChangeNotifierProvider<ConfiguracionController>(
           create: (_) => ConfiguracionController(),
