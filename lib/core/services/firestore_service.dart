@@ -137,11 +137,12 @@ class FirestoreService {
 
   /// Obtiene reservas filtradas por turno, fecha y agencia, sin paginación.
   Stream<QuerySnapshot<Reserva>> getReservasFiltered({
-  TurnoType? turno,
-  DateFilterType filter = DateFilterType.all,
-  DateTime? customDate,
-  String? agenciaId,
-}) async* {
+    TurnoType? turno,
+    DateFilterType filter = DateFilterType.all,
+    DateTime? customDate,
+    String? agenciaId,
+    EstadoReserva? estado,
+  }) async* {
     // 1) traer TODAS las agencias para saber cuáles están eliminadas
     final todasAgencias = await getAllAgencias();
     final eliminadasIds = todasAgencias
@@ -150,12 +151,15 @@ class FirestoreService {
         .toList();
 
     // 2) construir consulta base
-    var query = _db
-        .collection('reservas')
-        .withConverter<Reserva>(
-          fromFirestore: (snap, _) => Reserva.fromFirestore(snap.data()!, snap.id),
-          toFirestore: (res, _) => res.toFirestore(),
-        ) as Query<Reserva>;
+    var query =
+        _db
+                .collection('reservas')
+                .withConverter<Reserva>(
+                  fromFirestore: (snap, _) =>
+                      Reserva.fromFirestore(snap.data()!, snap.id),
+                  toFirestore: (res, _) => res.toFirestore(),
+                )
+            as Query<Reserva>;
 
     // 3) filtros de turno y agencia explícita
     if (turno != null) {
@@ -165,12 +169,16 @@ class FirestoreService {
     if (agenciaId != null && agenciaId.isNotEmpty) {
       query = query.where('agenciaId', isEqualTo: agenciaId);
     }
+    if (estado != null) {
+      final e = estado.toString().split('.').last;
+      query = query.where('estado', isEqualTo: e);
+    }
 
     // 4) excluir agencias eliminadas: NOT‐IN + ORDER BY campo de inequality
     if (eliminadasIds.isNotEmpty) {
       query = query
-        .where('agenciaId', whereNotIn: eliminadasIds)
-        .orderBy('agenciaId');
+          .where('agenciaId', whereNotIn: eliminadasIds)
+          .orderBy('agenciaId');
     }
 
     // 5) filtros de fecha
