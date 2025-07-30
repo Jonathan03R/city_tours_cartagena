@@ -1,6 +1,6 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
-import 'package:citytourscartagena/core/models/usuarios.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
+import 'package:citytourscartagena/core/models/usuarios.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';

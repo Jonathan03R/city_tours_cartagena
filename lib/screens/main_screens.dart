@@ -5,10 +5,10 @@ import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
-import 'package:citytourscartagena/core/models/roles.dart'; // ¡Importante!
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
@@ -89,9 +89,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // Obtener el AuthController para verificar los roles
     final authController = context.watch<AuthController>();
-    final bool isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
-    final bool isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
-    final bool isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
+    final authRole = context.read<AuthController>();
 
 
     return MultiProvider(
@@ -168,7 +166,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
           centerTitle: true,
           actions: [
-            if (_currentIndex == 1 && !isColaborador) // Solo mostrar contador en pestaña de agencias y si NO es colaborador
+            if (_currentIndex == 1 ) // Solo mostrar contador en pestaña de agencias y si NO es colaborador
               Consumer<AgenciasController>(
                 builder: (_, agCtrl, __) {
                   return StreamBuilder<List<AgenciaConReservas>>(
@@ -198,6 +196,7 @@ class _MainScreenState extends State<MainScreen> {
                   );
                 },
               ),
+            if (authRole.hasPermission(Permission.edit_configuracion))
             IconButton(
               icon: const Icon(Icons.settings, color: Color(0xFF06142F)),
               onPressed: () {
@@ -257,7 +256,7 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
                     // Sección de Agencias (solo visible si NO es colaborador)
-                    if (!isColaborador)
+                    if(authRole.hasPermission(Permission.view_debt))
                       Consumer<AgenciasController>(
                         builder: (_, agCtrl, __) {
                           return StreamBuilder<List<AgenciaConReservas>>(
@@ -281,7 +280,7 @@ class _MainScreenState extends State<MainScreen> {
                         },
                       ),
                     // Sección de Reservas (solo visible si NO es colaborador)
-                    if (!isColaborador)
+                    if(authRole.hasPermission(Permission.view_debt))
                       Consumer<ReservasController>(
                         builder: (_, resCtrl, __) {
                           return StreamBuilder<List<ReservaConAgencia>>(

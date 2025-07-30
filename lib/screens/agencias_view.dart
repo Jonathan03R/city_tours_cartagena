@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
@@ -62,6 +64,7 @@ class _AgenciasViewState extends State<AgenciasView> {
   Widget build(BuildContext context) {
     final agenciasController = context.watch<AgenciasController>();
     final reservasController = context.watch<ReservasController>();
+    final authController = context.read<AuthController>();
 
     return Scaffold(
       body: Column(
@@ -364,12 +367,14 @@ class _AgenciasViewState extends State<AgenciasView> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _mostrarFormularioAgregarAgencia,
-        backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: authController.hasPermission(Permission.crear_agencias)
+          ? FloatingActionButton(
+              onPressed: _mostrarFormularioAgregarAgencia,
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 

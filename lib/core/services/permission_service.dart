@@ -14,10 +14,16 @@ class PermissionService {
       Permission.manage_observations,
       Permission.select_reservas,
       Permission.change_agency,
+      Permission.edit_configuracion,
+      Permission.export_reservas,
+      Permission.edit_agencias,
+      Permission.crear_agencias,
+      Permission.view_usuarios,
+      
+      
       // Un administrador tiene todos los permisos
     ],
     Roles.colaborador: [
-
       // Un colaborador puede editar, ver deuda, contactar, etc., pero no eliminar ni cambiar agencia
     ],
     Roles.agencia: [
@@ -30,7 +36,7 @@ class PermissionService {
       Permission.contact_whatsapp,
       Permission.manage_observations,
       Permission.select_reservas,
-      // Un trabajador puede contactar, ver observaciones y seleccionar, pero no ve la deuda
+      // Permission.edit_agencias,
     ],
     Roles.reservas: [
       // Define permisos específicos para el rol 'reservas' si es distinto de 'colaborador'
