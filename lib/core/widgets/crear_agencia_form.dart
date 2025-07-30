@@ -172,318 +172,325 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(
-        widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia',
-      ),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nombreController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de la Agencia',
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.business),
+Widget build(BuildContext context) {
+  return AlertDialog(
+    title: Text(
+      widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia',
+    ),
+    content: SingleChildScrollView(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12), // Espacio extra arriba del primer campo
+            TextFormField(
+              controller: _nombreController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre de la Agencia',
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa un nombre';
-                  }
-                  return null;
-                },
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.business),
               ),
-              const SizedBox(height: 20),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor ingresa un nombre';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
 
-              // TextFormField(
-              //   controller: _precioController,
-              //   decoration: const InputDecoration(
-              //     labelText: 'Precio por Asiento (opcional)',
-              //     hintText: 'Ej: 50.000 o 50,000.00',
-              //     border: OutlineInputBorder(),
-              //     prefixIcon: Icon(Icons.attach_money),
-              //   ),
-              //   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              //   // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
-              //   validator: (value) {
-              //     if (value != null && value.isNotEmpty) {
-              //       final parsed = ParserUtils.parseDouble(value);
-              //       if (parsed == null || parsed < 0) {
-              //         return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
-              //       }
-              //     }
-              //     return null;
-              //   },
-              // ),
-              TextFormField(
-                controller: _precioMananaController,
-                decoration: const InputDecoration(
-                  labelText: 'Precio Asiento (Mañana)',
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  hintText: 'Ej: 50.000 o 50,000.00',
-                  hintStyle: TextStyle(fontSize: 11),
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.attach_money),
+            // TextFormField(
+            //   controller: _precioController,
+            //   decoration: const InputDecoration(
+            //     labelText: 'Precio por Asiento (opcional)',
+            //     hintText: 'Ej: 50.000 o 50,000.00',
+            //     border: OutlineInputBorder(),
+            //     prefixIcon: Icon(Icons.attach_money),
+            //   ),
+            //   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            //   // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+            //   validator: (value) {
+            //     if (value != null && value.isNotEmpty) {
+            //       final parsed = ParserUtils.parseDouble(value);
+            //       if (parsed == null || parsed < 0) {
+            //         return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+            //       }
+            //     }
+            //     return null;
+            //   },
+            // ),
+            TextFormField(
+              controller: _precioMananaController,
+              decoration: const InputDecoration(
+                labelText: 'Precio Asiento (Mañana)',
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final parsed = ParserUtils.parseDouble(value);
-                    if (parsed == null || parsed < 0) {
-                      return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
-                    }
-                  }
-                  return null;
-                },
+                hintText: 'Ej: 50.000 o 50,000.00',
+                hintStyle: TextStyle(fontSize: 11),
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.attach_money),
               ),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  final parsed = ParserUtils.parseDouble(value);
+                  if (parsed == null || parsed < 0) {
+                    return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                  }
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
 
-              TextFormField(
-                controller: _precioTardeController,
-                decoration: const InputDecoration(
-                  labelText: 'Precio Asiento (Tarde)',
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  hintText: 'Ej: 50.000 o 50,000.00',
-                  hintStyle: TextStyle(fontSize: 11),
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.attach_money),
+            TextFormField(
+              controller: _precioTardeController,
+              decoration: const InputDecoration(
+                labelText: 'Precio Asiento (Tarde)',
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final parsed = ParserUtils.parseDouble(value);
-                    if (parsed == null || parsed < 0) {
-                      return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
-                    }
+                hintText: 'Ej: 50.000 o 50,000.00',
+                hintStyle: TextStyle(fontSize: 11),
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.attach_money),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  final parsed = ParserUtils.parseDouble(value);
+                  if (parsed == null || parsed < 0) {
+                    return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
                   }
-                  return null;
-                },
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Nuevo: Campo Tipo de Documento
+            // Dropdown para Tipo de Documento
+            DropdownButtonFormField<TipoDocumento?>(
+              value: _selectedTipoDocumento,
+              decoration: const InputDecoration(
+                labelText: 'Tipo de Documento',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.description),
               ),
-              const SizedBox(height: 20),
-              // Nuevo: Campo Tipo de Documento
-              // Dropdown para Tipo de Documento
-              DropdownButtonFormField<TipoDocumento?>(
-                value: _selectedTipoDocumento,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de Documento',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
+              items: [
+                // opción nula
+                const DropdownMenuItem<TipoDocumento?>(
+                  value: null,
+                  child: Text('No especificado'),
                 ),
-                items: [
-                  // opción nula
-                  const DropdownMenuItem<TipoDocumento?>(
-                    value: null,
-                    child: Text('No especificado'),
-                  ),
-                  // todas las demás
-                  ...TipoDocumento.values.map((td) {
-                    final label = td.name.toUpperCase();
-                    return DropdownMenuItem<TipoDocumento?>(
-                      value: td,
-                      child: Text(label),
-                    );
-                  }),
-                ],
-                onChanged: (td) => setState(() => _selectedTipoDocumento = td),
-                // validator: (td) {
-                //   if (td == null)
-                //     return 'Por favor selecciona un tipo de documento';
-                //   return null;
-                // },
+                // todas las demás
+                ...TipoDocumento.values.map((td) {
+                  final label = td.name.toUpperCase();
+                  return DropdownMenuItem<TipoDocumento?>(
+                    value: td,
+                    child: Text(label),
+                  );
+                }),
+              ],
+              onChanged: (td) => setState(() => _selectedTipoDocumento = td),
+              // validator: (td) {
+              //   if (td == null)
+              //     return 'Por favor selecciona un tipo de documento';
+              //   return null;
+              // },
+            ),
+            const SizedBox(height: 12),
+
+            TextFormField(
+              controller: _numeroDocumentoController,
+              decoration: const InputDecoration(
+                labelText: 'Número de Documento',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.document_scanner),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _numeroDocumentoController,
-                decoration: const InputDecoration(
-                  labelText: 'Número de Documento',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.document_scanner),
-                ),
-                // validator: (value) {
-                //   if (value == null || value.isEmpty) {
-                //     return 'Por favor ingresa número de documento';
-                //   }
-                //   return null;
-                // },
+              // validator: (value) {
+              //   if (value == null || value.isEmpty) {
+              //     return 'Por favor ingresa número de documento';
+              //   }
+              //   return null;
+              // },
+            ),
+            const SizedBox(height: 12),
+
+            TextFormField(
+              controller: _nombreBeneficiarioController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre Beneficiario',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nombreBeneficiarioController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre Beneficiario',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                // validator: (value) {
-                //   if (value == null || value.isEmpty) {
-                //     return 'Por favor ingresa nombre del beneficiario';
-                //   }
-                //   return null;
-                // },
+              // validator: (value) {
+              //   if (value == null || value.isEmpty) {
+              //     return 'Por favor ingresa nombre del beneficiario';
+              //   }
+              //   return null;
+              // },
+            ),
+            const SizedBox(height: 20),
+
+            // Sección de selección y vista previa de imagen
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
               ),
-              const SizedBox(height: 20),
-              // Sección de selección y vista previa de imagen
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.image, color: Colors.blue.shade600),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Imagen de la Agencia',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _pickImage,
-                            icon: const Icon(Icons.photo_library),
-                            label: const Text('Seleccionar Imagen'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade600,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-                        if (_selectedImage != null ||
-                            (widget.initialImagenUrl != null &&
-                                !_clearExistingImage))
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.red),
-                              onPressed: _clearImage,
-                              tooltip: 'Eliminar imagen',
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Vista previa de la imagen
-                    if (_selectedImage != null)
-                      Center(
-                        child: Image.file(
-                          File(_selectedImage!.path),
-                          height: 120,
-                          width: 120,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    else if (widget.initialImagenUrl != null &&
-                        !_clearExistingImage)
-                      Center(
-                        child: Image.network(
-                          widget.initialImagenUrl!,
-                          height: 120,
-                          width: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                                height: 120,
-                                width: 120,
-                                color: Colors.grey.shade200,
-                                child: Icon(
-                                  Icons.broken_image,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                        ),
-                      )
-                    else
-                      Center(
-                        child: Container(
-                          height: 120,
-                          width: 120,
-                          color: Colors.grey.shade200,
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        _selectedImage != null
-                            ? 'Nueva imagen: ${_selectedImage!.name}'
-                            : (widget.initialImagenUrl != null &&
-                                  !_clearExistingImage)
-                            ? 'Imagen actual'
-                            : 'Ninguna imagen seleccionada',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.image, color: Colors.blue.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Imagen de la Agencia',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
                         ),
-                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('Seleccionar Imagen'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (_selectedImage != null ||
+                          (widget.initialImagenUrl != null &&
+                              !_clearExistingImage))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.red),
+                            onPressed: _clearImage,
+                            tooltip: 'Eliminar imagen',
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Vista previa de la imagen
+                  if (_selectedImage != null)
+                    Center(
+                      child: Image.file(
+                        File(_selectedImage!.path),
+                        height: 120,
+                        width: 120,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  else if (widget.initialImagenUrl != null &&
+                      !_clearExistingImage)
+                    Center(
+                      child: Image.network(
+                        widget.initialImagenUrl!,
+                        height: 120,
+                        width: 120,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(
+                              height: 120,
+                              width: 120,
+                              color: Colors.grey.shade200,
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                      ),
+                    )
+                  else
+                    Center(
+                      child: Container(
+                        height: 120,
+                        width: 120,
+                        color: Colors.grey.shade200,
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey.shade400,
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      _selectedImage != null
+                          ? 'Nueva imagen: ${_selectedImage!.name}'
+                          : (widget.initialImagenUrl != null &&
+                                  !_clearExistingImage)
+                              ? 'Imagen actual'
+                              : 'Ninguna imagen seleccionada',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+    ),
+    actions: [
+      TextButton(
+        onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+        child: const Text('Cancelar'),
+      ),
+      ElevatedButton(
+        onPressed: _isSaving ? null : _submitForm,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green.shade600,
+          foregroundColor: Colors.white,
         ),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _submitForm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green.shade600,
-            foregroundColor: Colors.white,
-          ),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Text(
-                  widget.initialNombre != null
-                      ? 'Guardar Cambios'
-                      : 'Crear Agencia',
+        child: _isSaving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
-        ),
-      ],
-    );
-  }
+              )
+            : Text(
+                widget.initialNombre != null
+                    ? 'Guardar Cambios'
+                    : 'Crear Agencia',
+              ),
+      ),
+    ],
+  );
+}
 }
