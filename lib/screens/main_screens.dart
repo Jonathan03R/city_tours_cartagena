@@ -89,9 +89,45 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // Obtener el AuthController para verificar los roles
     final authController = context.watch<AuthController>();
+    final canViewReservas   = authController.hasPermission(Permission.ver_reservas);
+    final canViewAgencias   = authController.hasPermission(Permission.ver_agencias);
+    final canViewUsuarios   = authController.hasPermission(Permission.ver_pagina_usuarios);
+
     final authRole = context.read<AuthController>();
 
 
+    // Definir las páginas según permisos
+    final pages = <Widget>[
+      if (canViewReservas)
+        (_currentIndex == 0
+            ? (_turnoSeleccionado == null
+                ? TurnoSelectorWidget(
+                    onTurnoSelected: (turno) => setState(() {
+                      _turnoSeleccionado = turno;
+                    }),
+                  )
+                : ReservasView(
+                    turno: _turnoSeleccionado,
+                    onBack: () => setState(() {
+                      _turnoSeleccionado = null;
+                    }),
+                  ))
+            : const SizedBox.shrink()),
+      if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
+      if (canViewUsuarios) const UsuariosScreen(),
+    ];
+    // Definir los ítems del bottom bar según permisos
+    final navItems = <BottomNavigationBarItem>[
+      if (canViewReservas)
+        const BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Reservas'),
+      if (canViewAgencias)
+        const BottomNavigationBarItem(icon: Icon(Icons.business), label: 'Agencias'),
+      if (canViewUsuarios)
+        const BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Colaboradores'),
+    ];
+    // Asegurar que currentIndex esté dentro de los límites de navItems
+    final int maxIndex = navItems.length - 1;
+    final int displayIndex = _currentIndex.clamp(0, maxIndex);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ReservasController()),
@@ -166,7 +202,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
           centerTitle: true,
           actions: [
-            if (_currentIndex == 1 ) // Solo mostrar contador en pestaña de agencias y si NO es colaborador
+            if (_currentIndex == 1 )
               Consumer<AgenciasController>(
                 builder: (_, agCtrl, __) {
                   return StreamBuilder<List<AgenciaConReservas>>(
@@ -413,50 +449,25 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
         body: IndexedStack(
-          index: _currentIndex,
-          children: [
-            _currentIndex == 0
-                ? (_turnoSeleccionado == null
-                    ? TurnoSelectorWidget(
-                        onTurnoSelected: (turno) => setState(() {
-                          _turnoSeleccionado = turno;
-                        }),
-                      )
-                    : ReservasView(
-                        turno: _turnoSeleccionado,
-                        onBack: () => setState(() {
-                          _turnoSeleccionado = null;
-                        }),
-                      ))
-                : const SizedBox.shrink(),
-            AgenciasView(searchTerm: _searchTerm), // Pasar el término de búsqueda
-            const UsuariosScreen(),
-          ],
+          index: displayIndex,
+          children: pages,
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-              // Limpiar búsqueda al cambiar de pestaña
-              if (index != 1) {
-                _searchController.clear();
-                _searchTerm = '';
-              }
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Reservas'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.business),
-              label: 'Agencias',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people),
-              label: 'Colaboradores',
-            ),
-          ],
-        ),
+        bottomNavigationBar: navItems.length >= 2
+            ? BottomNavigationBar(
+                currentIndex: displayIndex,
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                    // Limpiar búsqueda al cambiar de pestaña
+                    if (canViewAgencias && index != pages.indexWhere((p) => p is AgenciasView)) {
+                      _searchController.clear();
+                      _searchTerm = '';
+                    }
+                  });
+                },
+                items: navItems,
+              )
+            : null,
       ),
     );
   }

@@ -318,28 +318,52 @@ class _AgenciasViewState extends State<AgenciasView> {
                                           ],
                                         ),
                                         const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: totalDeuda > 0
-                                                ? Colors.red.shade50
-                                                : Colors.green.shade50,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            'Deuda: ${Formatters.formatCurrency(totalDeuda)}',
-                                            style: TextStyle(
-                                              color: totalDeuda > 0
-                                                  ? Colors.red.shade700
-                                                  : Colors.green.shade700,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 8,
-                                            ),
-                                          ),
-                                        ),
+                                        authController.hasPermission(Permission.view_debt)
+                                            ? Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 5,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: totalDeuda > 0
+                                                      ? Colors.red.shade50
+                                                      : Colors.green.shade50,
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  'Deuda: ${Formatters.formatCurrency(totalDeuda)}',
+                                                  style: TextStyle(
+                                                    color: totalDeuda > 0
+                                                        ? Colors.red.shade700
+                                                        : Colors.green.shade700,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 8,
+                                                  ),
+                                                ),
+                                              )
+                                            : const SizedBox.shrink(),
+                                        // Container(
+                                        //   padding: const EdgeInsets.symmetric(
+                                        //     horizontal: 12,
+                                        //     vertical: 6,
+                                        //   ),
+                                        //   decoration: BoxDecoration(
+                                        //     color: totalDeuda > 0
+                                        //         ? Colors.red.shade50
+                                        //         : Colors.green.shade50,
+                                        //     borderRadius: BorderRadius.circular(20),
+                                        //   ),
+                                        //   child: Text(
+                                        //     'Deuda: ${Formatters.formatCurrency(totalDeuda)}',
+                                        //     style: TextStyle(
+                                        //       color: totalDeuda > 0
+                                        //           ? Colors.red.shade700
+                                        //           : Colors.green.shade700,
+                                        //       fontWeight: FontWeight.w600,
+                                        //       fontSize: 8,
+                                        //     ),
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
                                   ),

@@ -22,6 +22,7 @@ class AuthController extends ChangeNotifier {
   final PermissionService _permissionService = PermissionService();
 
   AuthController(this._authService, this._userService) {
+
   user = FirebaseAuth.instance.currentUser;
   _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) {
   user = u;
@@ -30,6 +31,7 @@ class AuthController extends ChangeNotifier {
   if (user != null) {
     debugPrint('[AuthController] Login: Llamando a _subscribeToAppUser con user: ${user?.uid}');
     _subscribeToAppUser(); // <- solo si hay usuario
+
   }
 });
 
@@ -41,6 +43,7 @@ class AuthController extends ChangeNotifier {
   /// lo que quiere decir que cada vez que el usuario
   /// se loguea o cambia, actualiza el perfil en memoria
   /// y notifica a los listeners.
+
   void _subscribeToAppUser({User? overrideUser}) {
   _appUserSub?.cancel();
   final currentUser = overrideUser ?? user;

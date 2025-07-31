@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+// Colores de la paleta "Azul Noche y Blanco" definidos globalmente en este archivo
+const Color _nightBlue = Color(0xFF1A237E); // Azul noche profundo
+const Color _lightNightBlue = Color(0xFF3F51B5); // Azul más claro para acentos
+const Color _white = Colors.white;
+const Color _lightGrey = Color(0xFFF5F5F5); // Gris muy claro para fondos de campos
+const Color _darkGreyText = Color(0xFF212121); // Gris oscuro para texto principal
+
 class CreateUserScreen extends StatefulWidget {
   const CreateUserScreen({super.key});
 
@@ -17,16 +24,17 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController(); // Campo de email opcional
   final TextEditingController _phoneController = TextEditingController();
-  List<String> _selectedRoles = [Roles.colaborador]; // Rol por defecto
+  final List<String> _selectedRoles = [Roles.verReservas]; // Rol por defecto
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red.shade400 : Colors.green.shade400,
+        content: Text(message, style: const TextStyle(color: _white)),
+        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         margin: EdgeInsets.all(16.r),
+        elevation: 6.h,
       ),
     );
   }
@@ -43,24 +51,24 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   @override
   Widget build(BuildContext context) {
     final authController = context.watch<AuthController>();
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: _white, // Fondo principal blanco
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 2.h,
+        backgroundColor: _nightBlue, // AppBar azul noche
+        elevation: 4.h,
         title: Text(
           'Crear Nuevo Usuario',
           style: TextStyle(
-            color: Colors.grey.shade800,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
+            color: _white, // Título blanco
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        iconTheme: IconThemeData(color: Colors.grey.shade700),
+        iconTheme: const IconThemeData(color: _white), // Iconos blancos
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20.r),
+        padding: EdgeInsets.all(24.r),
         child: Form(
           key: _formKey,
           child: Column(
@@ -69,12 +77,12 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
               Text(
                 'Datos del Nuevo Usuario',
                 style: TextStyle(
-                  fontSize: 22.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade800,
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w800,
+                  color: _darkGreyText,
                 ),
               ),
-              SizedBox(height: 20.h),
+              SizedBox(height: 24.h),
               _buildTextField(
                 controller: _usernameController,
                 label: 'Usuario (para login y contraseña inicial)',
@@ -116,22 +124,22 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
               ),
-              SizedBox(height: 20.h),
+              SizedBox(height: 30.h),
               Text(
-                'Roles',
+                'Roles de Usuario',
                 style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade800,
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w700,
+                  color: _darkGreyText,
                 ),
               ),
-              SizedBox(height: 10.h),
+              SizedBox(height: 16.h),
               Wrap(
-                spacing: 8.w,
-                runSpacing: 8.h,
+                spacing: 10.w,
+                runSpacing: 10.h,
                 children: Roles.allRoles.map((role) {
                   final isSelected = _selectedRoles.contains(role);
-                  return FilterChip(
+                  return ChoiceChip(
                     label: Text(role),
                     selected: isSelected,
                     onSelected: (selected) {
@@ -143,26 +151,29 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                         }
                       });
                     },
-                    selectedColor: Colors.blue.shade100,
-                    checkmarkColor: Colors.blue.shade600,
+                    selectedColor: _lightNightBlue, // Azul claro para seleccionado
+                    backgroundColor: _white, // Fondo blanco para no seleccionado
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.blue.shade800 : Colors.grey.shade700,
-                      fontSize: 14.sp,
+                      color: isSelected ? _white : _darkGreyText, // Texto blanco si seleccionado, oscuro si no
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w500,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(20.r), // Bordes más redondeados
                       side: BorderSide(
-                        color: isSelected ? Colors.blue.shade600 : Colors.grey.shade300,
-                        width: 1.w,
+                        color: isSelected ? _lightNightBlue : Colors.grey.shade400, // Borde azul si seleccionado
+                        width: 1.5.w,
                       ),
                     ),
+                    elevation: isSelected ? 4.h : 1.h, // Sombra sutil
+                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
                   );
                 }).toList(),
               ),
-              SizedBox(height: 30.h),
+              SizedBox(height: 40.h),
               SizedBox(
                 width: double.infinity,
-                height: 50.h,
+                height: 56.h, // Altura del botón ligeramente mayor
                 child: ElevatedButton.icon(
                   onPressed: authController.isLoading ? null : () async {
                     if (_formKey.currentState!.validate()) {
@@ -171,11 +182,12 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                         return;
                       }
                       try {
+                        // Aquí se mantiene la llamada a tu AuthController
                         await authController.adminCreateUser(
                           username: _usernameController.text.trim(),
                           name: _nameController.text.trim(),
-                          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(), // Pasa null si está vacío
-                          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(), // Pasa null si está vacío
+                          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+                          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
                           roles: _selectedRoles,
                         );
                         _showSnackBar('Usuario creado con éxito.');
@@ -187,25 +199,27 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
+                    backgroundColor: _nightBlue, // Botón azul noche
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
+                      borderRadius: BorderRadius.circular(12.r), // Bordes redondeados
                     ),
-                    elevation: 3.h,
+                    elevation: 8.h, // Mayor elevación para un look premium
+                    shadowColor: _nightBlue.withOpacity(0.4), // Sombra con color del botón
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
                   ),
                   icon: authController.isLoading
                       ? SizedBox(
-                          width: 20.w,
-                          height: 20.h,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.w,
+                          width: 24.w,
+                          height: 24.h,
+                          child: const CircularProgressIndicator(
+                            color: _white,
+                            strokeWidth: 3,
                           ),
                         )
-                      : Icon(Icons.person_add_alt_1_outlined, size: 20.w, color: Colors.white),
+                      : Icon(Icons.person_add_alt_1_outlined, size: 24.w, color: _white),
                   label: Text(
                     authController.isLoading ? 'Creando...' : 'Crear Usuario',
-                    style: TextStyle(fontSize: 16.sp, color: Colors.white, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 18.sp, color: _white, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -226,24 +240,35 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade900),
+      style: TextStyle(fontSize: 17.sp, color: _darkGreyText),
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 20.w, color: Colors.grey.shade600),
+        labelStyle: TextStyle(color: Colors.grey.shade700, fontSize: 16.sp),
+        prefixIcon: Icon(icon, size: 22.w, color: _lightNightBlue), // Icono azul claro
+        filled: true,
+        fillColor: _lightGrey, // Fondo del campo muy claro
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12.r), // Bordes más redondeados
+          borderSide: BorderSide.none, // Sin borde visible por defecto
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.w), // Borde sutil
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.r),
-          borderSide: BorderSide(color: Colors.blue.shade600, width: 2.w),
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: _lightNightBlue, width: 2.5.w), // Borde azul más grueso al enfocar
         ),
-        contentPadding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 12.w),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.red.shade600, width: 2.w), // Borde rojo para errores
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.red.shade800, width: 2.5.w),
+        ),
+        contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w), // Mayor padding
       ),
     );
   }

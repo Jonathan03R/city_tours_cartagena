@@ -495,20 +495,23 @@ class _ReservasViewState extends State<ReservasView> {
       //         ],
       //       )
       //     : null,
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            onPressed: _showAddReservaProForm,
-            backgroundColor: Colors.purple.shade600,
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('registro rapido'),
-            heroTag: "pro_button",
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+      floatingActionButton: authRole.hasPermission(Permission.crear_reserva)
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  onPressed: _showAddReservaProForm,
+                  backgroundColor: Colors.purple.shade600,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('registro rapido'),
+                  heroTag: "pro_button",
+                ),
+                const SizedBox(height: 16),
+              ],
+            )
+          : null,
+    
     );
   }
 

@@ -17,12 +17,12 @@ class Usuarios {
     this.telefono,
     List<String>? roles,
     this.activo = true,
-  }) : roles = roles ?? [Roles.colaborador];
+  }) : roles = roles ?? [Roles.verReservas];
 
   Usuarios.fromJson(Map<String, dynamic> json)
     : roles =
           (json['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-          [Roles.colaborador],
+          [Roles.verReservas],
       activo = json['activo'] as bool? ?? true {
     id = json['id'];
     usuario = json['usuario'];
@@ -43,14 +43,33 @@ class Usuarios {
     return data;
   }
 
+  Usuarios copyWith({
+    String? usuario,
+    String? nombre,
+    String? email,
+    String? telefono,
+    List<String>? roles,
+    bool? activo,
+  }) {
+    return Usuarios(
+      id: this.id,
+      usuario: usuario ?? this.usuario,
+      nombre: nombre ?? this.nombre,
+      email: email ?? this.email,
+      telefono: telefono ?? this.telefono,
+      roles: roles ?? this.roles,
+      activo: activo ?? this.activo,
+    );
+  }
+
   Usuarios.fromMap(Map<String, dynamic> map)
-    : id       = map['id']       as String?,
-      usuario  = map['usuario']  as String?,
-      nombre   = map['nombre']   as String?,
-      email    = map['email']    as String?,
+    : id = map['id'] as String?,
+      usuario = map['usuario'] as String?,
+      nombre = map['nombre'] as String?,
+      email = map['email'] as String?,
       telefono = map['telefono'] as String?,
-      roles    = (map['rol'] as List<dynamic>?)
-                     ?.map((e) => e.toString())
-                     .toList() ?? [Roles.colaborador],
-      activo   = map['activo'] == true;   
+      roles =
+          (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          [Roles.verReservas],
+      activo = map['activo'] == true;
 }

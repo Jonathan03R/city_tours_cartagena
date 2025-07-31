@@ -11,8 +11,8 @@ class UsuariosScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authRole = context.read<AuthController>();
-    final showAll = authRole.hasPermission(Permission.view_usuarios);
+    final authRole = context.watch<AuthController>();
+    final showAll = authRole.hasPermission(Permission.ver_todos_usuarios);
     return DefaultTabController(
       length: showAll ? 2 : 1,
       child: Scaffold(
