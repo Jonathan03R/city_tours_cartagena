@@ -17,7 +17,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # esta es la version de la aplicacion
-version: 1.10.4+5
+version: 2.17.2+7
 # MAJOR = versión principal (1): cambia cuando hay cambios grandes o incompatibles.
 
 # MINOR = nueva funcionalidad sin romper nada.
@@ -60,6 +60,9 @@ dependencies:
   pdf: ^3.11.3
   firebase_auth: ^5.7.0
   flutter_screenutil: ^5.9.3
+  lucide_icons_flutter: ^3.0.7
+  uuid: ^4.5.1
+  restart_app: ^1.3.2
   # flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:

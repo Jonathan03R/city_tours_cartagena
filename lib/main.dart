@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/controller/configuracion_controller.dart
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
+import 'package:citytourscartagena/core/services/user_service.dart' show UserService;
 import 'package:citytourscartagena/firebase_options.dart';
 import 'package:citytourscartagena/main_dev.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,14 +21,14 @@ void main() async {
   // await ReservasController.initialize();
   // <-- Aquí imprimes el debug tras inicializar todo
   // ejecutar una vesta la configuración de Firebase y los controladores
-  await ConfiguracionService.inicializarConfiguracion();
+  // await ConfiguracionService.inicializarConfiguracion();
   // await _assignDefaultTurno();
   ReservasController.printDebugInfo();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthController>(
-          create: (_) => AuthController(AuthService()),
+          create: (_) => AuthController(AuthService(), UserService()),
         ),
         ChangeNotifierProvider<ConfiguracionController>(
           create: (_) => ConfiguracionController(),
