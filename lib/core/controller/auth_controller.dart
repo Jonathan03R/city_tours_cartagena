@@ -6,7 +6,6 @@ import 'package:citytourscartagena/core/services/permission_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-
 import '../models/usuarios.dart'; // Importa tu modelo Usuarios
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -75,7 +74,7 @@ class AuthController extends ChangeNotifier {
             nombre: null,
             email: correo.isNotEmpty ? correo : null,
             telefono: null,
-            roles: [Roles.colaborador],
+            roles: [Roles.verReservas],
             activo: true,
           );
           await _userService.saveUserData(user!.uid, nuevoUsuario);
