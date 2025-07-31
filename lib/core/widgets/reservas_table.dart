@@ -1,4 +1,6 @@
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
@@ -10,15 +12,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'reserva_details.dart';
-
 class ReservasTable extends StatefulWidget {
   final List<ReservaConAgencia> reservas;
   final VoidCallback onUpdate;
   final DateFilterType currentFilter;
   final TurnoType? turno;
   final String? agenciaId;
-
   const ReservasTable({
     super.key,
     required this.reservas,
@@ -27,7 +26,6 @@ class ReservasTable extends StatefulWidget {
     required this.turno,
     required this.agenciaId,
   });
-
   @override
   State<ReservasTable> createState() => _ReservasTableState();
 }
@@ -38,7 +36,6 @@ class _ReservasTableState extends State<ReservasTable> {
   final Map<String, EstadoReserva> _estadoValues = {};
   final Map<String, DateTime> _fechaValues = {};
   final Map<String, String> _agenciaValues = {};
-
   late ReservasController _controller;
 
   @override
@@ -154,26 +151,14 @@ class _ReservasTableState extends State<ReservasTable> {
     }
   }
 
-  void _showReservaDetails(BuildContext context, ReservaConAgencia reserva) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => ReservaDetails(
-        reserva: reserva,
-        onUpdate: widget.onUpdate,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     _controller = Provider.of<ReservasController>(context);
+    final authController = context.watch<AuthController>();
 
     final reservasFiltradas = widget.reservas;
     debugPrint(
-      'Página recibida: ${widget.reservas.length}, a mostrar: ${reservasFiltradas.length}',
-    );
-
+        'Página recibida: ${widget.reservas.length}, a mostrar: ${reservasFiltradas.length}');
     // Calcular totales normales
     int totalPax = 0;
     double totalSaldo = 0.0;
@@ -181,7 +166,6 @@ class _ReservasTableState extends State<ReservasTable> {
     final unpaid = reservasFiltradas
         .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
         .toList();
-    
     if (widget.agenciaId != null) {
       totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
       totalSaldo = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
@@ -191,14 +175,12 @@ class _ReservasTableState extends State<ReservasTable> {
       totalSaldo = reservasFiltradas.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
       totalDeuda = unpaid.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
     }
-
     // Si estamos en modo selección, usar los totales de las seleccionadas
     if (_controller.isSelectionMode && _controller.selectedCount > 0) {
       totalPax = _controller.getSelectedTotalPax();
       totalSaldo = _controller.getSelectedTotalSaldo();
       totalDeuda = _controller.getSelectedTotalDeuda();
     }
-
     if (reservasFiltradas.isEmpty) {
       return const Center(
         child: Column(
@@ -214,10 +196,8 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       );
     }
-
     final showFechaColumn = widget.currentFilter == DateFilterType.all ||
         widget.currentFilter == DateFilterType.lastWeek;
-
     // Construir las columnas dinámicamente
     final List<DataColumn> columns = [
       // Nueva columna de selección
@@ -228,20 +208,20 @@ class _ReservasTableState extends State<ReservasTable> {
                   Checkbox(
                     value: _controller.selectedCount == reservasFiltradas.length,
                     tristate: true,
-                    onChanged: (value) {
+                    onChanged: authController.hasPermission(Permission.select_reservas) ? (value) {
                       if (value == true) {
                         _controller.selectAllVisible();
                       } else {
                         _controller.clearSelection();
                       }
-                    },
+                    } : null,
                   ),
                   Text('${_controller.selectedCount}'),
                 ],
               )
             : const Text('Sel'),
       ),
-      const DataColumn(label: Text('Acción')),
+      DataColumn(label: Text('Acción')),
       const DataColumn(label: Text('Turno')),
       const DataColumn(label: Text('Número')),
       const DataColumn(label: Text('Hotel')),
@@ -251,10 +231,11 @@ class _ReservasTableState extends State<ReservasTable> {
       const DataColumn(label: Text('Saldo')),
       const DataColumn(label: Text('Observaciones')),
       const DataColumn(label: Text('Agencia')),
-      const DataColumn(label: Text('Deuda')),
-      const DataColumn(label: Text('Editar')),
+      if (authController.hasPermission(Permission.view_debt))
+        const DataColumn(label: Text('Deuda')),
+      if (authController.hasPermission(Permission.edit_reserva))
+        const DataColumn(label: Text('Editar')),
     ];
-
     return Column(
       children: [
         SingleChildScrollView(
@@ -266,14 +247,14 @@ class _ReservasTableState extends State<ReservasTable> {
             columns: columns,
             rows: [
               ...reservasFiltradas.map(
-                (reserva) => _buildDataRow(reserva, showFechaColumn),
+                (reserva) => _buildDataRow(reserva, showFechaColumn, authController),
               ),
               // Fila de totales actualizada
               DataRow(
                 color: WidgetStateProperty.all(
                   _controller.isSelectionMode && _controller.selectedCount > 0
-                      ? Colors.green.shade100  // Verde si hay selecciones
-                      : Colors.grey.shade200   // Gris normal
+                      ? Colors.green.shade100 // Verde si hay selecciones
+                      : Colors.grey.shade200, // Gris normal
                 ),
                 cells: [
                   const DataCell(Text('')), // Celda de selección vacía
@@ -331,6 +312,7 @@ class _ReservasTableState extends State<ReservasTable> {
                         ],
                       ),
                     ),
+                  // Este bloque es total Pax
                   DataCell(
                     Row(
                       children: [
@@ -381,31 +363,33 @@ class _ReservasTableState extends State<ReservasTable> {
                   ),
                   const DataCell(Text('')),
                   const DataCell(Text('')),
-                  DataCell(
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            color: _controller.isSelectionMode && _controller.selectedCount > 0
-                                ? Colors.green.shade200
-                                : Colors.blue.shade100,
-                            alignment: Alignment.center,
-                            child: Text(
-                              Formatters.formatCurrency(totalDeuda),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _controller.isSelectionMode && _controller.selectedCount > 0
-                                    ? Colors.green.shade800
-                                    : Colors.black,
+                  if (authController.hasPermission(Permission.view_debt))
+                    DataCell(
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                  ? Colors.green.shade200
+                                  : Colors.blue.shade100,
+                              alignment: Alignment.center,
+                              child: Text(
+                                Formatters.formatCurrency(totalDeuda),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _controller.isSelectionMode && _controller.selectedCount > 0
+                                      ? Colors.green.shade800
+                                      : Colors.black,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const DataCell(Text('')),
+                  if (authController.hasPermission(Permission.edit_reserva))
+                    const DataCell(Text('')),
                 ],
               ),
             ],
@@ -415,35 +399,36 @@ class _ReservasTableState extends State<ReservasTable> {
     );
   }
 
-  DataRow _buildDataRow(ReservaConAgencia ra, bool showFechaColumn) {
+  DataRow _buildDataRow(
+    ReservaConAgencia ra,
+    bool showFechaColumn,
+    AuthController authController, // Pasa el AuthController directamente
+  ) {
     var r = ra.reserva;
     final isEditing = _editingReservaId == r.id;
     final isSelected = _controller.isReservaSelected(r.id);
 
     final List<DataCell> cells = [
-      // Nueva celda de selección - CAMBIADO: solo tap, no long press
+      // Celda de selección
       DataCell(
         GestureDetector(
-          onTap: () {
+          onTap: authController.hasPermission(Permission.select_reservas) ? () {
             if (!_controller.isSelectionMode) {
-              // Si no estamos en modo selección, iniciarlo
               _controller.startSelectionWith(r.id);
             } else {
-              // Si ya estamos en modo selección, toggle esta reserva
               _controller.toggleReservaSelection(r.id);
             }
-          },
+          } : null,
           child: _controller.isSelectionMode
               ? Checkbox(
                   value: isSelected,
-                  onChanged: (value) {
+                  onChanged: authController.hasPermission(Permission.select_reservas) ? (value) {
                     _controller.toggleReservaSelection(r.id);
-                  },
+                  } : null,
                 )
               : const Icon(Icons.check_box_outline_blank, size: 16, color: Colors.grey),
         ),
       ),
-      
       // Celda de acción (WhatsApp)
       DataCell(
         IconButton(
@@ -452,11 +437,11 @@ class _ReservasTableState extends State<ReservasTable> {
             color: r.whatsappContactado ? Colors.green : Colors.redAccent,
           ),
           tooltip: 'Chatear por WhatsApp',
-          onPressed: () async {
+          onPressed: authController.hasPermission(Permission.contact_whatsapp) ? () async {
             final telefono = r.telefono.replaceAll('+', '').replaceAll(' ', '');
             final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
             final uriWeb = Uri.parse('https://wa.me/$telefono');
-            
+
             if (r.whatsappContactado) {
               await FirebaseFirestore.instance
                   .collection('reservas')
@@ -464,7 +449,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   .update({'whatsappContactado': false});
               return;
             }
-            
+
             if (await canLaunchUrl(uriApp)) {
               await FirebaseFirestore.instance
                   .collection('reservas')
@@ -473,7 +458,7 @@ class _ReservasTableState extends State<ReservasTable> {
               await launchUrl(uriApp, mode: LaunchMode.externalApplication);
               return;
             }
-            
+
             if (await canLaunchUrl(uriWeb)) {
               await FirebaseFirestore.instance
                   .collection('reservas')
@@ -482,7 +467,7 @@ class _ReservasTableState extends State<ReservasTable> {
               await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
               return;
             }
-            
+
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -491,16 +476,15 @@ class _ReservasTableState extends State<ReservasTable> {
                 ),
               );
             }
-          },
+          } : null,
         ),
       ),
-      
       // Resto de celdas existentes...
       DataCell(
         Text(r.turno?.label ?? ''),
       ),
       DataCell(
-        isEditing
+        isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
                 controller: _controllers['${r.id}_telefono'],
                 decoration: const InputDecoration(
@@ -516,7 +500,7 @@ class _ReservasTableState extends State<ReservasTable> {
               ),
       ),
       DataCell(
-        isEditing
+        isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
                 controller: _controllers['${r.id}_hotel'],
                 decoration: const InputDecoration(
@@ -527,7 +511,7 @@ class _ReservasTableState extends State<ReservasTable> {
             : Text(r.hotel),
       ),
       DataCell(
-        isEditing
+        isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
                 controller: _controllers['${r.id}_cliente'],
                 decoration: const InputDecoration(
@@ -538,12 +522,11 @@ class _ReservasTableState extends State<ReservasTable> {
             : Text(r.nombreCliente),
       ),
     ];
-
     // Añadir la celda de Fecha condicionalmente
     if (showFechaColumn) {
       cells.add(
         DataCell(
-          isEditing
+          isEditing && authController.hasPermission(Permission.edit_reserva)
               ? GestureDetector(
                   onTap: () async {
                     final selectedDate = await showDatePicker(
@@ -575,10 +558,9 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       );
     }
-
     cells.addAll([
       DataCell(
-        isEditing
+        isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
                 controller: _controllers['${r.id}_pax'],
                 keyboardType: TextInputType.number,
@@ -590,7 +572,7 @@ class _ReservasTableState extends State<ReservasTable> {
             : Text('${r.pax}'),
       ),
       DataCell(
-        isEditing
+        isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
                 controller: _controllers['${r.id}_saldo'],
                 keyboardType: TextInputType.number,
@@ -601,6 +583,7 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
+      // Celda de Observaciones
       DataCell(
         IconButton(
           icon: Icon(
@@ -608,126 +591,128 @@ class _ReservasTableState extends State<ReservasTable> {
             color: r.observacion.isNotEmpty ? Colors.blue : Colors.grey,
             size: 20,
           ),
-          onPressed: () => _showObservacionDialog(ra),
+          onPressed: authController.hasPermission(Permission.manage_observations) ? () => _showObservacionDialog(ra) : null,
         ),
       ),
-      DataCell(isEditing ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
-      DataCell(
-        GestureDetector(
-          onTap: () async {
-            if (ra.reserva.estado == EstadoReserva.pagada) {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Marcar como pendiente'),
-                  content: const Text('¿Deseas cambiar el estado a pendiente?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: const Text('Sí'),
-                    ),
-                  ],
-                ),
-              );
-              if (ok == true) {
-                final updated = ra.reserva.copyWith(
-                  estado: EstadoReserva.pendiente,
-                );
-                await _controller.updateReserva(ra.id, updated);
-              }
-            } else {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Marcar como pagada'),
-                  content: const Text('¿Deseas marcar esta reserva como pagada?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: const Text('Sí'),
-                    ),
-                  ],
-                ),
-              );
-              if (ok == true) {
-                final updated = ra.reserva.copyWith(
-                  estado: EstadoReserva.pagada,
-                );
-                await _controller.updateReserva(ra.id, updated);
-              }
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: ra.reserva.estado == EstadoReserva.pagada
-                    ? Colors.green
-                    : (ra.reserva.deuda > 0 ? Colors.red : Colors.transparent),
-              ),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            alignment: Alignment.center,
-            child: ra.reserva.estado == EstadoReserva.pagada
-                ? const Text(
-                    'Pagado',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  )
-                : Text(
-                    Formatters.formatCurrency(ra.reserva.deuda),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: ra.reserva.deuda > 0
-                          ? Colors.red.shade700
-                          : Colors.green.shade700,
-                    ),
+      DataCell(isEditing && authController.hasPermission(Permission.change_agency) ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
+      if (authController.hasPermission(Permission.view_debt))
+        DataCell(
+          GestureDetector(
+            onTap: authController.hasPermission(Permission.toggle_paid_status) ? () async {
+              if (ra.reserva.estado == EstadoReserva.pagada) {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Marcar como pendiente'),
+                    content: const Text('¿Deseas cambiar el estado a pendiente?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancelar'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Sí'),
+                      ),
+                    ],
                   ),
+                );
+                if (ok == true) {
+                  final updated = ra.reserva.copyWith(
+                    estado: EstadoReserva.pendiente,
+                  );
+                  await _controller.updateReserva(ra.id, updated);
+                }
+              } else {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Marcar como pagada'),
+                    content: const Text('¿Deseas marcar esta reserva como pagada?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancelar'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Sí'),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok == true) {
+                  final updated = ra.reserva.copyWith(
+                    estado: EstadoReserva.pagada,
+                  );
+                  await _controller.updateReserva(ra.id, updated);
+                }
+              }
+            } : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: ra.reserva.estado == EstadoReserva.pagada
+                      ? Colors.green
+                      : (ra.reserva.deuda > 0 ? Colors.red : Colors.transparent),
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              alignment: Alignment.center,
+              child: ra.reserva.estado == EstadoReserva.pagada
+                  ? const Text(
+                      'Pagado',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    )
+                  : Text(
+                      Formatters.formatCurrency(ra.reserva.deuda),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: ra.reserva.deuda > 0
+                            ? Colors.red.shade700
+                            : Colors.green.shade700,
+                      ),
+                    ),
+            ),
           ),
         ),
-      ),
-      DataCell(
-        isEditing
-            ? Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: _saveChanges,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: _cancelEditing,
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blue),
-                    onPressed: () => _startEditing(ra),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _showDeleteDialog(ra),
-                  ),
-                ],
-              ),
-      ),
+      if (authController.hasPermission(Permission.edit_reserva))
+        DataCell(
+          isEditing
+              ? Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: _saveChanges,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: _cancelEditing,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _startEditing(ra),
+                    ),
+                    if (authController.hasPermission(Permission.delete_reserva))
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _showDeleteDialog(ra),
+                      ),
+                  ],
+                ),
+        ),
     ]);
-
     // Aplicar color de fondo si está seleccionada
     return DataRow(
-      color: isSelected 
+      color: isSelected
           ? WidgetStateProperty.all(Colors.blue.shade100)
           : null,
       cells: cells,

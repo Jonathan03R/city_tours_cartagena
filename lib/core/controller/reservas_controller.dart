@@ -19,6 +19,7 @@ class ReservasController extends ChangeNotifier {
   DateFilterType _selectedFilter = DateFilterType.today;
   DateTime? _customDate;
   String? _agenciaIdFilter;
+  EstadoReserva? _estadoFilter;
 
   // --- Paginación ---
   int _itemsPerPage = 10;
@@ -63,6 +64,7 @@ class ReservasController extends ChangeNotifier {
   DateTime? get customDate => _customDate;
   List<ReservaConAgencia> get currentReservas => _allLoadedReservas;
   TurnoType? get turnoFilter => _turnoFilter;
+   EstadoReserva? get estadoFilter => _estadoFilter;
   bool get isLoading => _isLoading;
 
   // Getters para la paginación
@@ -189,11 +191,13 @@ class ReservasController extends ChangeNotifier {
     DateTime? date,
     String? agenciaId,
     TurnoType? turno,
+    EstadoReserva? estado,
   }) {
     if (_selectedFilter == filter &&
         _customDate == date &&
         _agenciaIdFilter == agenciaId &&
-        _turnoFilter == turno) {
+        _turnoFilter == turno &&
+        _estadoFilter == estado) {
       return;
     }
 
@@ -201,6 +205,7 @@ class ReservasController extends ChangeNotifier {
     _customDate = date;
     _agenciaIdFilter = agenciaId;
     _turnoFilter = turno;
+    _estadoFilter = estado;        
     
     // Limpiar selección al cambiar filtros
     _selectedReservaIds.clear();
@@ -293,6 +298,7 @@ class ReservasController extends ChangeNotifier {
           filter: _selectedFilter,
           customDate: _customDate,
           agenciaId: _agenciaIdFilter,
+          estado: _estadoFilter,
         )
         .listen(
           (snapshot) {

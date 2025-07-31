@@ -44,6 +44,7 @@ class _TableOnlyViewScreenState extends State<TableOnlyViewScreen> {
         widget.selectedFilter,
         date: widget.customDate,
         agenciaId: widget.agenciaId,
+        turno: widget.turno,
       );
     });
 

@@ -4,9 +4,10 @@ class Usuarios {
   String? id;
   String? usuario;
   String? nombre;
-  String? email;
-  String? telefono;
+  String? email; // Opcional
+  String? telefono; // Opcional
   List<String> roles;
+  bool activo;
 
   Usuarios({
     this.id,
@@ -15,12 +16,14 @@ class Usuarios {
     this.email,
     this.telefono,
     List<String>? roles,
-  }) : roles = roles ?? [Roles.colaborador];
+    this.activo = true,
+  }) : roles = roles ?? [Roles.verReservas];
 
   Usuarios.fromJson(Map<String, dynamic> json)
     : roles =
           (json['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-          [Roles.colaborador] {
+          [Roles.verReservas],
+      activo = json['activo'] as bool? ?? true {
     id = json['id'];
     usuario = json['usuario'];
     nombre = json['nombre'];
@@ -36,18 +39,37 @@ class Usuarios {
     data['email'] = email;
     data['telefono'] = telefono;
     data['rol'] = roles;
+    data['activo'] = activo;
     return data;
   }
 
-  /// este es el fromMap
+  Usuarios copyWith({
+    String? usuario,
+    String? nombre,
+    String? email,
+    String? telefono,
+    List<String>? roles,
+    bool? activo,
+  }) {
+    return Usuarios(
+      id: this.id,
+      usuario: usuario ?? this.usuario,
+      nombre: nombre ?? this.nombre,
+      email: email ?? this.email,
+      telefono: telefono ?? this.telefono,
+      roles: roles ?? this.roles,
+      activo: activo ?? this.activo,
+    );
+  }
 
   Usuarios.fromMap(Map<String, dynamic> map)
-    : id = map['id'],
-      usuario = map['usuario'],
-      nombre = map['nombre'],
-      email = map['email'],
-      telefono = map['telefono'],
+    : id = map['id'] as String?,
+      usuario = map['usuario'] as String?,
+      nombre = map['nombre'] as String?,
+      email = map['email'] as String?,
+      telefono = map['telefono'] as String?,
       roles =
           (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-          [Roles.colaborador];
+          [Roles.verReservas],
+      activo = map['activo'] == true;
 }

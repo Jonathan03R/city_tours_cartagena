@@ -1,13 +1,16 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
+import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
@@ -103,7 +106,7 @@ class _ReservasViewState extends State<ReservasView> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TableOnlyViewScreen(
-          turno: widget.turno,
+          turno: reservasController.turnoFilter,
           selectedFilter: reservasController.selectedFilter,
           customDate: reservasController.customDate,
           agenciaId: widget.agencia?.id,
@@ -176,6 +179,7 @@ class _ReservasViewState extends State<ReservasView> {
     final reservasController = context.watch<ReservasController>();
     final configuracionController = context.watch<ConfiguracionController>();
     final configuracion = configuracionController.configuracion;
+    final authRole = context.read<AuthController>();
 
     return Scaffold(
       appBar: AppBar(
@@ -205,11 +209,12 @@ class _ReservasViewState extends State<ReservasView> {
             tooltip: _isTableView ? 'Vista de lista' : 'Vista de tabla',
           ),
           if (widget.agencia != null) ...[
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: _editarAgencia,
-              tooltip: 'Editar agencia',
-            ),
+            if (authRole.hasPermission(Permission.edit_agencias))
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: _editarAgencia,
+                tooltip: 'Editar agencia',
+              ),
           ],
           IconButton(
             icon: const Icon(Icons.visibility),
@@ -233,16 +238,34 @@ class _ReservasViewState extends State<ReservasView> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            TurnoFilterButtons(
-              selectedTurno: reservasController.turnoFilter,
-              onTurnoChanged: (nuevoTurno) {
-                reservasController.updateFilter(
-                  reservasController.selectedFilter,
-                  date: reservasController.customDate,
-                  agenciaId: widget.agencia?.id,
-                  turno: nuevoTurno,
-                );
-              },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TurnoFilterButtons(
+                  selectedTurno: reservasController.turnoFilter,
+                  onTurnoChanged: (nuevoTurno) {
+                    reservasController.updateFilter(
+                      reservasController.selectedFilter,
+                      date: reservasController.customDate,
+                      agenciaId: widget.agencia?.id,
+                      turno: nuevoTurno,
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                EstadoFilterButtons(
+                  selectedEstado: reservasController.estadoFilter,
+                  onEstadoChanged: (nuevoEstado) {
+                    reservasController.updateFilter(
+                      reservasController.selectedFilter,
+                      date: reservasController.customDate,
+                      agenciaId: widget.agencia?.id,
+                      turno: reservasController.turnoFilter,
+                      estado: nuevoEstado,
+                    );
+                  },
+                ),
+              ],
             ),
             CompactDateFilterButtons(
               selectedFilter: reservasController.selectedFilter,
@@ -278,7 +301,7 @@ class _ReservasViewState extends State<ReservasView> {
                               configuracion,
                               reservasController
                                   .turnoFilter, // NUEVO: Pasar turno filtrado
-                              reservasController, 
+                              reservasController,
                             ),
                           ],
                         )
@@ -290,7 +313,7 @@ class _ReservasViewState extends State<ReservasView> {
                               configuracion,
                               reservasController
                                   .turnoFilter, // NUEVO: Pasar turno filtrado
-                              reservasController, 
+                              reservasController,
                             ),
                             Text(
                               _getFilterTitle(
@@ -472,20 +495,23 @@ class _ReservasViewState extends State<ReservasView> {
       //         ],
       //       )
       //     : null,
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            onPressed: _showAddReservaProForm,
-            backgroundColor: Colors.purple.shade600,
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('registro rapido'),
-            heroTag: "pro_button",
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+      floatingActionButton: authRole.hasPermission(Permission.crear_reserva)
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  onPressed: _showAddReservaProForm,
+                  backgroundColor: Colors.purple.shade600,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('registro rapido'),
+                  heroTag: "pro_button",
+                ),
+                const SizedBox(height: 16),
+              ],
+            )
+          : null,
+    
     );
   }
 
@@ -828,6 +854,12 @@ class _ReservasViewState extends State<ReservasView> {
     ReservasController
     reservasController, // NUEVO: Recibir el controlador completo
   ) {
+    final authController = context.read<AuthController>();
+    // final isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
+    // final isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
+    // final isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
+    // final isTrabajador = authController.appUser?.roles.contains(Roles.trabajador) ?? false;
+
     final ac = _currentAgencia ?? widget.agencia;
     final ag = ac?.agencia;
 
@@ -895,59 +927,61 @@ class _ReservasViewState extends State<ReservasView> {
                       : Colors.black, // NUEVO: Color dinámico
                 ),
               ),
+              if (authController.hasPermission(Permission.export_reservas))
+                /// boton para exportar reservas
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    List<ReservaConAgencia> reservasParaExportar;
 
-              ElevatedButton.icon(
-                onPressed: () async {
-                  List<ReservaConAgencia> reservasParaExportar;
+                    // NUEVA LÓGICA: Decidir qué reservas exportar
+                    if (hasSelections) {
+                      // Si hay selecciones, usar solo las seleccionadas
+                      reservasParaExportar =
+                          reservasController.selectedReservas;
+                      debugPrint(
+                        '📄 Exportando ${reservasParaExportar.length} reservas SELECCIONADAS',
+                      );
+                    } else {
+                      // Si no hay selecciones, usar todas las filtradas (comportamiento original)
+                      reservasParaExportar = await reservasController
+                          .getAllFilteredReservasSinPaginacion();
+                      debugPrint(
+                        '📄 Exportando ${reservasParaExportar.length} reservas FILTRADAS',
+                      );
+                    }
 
-                  // NUEVA LÓGICA: Decidir qué reservas exportar
-                  if (hasSelections) {
-                    // Si hay selecciones, usar solo las seleccionadas
-                    reservasParaExportar = reservasController.selectedReservas;
-                    debugPrint(
-                      '📄 Exportando ${reservasParaExportar.length} reservas SELECCIONADAS',
+                    if (!mounted) return;
+
+                    final pdfService = PdfExportService();
+                    await pdfService.exportarReservasConAgencia(
+                      reservasConAgencia:
+                          reservasParaExportar, // NUEVO: Lista dinámica
+                      context: context,
+                      filtroFecha: reservasController.selectedFilter,
+                      fechaPersonalizada: reservasController.customDate,
+                      turnoFiltrado: reservasController.turnoFilter,
+                      agenciaEspecifica: _currentAgencia?.agencia,
                     );
-                  } else {
-                    // Si no hay selecciones, usar todas las filtradas (comportamiento original)
-                    reservasParaExportar = await reservasController
-                        .getAllFilteredReservasSinPaginacion();
-                    debugPrint(
-                      '📄 Exportando ${reservasParaExportar.length} reservas FILTRADAS',
-                    );
-                  }
-
-                  if (!mounted) return;
-
-                  final pdfService = PdfExportService();
-                  await pdfService.exportarReservasConAgencia(
-                    reservasConAgencia:
-                        reservasParaExportar, // NUEVO: Lista dinámica
-                    context: context,
-                    filtroFecha: reservasController.selectedFilter,
-                    fechaPersonalizada: reservasController.customDate,
-                    turnoFiltrado: reservasController.turnoFilter,
-                    agenciaEspecifica: _currentAgencia?.agencia,
-                  );
-                },
-                icon: Icon(
-                  hasSelections
-                      ? Icons.file_download_outlined
-                      : Icons.file_download, // NUEVO: Ícono dinámico
-                  size: 20,
-                ),
-                label: Text(buttonText), // NUEVO: Texto dinámico
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: hasSelections
-                      ? Colors.blue.shade600
-                      : Colors.green.shade600, // NUEVO: Color dinámico
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                  },
+                  icon: Icon(
+                    hasSelections
+                        ? Icons.file_download_outlined
+                        : Icons.file_download, // NUEVO: Ícono dinámico
+                    size: 20,
                   ),
-                  textStyle: const TextStyle(fontSize: 12),
+                  label: Text(buttonText), // NUEVO: Texto dinámico
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: hasSelections
+                        ? Colors.blue.shade600
+                        : Colors.green.shade600, // NUEVO: Color dinámico
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1009,51 +1043,57 @@ class _ReservasViewState extends State<ReservasView> {
                 ),
               ],
             ],
-
-            Align(
-              alignment: Alignment.centerRight,
-              child: _editandoPrecio
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.close, color: Colors.grey.shade600),
-                          tooltip: 'Cancelar',
-                          onPressed: () {
-                            setState(() {
-                              _editandoPrecio = false;
-                              _precioMananaController.clear();
-                              _precioTardeController.clear();
-                            });
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.check, color: Colors.green.shade600),
-                          tooltip: 'Guardar',
-                          onPressed: () => _guardarNuevoPrecio(configuracion),
-                        ),
-                      ],
-                    )
-                  : IconButton(
-                      icon: Icon(Icons.edit, color: Colors.grey.shade800),
-                      tooltip: 'Editar precios',
-                      onPressed: () {
-                        setState(() {
-                          _precioMananaController.text =
-                              ag.precioPorAsientoTurnoManana?.toStringAsFixed(
-                                2,
-                              ) ??
-                              '';
-                          _precioTardeController.text =
-                              ag.precioPorAsientoTurnoTarde?.toStringAsFixed(
-                                2,
-                              ) ??
-                              '';
-                          _editandoPrecio = true;
-                        });
-                      },
-                    ),
-            ),
+            if (authController.hasPermission(Permission.edit_agencias))
+              Align(
+                alignment: Alignment.centerRight,
+                child: _editandoPrecio
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: Colors.grey.shade600,
+                            ),
+                            tooltip: 'Cancelar',
+                            onPressed: () {
+                              setState(() {
+                                _editandoPrecio = false;
+                                _precioMananaController.clear();
+                                _precioTardeController.clear();
+                              });
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.check,
+                              color: Colors.green.shade600,
+                            ),
+                            tooltip: 'Guardar',
+                            onPressed: () => _guardarNuevoPrecio(configuracion),
+                          ),
+                        ],
+                      )
+                    : IconButton(
+                        icon: Icon(Icons.edit, color: Colors.grey.shade800),
+                        tooltip: 'Editar precios',
+                        onPressed: () {
+                          setState(() {
+                            _precioMananaController.text =
+                                ag.precioPorAsientoTurnoManana?.toStringAsFixed(
+                                  2,
+                                ) ??
+                                '';
+                            _precioTardeController.text =
+                                ag.precioPorAsientoTurnoTarde?.toStringAsFixed(
+                                  2,
+                                ) ??
+                                '';
+                            _editandoPrecio = true;
+                          });
+                        },
+                      ),
+              ),
           ] else ...[
             _buildGlobalPriceSection(
               configuracion,
@@ -1114,6 +1154,11 @@ class _ReservasViewState extends State<ReservasView> {
     double? globalPriceTarde,
     TurnoType? turnoFilter, // NUEVO: Recibir filtro de turno
   ) {
+    final authController = context.read<AuthController>();
+    // final isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
+    // final isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
+    // final isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
+    // final isTrabajador = authController.appUser?.roles.contains(Roles.trabajador) ?? false;
     // ARREGLADO: Solo mostrar el precio del turno filtrado, o ambos si no hay filtro
     final showManana = turnoFilter == null || turnoFilter == TurnoType.manana;
     final showTarde = turnoFilter == null || turnoFilter == TurnoType.tarde;
@@ -1158,27 +1203,28 @@ class _ReservasViewState extends State<ReservasView> {
                         ),
                       ),
               ),
-              IconButton(
-                icon: Icon(
-                  _editandoPrecio && _editingTurno == 'manana'
-                      ? Icons.check
-                      : Icons.edit,
-                  color: Colors.grey.shade800,
-                  size: 18,
+              if (authController.hasPermission(Permission.edit_configuracion))
+                IconButton(
+                  icon: Icon(
+                    _editandoPrecio && _editingTurno == 'manana'
+                        ? Icons.check
+                        : Icons.edit,
+                    color: Colors.grey.shade800,
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    if (_editandoPrecio && _editingTurno == 'manana') {
+                      _guardarNuevoPrecioGlobal('manana', configuracion);
+                    } else {
+                      setState(() {
+                        _precioController.text =
+                            globalPriceManana?.toStringAsFixed(2) ?? '0.00';
+                        _editandoPrecio = true;
+                        _editingTurno = 'manana';
+                      });
+                    }
+                  },
                 ),
-                onPressed: () {
-                  if (_editandoPrecio && _editingTurno == 'manana') {
-                    _guardarNuevoPrecioGlobal('manana', configuracion);
-                  } else {
-                    setState(() {
-                      _precioController.text =
-                          globalPriceManana?.toStringAsFixed(2) ?? '0.00';
-                      _editandoPrecio = true;
-                      _editingTurno = 'manana';
-                    });
-                  }
-                },
-              ),
             ],
           ),
 
@@ -1216,27 +1262,28 @@ class _ReservasViewState extends State<ReservasView> {
                         ),
                       ),
               ),
-              IconButton(
-                icon: Icon(
-                  _editandoPrecio && _editingTurno == 'tarde'
-                      ? Icons.check
-                      : Icons.edit,
-                  color: Colors.grey.shade800,
-                  size: 18,
+              if (authController.hasPermission(Permission.edit_configuracion))
+                IconButton(
+                  icon: Icon(
+                    _editandoPrecio && _editingTurno == 'tarde'
+                        ? Icons.check
+                        : Icons.edit,
+                    color: Colors.grey.shade800,
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    if (_editandoPrecio && _editingTurno == 'tarde') {
+                      _guardarNuevoPrecioGlobal('tarde', configuracion);
+                    } else {
+                      setState(() {
+                        _precioController.text =
+                            globalPriceTarde?.toStringAsFixed(2) ?? '0.00';
+                        _editandoPrecio = true;
+                        _editingTurno = 'tarde';
+                      });
+                    }
+                  },
                 ),
-                onPressed: () {
-                  if (_editandoPrecio && _editingTurno == 'tarde') {
-                    _guardarNuevoPrecioGlobal('tarde', configuracion);
-                  } else {
-                    setState(() {
-                      _precioController.text =
-                          globalPriceTarde?.toStringAsFixed(2) ?? '0.00';
-                      _editandoPrecio = true;
-                      _editingTurno = 'tarde';
-                    });
-                  }
-                },
-              ),
             ],
           ),
       ],
