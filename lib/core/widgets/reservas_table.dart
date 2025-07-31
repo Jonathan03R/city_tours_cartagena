@@ -583,6 +583,7 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
+      // Celda de Observaciones
       DataCell(
         IconButton(
           icon: Icon(

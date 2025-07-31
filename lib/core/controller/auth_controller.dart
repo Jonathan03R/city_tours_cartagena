@@ -24,6 +24,8 @@ class AuthController extends ChangeNotifier {
     /// Inicializar el controlador de autenticación
     /// al iniciar la aplicación, se suscribe a los cambios de estado de autenticación
     user = FirebaseAuth.instance.currentUser;
+    _subscribeToAppUser();
+
     _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) {
       user = u;
       notifyListeners();
@@ -68,7 +70,7 @@ class AuthController extends ChangeNotifier {
                 nombre: null,
                 email: correo.isNotEmpty ? correo : null,
                 telefono: null,
-                roles: [Roles.colaborador],
+                roles: [Roles.verReservas],
                 activo: true,
               );
               await _userService.saveUserData(user!.uid, nuevoUsuario);

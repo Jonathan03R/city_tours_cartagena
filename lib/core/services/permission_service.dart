@@ -5,39 +5,22 @@ class PermissionService {
   // Este mapa define qué permisos tiene cada rol (como String).
   // Puedes cargar esto desde una base de datos o configuración remota si necesitas que sea dinámico.
   static const Map<String, List<Permission>> _rolePermissions = {
-    Roles.admin: [
-      Permission.edit_reserva,
-      Permission.delete_reserva,
-      Permission.view_debt,
-      Permission.contact_whatsapp,
-      Permission.toggle_paid_status,
-      Permission.manage_observations,
-      Permission.select_reservas,
-      Permission.change_agency,
-      Permission.edit_configuracion,
-      Permission.export_reservas,
-      Permission.edit_agencias,
-      Permission.crear_agencias,
-      Permission.view_usuarios,
-      
-      
-      // Un administrador tiene todos los permisos
-    ],
-    Roles.colaborador: [
-      // Un colaborador puede editar, ver deuda, contactar, etc., pero no eliminar ni cambiar agencia
-    ],
+    Roles.admin       : Permission.values,
+    // Roles.colaborador: [
+    //   // Un colaborador puede editar, ver deuda, contactar, etc., pero no eliminar ni cambiar agencia
+    // ],
     Roles.agencia: [
       // Permission.manage_observations,
       // Permission.select_reservas,
       // Una agencia solo puede contactar, ver observaciones y seleccionar
     ],
-    Roles.trabajador: [
-      Permission.contact_whatsapp,
-      // Permission.manage_observations,
-      Permission.select_reservas,
-      // Permission.edit_agencias,
-    ],
-
+    // Roles.trabajador: [
+    //   Permission.contact_whatsapp,
+    //   // Permission.manage_observations,
+    //   Permission.select_reservas,
+    //   // Permission.edit_agencias,
+    // ],
+    
     Roles.crearAgencias: [
       Permission.crear_agencias,
       // Define permisos específicos para el rol 'crearAgencias'
@@ -46,8 +29,28 @@ class PermissionService {
       Permission.edit_reserva,
       // Define permisos específicos para el rol 'editarReservas'
     ],
+    Roles.verAgencias: [
+      Permission.ver_agencias,
+      Permission.ver_pagina_usuarios,
+      // Define permisos específicos para el rol 'verAgencias'
+    ],
 
-    
+    Roles.verReservas: [
+      Permission.ver_reservas,
+      Permission.contact_whatsapp,
+      Permission.ver_pagina_usuarios,
+      // Define permisos específicos para el rol 'verReservas'
+    ],
+    Roles.verColaborador: [
+      Permission.ver_pagina_usuarios,
+
+      // Define permisos específicos para el rol 'verColaborador'
+    ],
+
+    Roles.verFinanzas: [
+      Permission.view_debt,
+    ],
+
     // Roles.reservas: [
     //   // Define permisos específicos para el rol 'reservas' si es distinto de 'colaborador'
     //   Permission.contact_whatsapp,
@@ -65,7 +68,13 @@ class PermissionService {
       Permission.edit_agencias,
       // Define permisos específicos para el rol 'editarAgencias'
     ],
-    
+
+    Roles.crearReservas: [
+      Permission.crear_reserva,
+      // Define permisos específicos para el rol 'crearReservas'
+    ],
+
+
   };
 
   /// Verifica si un rol específico (String) tiene un permiso dado.
