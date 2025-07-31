@@ -133,6 +133,7 @@ class PdfExportService {
               totalDeuda,
               agenciaEspecifica !=
                   null, // Indicar si es vista de agencia específica
+              canViewDeuda, // Pasa el permiso
             ),
           ],
         ),
@@ -518,6 +519,7 @@ class PdfExportService {
     double totalSaldo,
     double totalDeuda,
     bool esAgenciaEspecifica,
+    bool canViewDeuda,
   ) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(15),
@@ -537,11 +539,13 @@ class PdfExportService {
                 Formatters.formatCurrency(totalSaldo),
                 PdfColors.green,
               ),
-              _buildTotalItem(
-                'TOTAL DEUDA',
-                Formatters.formatCurrency(totalDeuda),
-                PdfColors.red,
-              ),
+              if (canViewDeuda) ...[
+                _buildTotalItem(
+                  'TOTAL DEUDA',
+                  Formatters.formatCurrency(totalDeuda),
+                  PdfColors.red,
+                ),
+              ],
             ],
           ),
           if (esAgenciaEspecifica) ...[
@@ -573,6 +577,9 @@ class PdfExportService {
     headerCells.add(_buildTableHeader('TURNO'));
     columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
 
+    headerCells.add(_buildTableHeader('TELEFONO'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
+
     headerCells.add(_buildTableHeader('HOTEL'));
     columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
 
@@ -596,8 +603,7 @@ class PdfExportService {
       columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
     }
 
-    headerCells.add(_buildTableHeader('ESTADO'));
-    columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
+    
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
@@ -633,6 +639,9 @@ class PdfExportService {
     final List<pw.Widget> dataCells = [];
 
     dataCells.add(_buildTableCell(_getTurnoText(reserva.reserva.turno)));
+    dataCells.add(_buildTableCell(reserva.telefono.isEmpty
+        ? 'Sin teléfono'
+        : reserva.telefono));
     dataCells.add(
       _buildTableCell(reserva.hotel.isEmpty ? 'Sin hotel' : reserva.hotel),
     );
@@ -660,12 +669,12 @@ class PdfExportService {
       );
     }
 
-    dataCells.add(
-      _buildTableCell(
-        Formatters.getEstadoText(reserva.estado),
-        color: _getEstadoColor(reserva.estado),
-      ),
-    );
+    // dataCells.add(
+    //   _buildTableCell(
+    //     Formatters.getEstadoText(reserva.estado),
+    //     color: _getEstadoColor(reserva.estado),
+    //   ),
+    // );
 
     return pw.TableRow(children: dataCells);
   }
@@ -925,6 +934,7 @@ class PdfExportService {
             totalSaldo,
             totalDeuda,
             agenciaEspecifica != null,
+            canViewDeuda, // Pasa el permiso
           ),
         ],
       ),
