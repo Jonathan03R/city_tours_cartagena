@@ -21,7 +21,7 @@ void main() async {
   // await ReservasController.initialize();
   // <-- Aquí imprimes el debug tras inicializar todo
   // ejecutar una vesta la configuración de Firebase y los controladores
-  await ConfiguracionService.inicializarConfiguracion();
+  // await ConfiguracionService.inicializarConfiguracion();
   // await _assignDefaultTurno();
   ReservasController.printDebugInfo();
   runApp(
