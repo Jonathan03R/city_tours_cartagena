@@ -318,7 +318,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                                           ],
                                         ),
                                         const SizedBox(height: 4),
-                                        authController.hasPermission(Permission.view_debt)
+                                        authController.hasPermission(Permission.ver_deuda_agencia)
                                             ? Container(
                                                 padding: const EdgeInsets.symmetric(
                                                   horizontal: 10,

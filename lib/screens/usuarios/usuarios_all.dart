@@ -13,9 +13,12 @@ class TodosUsuariosTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authController = context.watch<AuthController>(); // Acceder al AuthController
+    final authController = context
+        .watch<AuthController>(); // Acceder al AuthController
     // Obtener el ID del usuario actualmente logeado
-    final currentUserId = authController.appUser?.id; // <-- Obtener el ID del usuario logeado aquí
+    final currentUserId = authController
+        .appUser
+        ?.id; // <-- Obtener el ID del usuario logeado aquí
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -35,12 +38,19 @@ class TodosUsuariosTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 60.w, color: Colors.red.shade400),
+                  Icon(
+                    Icons.error_outline,
+                    size: 60.w,
+                    color: Colors.red.shade400,
+                  ),
                   SizedBox(height: 16.h),
                   Text(
                     'Error al cargar usuarios: ${snapshot.error}',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16.sp, color: Colors.red.shade400),
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.red.shade400,
+                    ),
                   ),
                 ],
               ),
@@ -51,7 +61,11 @@ class TodosUsuariosTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.people_outline, size: 60.w, color: Colors.grey[400]),
+                  Icon(
+                    Icons.people_outline,
+                    size: 60.w,
+                    color: Colors.grey[400],
+                  ),
                   SizedBox(height: 16.h),
                   Text(
                     'No hay usuarios registrados.',
@@ -65,15 +79,22 @@ class TodosUsuariosTab extends StatelessWidget {
           // Filtrar la lista de usuarios para excluir al usuario actualmente logeado
           final usuarios = docs
               .map((e) => Usuarios.fromMap(e.data() as Map<String, dynamic>))
-              .where((usuario) => usuario.id != currentUserId) // <-- ¡Esta es la línea clave!
+              .where(
+                (usuario) => usuario.id != currentUserId,
+              ) // <-- ¡Esta es la línea clave!
               .toList();
 
-          if (usuarios.isEmpty) { // Si después de filtrar no quedan usuarios
+          if (usuarios.isEmpty) {
+            // Si después de filtrar no quedan usuarios
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.people_outline, size: 60.w, color: Colors.grey[400]),
+                  Icon(
+                    Icons.people_outline,
+                    size: 60.w,
+                    color: Colors.grey[400],
+                  ),
                   SizedBox(height: 16.h),
                   Text(
                     'No hay otros usuarios registrados para mostrar.',
@@ -123,15 +144,25 @@ class TodosUsuariosTab extends StatelessWidget {
 class UserCard extends StatelessWidget {
   final Usuarios usuario;
   final AuthController authController;
-  const UserCard({super.key, required this.usuario, required this.authController});
+  const UserCard({
+    super.key,
+    required this.usuario,
+    required this.authController,
+  });
 
-  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
+  void _showSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = false,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red.shade400 : Colors.green.shade400,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
+        ),
         margin: EdgeInsets.all(16.r),
       ),
     );
@@ -147,9 +178,7 @@ class UserCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12.r),
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => UserDetailScreen(usuario: usuario),
-          ),
+          MaterialPageRoute(builder: (_) => UserDetailScreen(usuario: usuario)),
         );
       },
       child: Card(
@@ -165,7 +194,11 @@ class UserCard extends StatelessWidget {
               CircleAvatar(
                 radius: 28.r,
                 backgroundColor: Colors.blue.shade50,
-                child: Icon(Icons.person_outline, size: 28.w, color: Colors.blue.shade600),
+                child: Icon(
+                  Icons.person_outline,
+                  size: 28.w,
+                  color: Colors.blue.shade600,
+                ),
               ),
               SizedBox(width: 16.w),
               Expanded(
@@ -196,15 +229,26 @@ class UserCard extends StatelessWidget {
                     Wrap(
                       spacing: 6.w,
                       runSpacing: 4.h,
-                      children: usuario.roles.map((rol) => Chip(
-                        label: Text(
-                          rol,
-                          style: TextStyle(fontSize: 12.sp, color: Colors.white),
-                        ),
-                        backgroundColor: Colors.blue.shade400,
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      )).toList(),
+                      children: usuario.roles
+                          .map(
+                            (rol) => Chip(
+                              label: Text(
+                                rol,
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              backgroundColor: Colors.blue.shade400,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8.w,
+                                vertical: 4.h,
+                              ),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
                 ),
@@ -214,15 +258,21 @@ class UserCard extends StatelessWidget {
               Column(
                 children: [
                   Icon(
-                    usuario.activo ? Icons.check_circle_outline : Icons.cancel_outlined,
-                    color: usuario.activo ? Colors.green.shade400 : Colors.red.shade400,
+                    usuario.activo
+                        ? Icons.check_circle_outline
+                        : Icons.cancel_outlined,
+                    color: usuario.activo
+                        ? Colors.green.shade400
+                        : Colors.red.shade400,
                     size: 24.w,
                   ),
                   Text(
                     usuario.activo ? 'Activo' : 'Inactivo',
                     style: TextStyle(
                       fontSize: 10.sp,
-                      color: usuario.activo ? Colors.green.shade400 : Colors.red.shade400,
+                      color: usuario.activo
+                          ? Colors.green.shade400
+                          : Colors.red.shade400,
                     ),
                   ),
                 ],
@@ -232,17 +282,24 @@ class UserCard extends StatelessWidget {
               // Solo muestra el botón si NO es el usuario actualmente logeado
               if (!isCurrentUser)
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: Colors.grey.shade600, size: 24.w),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: Colors.grey.shade600,
+                    size: 24.w,
+                  ),
                   onSelected: (value) async {
                     if (value == 'toggle_status') {
                       try {
-                        await authController.toggleUserActiveStatus(usuario.id!, !usuario.activo);
-                        _showSnackBar(
-                          context,
-                          'Usuario ${usuario.usuario} ${usuario.activo ? "desactivado" : "activado"} con éxito.',
+                        await authController.toggleUserActiveStatus(
+                          usuario.id!,
+                          !usuario.activo,
                         );
+                        if (!context.mounted)
+                          return; // <- evita usar context si ya se desmontó
+                        _showSnackBar(context, 'Usuario … con éxito.');
                       } catch (e) {
-                        _showSnackBar(context, 'Error al cambiar estado: ${e.toString()}', isError: true);
+                        if (!context.mounted) return;
+                        _showSnackBar(context, 'Error: ${e}', isError: true);
                       }
                     }
                   },
@@ -253,12 +310,20 @@ class UserCard extends StatelessWidget {
                         child: Row(
                           children: [
                             Icon(
-                              usuario.activo ? Icons.block : Icons.check_circle_outline,
-                              color: usuario.activo ? Colors.red.shade400 : Colors.green.shade400,
+                              usuario.activo
+                                  ? Icons.block
+                                  : Icons.check_circle_outline,
+                              color: usuario.activo
+                                  ? Colors.red.shade400
+                                  : Colors.green.shade400,
                               size: 20.w,
                             ),
                             SizedBox(width: 8.w),
-                            Text(usuario.activo ? 'Desactivar Usuario' : 'Activar Usuario'),
+                            Text(
+                              usuario.activo
+                                  ? 'Desactivar Usuario'
+                                  : 'Activar Usuario',
+                            ),
                           ],
                         ),
                       ),

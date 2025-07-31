@@ -48,7 +48,11 @@ class PermissionService {
     ],
 
     Roles.verFinanzas: [
-      Permission.view_debt,
+      Permission.ver_deuda_agencia,
+    ],
+
+    Roles.verDeudasReservas: [
+      Permission.ver_deuda_reservas,
     ],
 
     // Roles.reservas: [
@@ -59,7 +63,6 @@ class PermissionService {
     //   // Ejemplo: quizás 'reservas' solo puede ver, no editar
     // ],
     Roles.reportar: [
-      Permission.view_debt,
       Permission.export_reservas,
       // Define permisos específicos para el rol 'reportador'
     ],

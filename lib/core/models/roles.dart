@@ -15,6 +15,7 @@ class Roles {
   static const String crearReservas = 'crear reservas';
   static const String editarReservas = 'editar reservas';
   static const String verReservas = 'ver reservas';
+  static const String verDeudasReservas = 'ver deudas reservas';
 
   /// Colaboradores
   static const String verColaborador = 'ver colaborador';
@@ -25,8 +26,6 @@ class Roles {
   static List<String> get allRoles => [
         admin,
         agencia,
-        // colaborador,
-        // trabajador,
         reportar,
         crearAgencias,
         editarReservas,
@@ -36,6 +35,8 @@ class Roles {
         verReservas,
         verColaborador,
         verFinanzas,
+        verDeudasReservas,
+
       ];
 
 }

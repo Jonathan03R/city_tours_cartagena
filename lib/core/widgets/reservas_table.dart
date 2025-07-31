@@ -231,7 +231,7 @@ class _ReservasTableState extends State<ReservasTable> {
       const DataColumn(label: Text('Saldo')),
       const DataColumn(label: Text('Observaciones')),
       const DataColumn(label: Text('Agencia')),
-      if (authController.hasPermission(Permission.view_debt))
+      if (authController.hasPermission(Permission.ver_deuda_reservas))
         const DataColumn(label: Text('Deuda')),
       if (authController.hasPermission(Permission.edit_reserva))
         const DataColumn(label: Text('Editar')),
@@ -363,7 +363,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   ),
                   const DataCell(Text('')),
                   const DataCell(Text('')),
-                  if (authController.hasPermission(Permission.view_debt))
+                  if (authController.hasPermission(Permission.ver_deuda_reservas))
                     DataCell(
                       Row(
                         children: [
@@ -595,7 +595,7 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       ),
       DataCell(isEditing && authController.hasPermission(Permission.change_agency) ? _buildAgenciaDropdown(ra) : Text(ra.nombreAgencia)),
-      if (authController.hasPermission(Permission.view_debt))
+      if (authController.hasPermission(Permission.ver_deuda_reservas))
         DataCell(
           GestureDetector(
             onTap: authController.hasPermission(Permission.toggle_paid_status) ? () async {

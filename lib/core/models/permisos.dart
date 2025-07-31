@@ -1,6 +1,7 @@
 enum Permission {
   // DEUDAS
-  view_debt,
+  ver_deuda_reservas,
+  ver_deuda_agencia,
 
   // AGENCIAS
   change_agency,
