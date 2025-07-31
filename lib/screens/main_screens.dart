@@ -216,7 +216,10 @@ class _MainScreenState extends State<MainScreen> {
               builder: (_, auth, __) {
                 final usuario = auth.appUser?.usuario ?? 'Invitado';
                 final email = auth.user?.email ?? '';
-                return Column(
+                return SafeArea(
+                  bottom: true, // protege de los botones de navegación inferiores
+                  top: false, // puedes cambiar a true si deseas también protección superior
+                  child: Column(
                   children: [
                     Container(
                       color: const Color(0xFF06142F),
@@ -403,6 +406,7 @@ class _MainScreenState extends State<MainScreen> {
                       onTap: () => auth.logout(),
                     ),
                   ],
+                )
                 );
               },
             ),
