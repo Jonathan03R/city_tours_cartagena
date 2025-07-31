@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
-import 'package:citytourscartagena/core/models/reserva.dart';
+import 'package:citytourscartagena/core/models/reserva.dart'; // Ensure EstadoReserva is imported
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
-import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Ensure DateFilterType and TurnoType are imported
 import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -25,11 +25,26 @@ class PdfExportService {
     DateTime? fechaPersonalizada,
     TurnoType? turnoFiltrado,
     Agencia? agenciaEspecifica, // Si hay una agencia específica
+    required bool canViewDeuda, // Nuevo parámetro para permisos
   }) async {
+    Uint8List? agenciaLogoBytes;
+    debugPrint('▶ reservasConAgencia: $reservasConAgencia');
+    debugPrint(
+      '▶ filtroFecha: $filtroFecha, fechaPersonalizada: $fechaPersonalizada',
+    );
+    debugPrint('▶ turnoFiltrado: $turnoFiltrado');
+    debugPrint('▶ agenciaEspecifica: $agenciaEspecifica');
     final Configuracion? cfg = await ConfiguracionService.getConfiguracion();
+    debugPrint('▶ cfg: $cfg');
     try {
       final byteData = await rootBundle.load('assets/images/logo.png');
+      debugPrint('▶ logo asset cargado, bytes=${byteData.lengthInBytes}');
+      debugPrint(
+        '▶ agenciaEspecifica.imagenUrl: ${agenciaEspecifica?.imagenUrl}',
+      );
+
       final Uint8List companyLogoBytes = byteData.buffer.asUint8List();
+
       // Solicitar permisos de almacenamiento
       var status = await Permission.manageExternalStorage.request();
       if (!status.isGranted) {
@@ -43,19 +58,15 @@ class PdfExportService {
         }
         return;
       }
-
       // Crear el documento PDF
       final pdf = pw.Document();
-
       // CALCULAR TOTALES SEGÚN LA LÓGICA DE LA TABLA
       int totalPax = 0;
       double totalSaldo = 0.0;
       double totalDeuda = 0.0;
-
       final unpaid = reservasConAgencia
           .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
           .toList();
-
       if (agenciaEspecifica != null) {
         // LÓGICA PARA AGENCIA ESPECÍFICA: solo reservas no pagadas
         totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
@@ -89,7 +100,6 @@ class PdfExportService {
           agenciaLogoBytes = resp.bodyBytes;
         }
       }
-
       // Agregar página al PDF
       pdf.addPage(
         pw.MultiPage(
@@ -112,7 +122,10 @@ class PdfExportService {
               ), // pasamos el buffer
               pw.SizedBox(height: 20),
             ],
-            _buildReservasTable(reservasConAgencia),
+            _buildReservasTable(
+              reservasConAgencia,
+              canViewDeuda,
+            ), // Pasa el permiso
             pw.SizedBox(height: 20),
             _buildTotalesSection(
               totalPax,
@@ -124,10 +137,8 @@ class PdfExportService {
           ],
         ),
       );
-
       // Generar bytes del PDF
       final Uint8List pdfBytes = await pdf.save();
-
       // Guardar archivo en el dispositivo
       await _guardarArchivoPdf(pdfBytes, context, agenciaEspecifica);
     } catch (e) {
@@ -256,7 +267,11 @@ class PdfExportService {
   }
 
   /// Construye la información de la agencia específica
-  pw.Widget _buildAgenciaInfo(Agencia agencia, {Uint8List? logoBytes, Configuracion? config, }) {
+  pw.Widget _buildAgenciaInfo(
+    Agencia agencia, {
+    Uint8List? logoBytes,
+    Configuracion? config,
+  }) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(15),
       decoration: pw.BoxDecoration(
@@ -380,9 +395,7 @@ class PdfExportService {
               ],
             ),
           ),
-
           pw.SizedBox(width: 20),
-
           pw.Expanded(
             flex: 1,
             child: pw.Column(
@@ -391,44 +404,56 @@ class PdfExportService {
               mainAxisAlignment:
                   pw.MainAxisAlignment.start, // contenido al tope
               children: [
-                if (agencia.tipoDocumento != null)
+                if (agencia.tipoDocumento != null &&
+                    agencia.numeroDocumento != null) ...[
                   pw.Text(
                     'Cuenta de cobro',
                     textAlign: pw.TextAlign.left,
-                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey800,
+                    ),
                   ),
-                
-                if (agencia.nombreBeneficiario != null)
+                  if (agencia.nombreBeneficiario != null)
+                    pw.Text(
+                      agencia.nombreBeneficiario!,
+                      textAlign: pw.TextAlign.left,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey800,
+                      ),
+                    ),
                   pw.Text(
-                    '${agencia.nombreBeneficiario}',
+                    '${agencia.tipoDocumento!.name.toUpperCase()} : ${agencia.numeroDocumento!}',
                     textAlign: pw.TextAlign.left,
                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                   ),
-                if (agencia.numeroDocumento != null)
-                  pw.Text(
-                    '${agencia.tipoDocumento!.name.toUpperCase()} : ${agencia.numeroDocumento}',
-                    textAlign: pw.TextAlign.left,
-                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
-                  ),
-                pw.SizedBox(height: 4),
-                if (agencia.tipoDocumento != null)
+                  pw.SizedBox(height: 4),
+                ],
+                if (config != null &&
+                    config.tipoDocumento != null &&
+                    config.numeroDocumento != null) ...[
                   pw.Text(
                     'Debe a',
                     textAlign: pw.TextAlign.left,
-                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey800,
+                    ),
                   ),
-                if (config?.nombreBeneficiario != null)
                   pw.Text(
-                    '${config!.nombreBeneficiario}',
+                    config.nombreBeneficiario ?? '',
                     textAlign: pw.TextAlign.left,
                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                   ),
-                if (config?.numeroDocumento != null)
                   pw.Text(
-                    '${config!.tipoDocumento.name.toUpperCase()} : ${config.numeroDocumento}',
+                    '${config.tipoDocumento!.name.toUpperCase()} : ${config.numeroDocumento!}',
                     textAlign: pw.TextAlign.left,
                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                   ),
+                ],
               ],
             ),
           ),
@@ -444,7 +469,6 @@ class PdfExportService {
     TurnoType? turnoFiltrado,
   ) {
     List<String> filtros = [];
-
     // Filtro de fecha
     if (filtroFecha != null) {
       switch (filtroFecha) {
@@ -478,7 +502,6 @@ class PdfExportService {
     } else {
       filtros.add('Sin filtro de fecha');
     }
-
     // Filtro de turno
     if (turnoFiltrado != null) {
       final turnoTexto = turnoFiltrado == TurnoType.manana ? 'Mañana' : 'Tarde';
@@ -486,7 +509,6 @@ class PdfExportService {
     } else {
       filtros.add('Todos los turnos');
     }
-
     return filtros.join(' • ');
   }
 
@@ -539,38 +561,57 @@ class PdfExportService {
   }
 
   /// Construye la tabla de reservas
-  pw.Widget _buildReservasTable(List<ReservaConAgencia> reservasConAgencia) {
+  pw.Widget _buildReservasTable(
+    List<ReservaConAgencia> reservasConAgencia,
+    bool canViewDeuda,
+  ) {
+    final List<pw.Widget> headerCells = [];
+    final Map<int, pw.TableColumnWidth> columnWidths = {};
+    int columnIndex = 0;
+
+    // Define columns and their widths dynamically
+    headerCells.add(_buildTableHeader('TURNO'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
+
+    headerCells.add(_buildTableHeader('HOTEL'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
+
+    headerCells.add(_buildTableHeader('CLIENTE'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(2.5);
+
+    headerCells.add(_buildTableHeader('FECHA'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
+
+    headerCells.add(_buildTableHeader('PAX'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(1);
+
+    headerCells.add(_buildTableHeader('SALDO'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
+
+    headerCells.add(_buildTableHeader('AGENCIA'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
+
+    if (canViewDeuda) {
+      headerCells.add(_buildTableHeader('DEUDA'));
+      columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
+    }
+
+    headerCells.add(_buildTableHeader('ESTADO'));
+    columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(1.5), // Turno
-        1: const pw.FlexColumnWidth(2), // Hotel
-        2: const pw.FlexColumnWidth(2.5), // Cliente
-        3: const pw.FlexColumnWidth(1.5), // Fecha
-        4: const pw.FlexColumnWidth(1), // Pax
-        5: const pw.FlexColumnWidth(1.5), // Saldo
-        6: const pw.FlexColumnWidth(2), // Agencia
-        7: const pw.FlexColumnWidth(1.5), // Deuda
-        8: const pw.FlexColumnWidth(1.5), // Estado
-      },
+      columnWidths: columnWidths,
       children: [
         // Encabezado de la tabla
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.blue100),
-          children: [
-            _buildTableHeader('TURNO'),
-            _buildTableHeader('HOTEL'),
-            _buildTableHeader('CLIENTE'),
-            _buildTableHeader('FECHA'),
-            _buildTableHeader('PAX'),
-            _buildTableHeader('SALDO'),
-            _buildTableHeader('AGENCIA'),
-            _buildTableHeader('DEUDA'),
-            _buildTableHeader('ESTADO'),
-          ],
+          children: headerCells,
         ),
         // Filas de datos
-        ...reservasConAgencia.map((reserva) => _buildTableRow(reserva)),
+        ...reservasConAgencia.map(
+          (reserva) => _buildTableRow(reserva, canViewDeuda),
+        ), // Pasa el permiso
       ],
     );
   }
@@ -588,30 +629,45 @@ class PdfExportService {
   }
 
   /// Construye una fila de datos de la tabla
-  pw.TableRow _buildTableRow(ReservaConAgencia reserva) {
-    return pw.TableRow(
-      children: [
-        _buildTableCell(_getTurnoText(reserva.reserva.turno)),
-        _buildTableCell(reserva.hotel.isEmpty ? 'Sin hotel' : reserva.hotel),
-        _buildTableCell(reserva.nombreCliente),
-        _buildTableCell(Formatters.formatDate(reserva.fecha)),
-        _buildTableCell('${reserva.pax}', align: pw.TextAlign.center),
-        _buildTableCell(
-          Formatters.formatCurrency(reserva.saldo),
-          align: pw.TextAlign.right,
-        ),
-        _buildTableCell(reserva.nombreAgencia),
+  pw.TableRow _buildTableRow(ReservaConAgencia reserva, bool canViewDeuda) {
+    final List<pw.Widget> dataCells = [];
+
+    dataCells.add(_buildTableCell(_getTurnoText(reserva.reserva.turno)));
+    dataCells.add(
+      _buildTableCell(reserva.hotel.isEmpty ? 'Sin hotel' : reserva.hotel),
+    );
+    dataCells.add(_buildTableCell(reserva.nombreCliente));
+    dataCells.add(_buildTableCell(Formatters.formatDate(reserva.fecha)));
+    dataCells.add(
+      _buildTableCell('${reserva.pax}', align: pw.TextAlign.center),
+    );
+    dataCells.add(
+      _buildTableCell(
+        Formatters.formatCurrency(reserva.saldo),
+        align: pw.TextAlign.right,
+      ),
+    );
+    dataCells.add(_buildTableCell(reserva.nombreAgencia));
+
+    // Conditionally add 'DEUDA' cell
+    if (canViewDeuda) {
+      dataCells.add(
         _buildTableCell(
           Formatters.formatCurrency(reserva.deuda),
           align: pw.TextAlign.right,
           color: reserva.deuda > 0 ? PdfColors.red : PdfColors.green,
         ),
-        _buildTableCell(
-          Formatters.getEstadoText(reserva.estado),
-          color: _getEstadoColor(reserva.estado),
-        ),
-      ],
+      );
+    }
+
+    dataCells.add(
+      _buildTableCell(
+        Formatters.getEstadoText(reserva.estado),
+        color: _getEstadoColor(reserva.estado),
+      ),
     );
+
+    return pw.TableRow(children: dataCells);
   }
 
   /// Construye una celda de datos de tabla
@@ -703,17 +759,14 @@ class PdfExportService {
       if (!directory.existsSync()) {
         directory.createSync(recursive: true);
       }
-
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final agenciaPrefix = agenciaEspecifica != null
           ? '${agenciaEspecifica.nombre.replaceAll(' ', '_')}_'
           : '';
       final fileName = 'reservas_${agenciaPrefix}city_tours_$timestamp.pdf';
       final filePath = '${directory.path}/$fileName';
-
       final file = File(filePath);
       await file.writeAsBytes(pdfBytes);
-
       if (context != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -734,7 +787,6 @@ class PdfExportService {
           ),
         );
       }
-
       debugPrint('✅ PDF guardado exitosamente en: $filePath');
     } catch (e) {
       debugPrint('❌ Error guardando PDF: $e');
@@ -800,14 +852,12 @@ class PdfExportService {
     DateTime? fechaPersonalizada,
     TurnoType? turnoFiltrado,
     Agencia? agenciaEspecifica,
+    required bool canViewDeuda, // Nuevo parámetro para permisos
   }) async {
     // 1) Crear doc
-
-    ///que es esto ia de mrd
     final byteData = await rootBundle.load('assets/images/logo.png');
     final Uint8List companyLogoBytes = byteData.buffer.asUint8List();
     final pdf = pw.Document();
-
     // 2) Calcular totales (idéntico a exportarReservasConAgencia)
     int totalPax = 0;
     double totalSaldo = 0.0;
@@ -839,7 +889,6 @@ class PdfExportService {
         (sum, ra) => sum + ra.reserva.deuda,
       );
     }
-
     // 3) Descargar logo si hay URL
     Uint8List? agenciaLogoBytes;
     if (agenciaEspecifica?.imagenUrl != null) {
@@ -848,7 +897,6 @@ class PdfExportService {
         agenciaLogoBytes = resp.bodyBytes;
       }
     }
-
     // 4) Construir páginas
     pdf.addPage(
       pw.MultiPage(
@@ -867,7 +915,10 @@ class PdfExportService {
             _buildAgenciaInfo(agenciaEspecifica, logoBytes: agenciaLogoBytes),
             pw.SizedBox(height: 20),
           ],
-          _buildReservasTable(reservasConAgencia),
+          _buildReservasTable(
+            reservasConAgencia,
+            canViewDeuda,
+          ), // Pasa el permiso
           pw.SizedBox(height: 20),
           _buildTotalesSection(
             totalPax,
@@ -878,7 +929,6 @@ class PdfExportService {
         ],
       ),
     );
-
     return pdf;
   }
 }

@@ -511,7 +511,6 @@ class _ReservasViewState extends State<ReservasView> {
               ],
             )
           : null,
-    
     );
   }
 
@@ -951,7 +950,7 @@ class _ReservasViewState extends State<ReservasView> {
                     }
 
                     if (!mounted) return;
-
+                    final bool canViewDeuda = authController.hasPermission(Permission.ver_deuda_reservas);
                     final pdfService = PdfExportService();
                     await pdfService.exportarReservasConAgencia(
                       reservasConAgencia:
@@ -961,6 +960,7 @@ class _ReservasViewState extends State<ReservasView> {
                       fechaPersonalizada: reservasController.customDate,
                       turnoFiltrado: reservasController.turnoFilter,
                       agenciaEspecifica: _currentAgencia?.agencia,
+                      canViewDeuda: canViewDeuda,
                     );
                   },
                   icon: Icon(
