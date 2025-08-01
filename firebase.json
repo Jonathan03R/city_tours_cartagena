@@ -1,1 +1,41 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"citytourscartagena","appId":"1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"citytourscartagena","configurations":{"android":"1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8","ios":"1:258997063737:ios:b5a79e2c80316706c2bde8","macos":"1:258997063737:ios:b5a79e2c80316706c2bde8","web":"1:258997063737:web:70cf8632f46b517cc2bde8","windows":"1:258997063737:web:e1090c344a9ab61ac2bde8"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "citytourscartagena",
+          "appId": "1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "citytourscartagena",
+          "configurations": {
+            "android": "1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8",
+            "ios": "1:258997063737:ios:b5a79e2c80316706c2bde8",
+            "macos": "1:258997063737:ios:b5a79e2c80316706c2bde8",
+            "web": "1:258997063737:web:70cf8632f46b517cc2bde8",
+            "windows": "1:258997063737:web:e1090c344a9ab61ac2bde8"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}

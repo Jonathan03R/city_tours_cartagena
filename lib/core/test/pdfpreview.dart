@@ -37,7 +37,7 @@ class PdfPreviewScreen extends StatelessWidget {
             filtroFecha: DateFilterType.today,
             fechaPersonalizada: DateTime.now(),
             turnoFiltrado: null,
-            agenciaEspecifica: testAgencia,
+            agenciaEspecifica: testAgencia, canViewDeuda: true,
           );
           return doc.save();
         },

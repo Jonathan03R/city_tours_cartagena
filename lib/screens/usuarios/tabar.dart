@@ -25,16 +25,16 @@ class UsuariosScreen extends StatelessWidget {
               labelColor: Colors.blue.shade600,
               unselectedLabelColor: Colors.grey.shade500,
               labelStyle: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.bold,
               ),
               unselectedLabelStyle: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w400,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.bold,
               ),
               tabs: [
-                if (showAll) Tab(text: 'Todos los Usuarios'),
-                Tab(text: 'Mi Perfil'),
+                if (showAll) Tab(text: 'TODOS LOS USUARIOS'),
+                Tab(text: 'MI PERFIL'),
               ],
             ),
             Expanded(

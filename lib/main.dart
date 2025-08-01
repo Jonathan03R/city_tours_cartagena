@@ -3,40 +3,112 @@ import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
-import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/core/services/user_service.dart' show UserService;
 import 'package:citytourscartagena/firebase_options.dart';
 import 'package:citytourscartagena/main_dev.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+/// Plugin para mostrar notificaciones locales
+// top-level
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+/// Handler de notificaciones cuando la app está en segundo plano o cerrada
+Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await initializeDateFormatting('es_ES', null);
-  // await ReservasController.initialize();
-  // <-- Aquí imprimes el debug tras inicializar todo
-  // ejecutar una vesta la configuración de Firebase y los controladores
-  // await ConfiguracionService.inicializarConfiguracion();
-  // await _assignDefaultTurno();
+  debugPrint('🔔 Notificación en segundo plano: ${message.notification?.title}');
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Crear canal de notificaciones para Android 8+
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'canal_reservas',
+    'Reservas',
+    description: 'Notificaciones de nuevas reservas',
+    importance: Importance.max,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // Configurar handler de background
+  FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
+
+  // Pedir permisos de notificación (iOS/Android 13+)
+  await FirebaseMessaging.instance.requestPermission();
+
+  // Suscribirse al topic de nuevas reservas
+  await FirebaseMessaging.instance.subscribeToTopic('nuevas-reservas');
+
+  // Mostrar notificaciones cuando la app está en primer plano
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    final notification = message.notification;
+    final android = message.notification?.android;
+
+    if (notification != null && android != null) {
+      flutterLocalNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channel.id,
+            channel.name,
+            channelDescription: channel.description,
+            icon: android.smallIcon,
+          ),
+        ),
+      );
+    }
+  });
+
+  // Obtener y guardar token FCM (opcional si usa topics)
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+  debugPrint('🔑 FCM Token: $fcmToken');
+  if (fcmToken != null) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .update({'fcmToken': fcmToken});
+    }
+  }
+
+  // Imprimir debug info personalizada
   ReservasController.printDebugInfo();
+
+  // Ejecutar app con providers
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthController>(
+        ChangeNotifierProvider(
           create: (_) => AuthController(AuthService(), UserService()),
         ),
-        ChangeNotifierProvider<ConfiguracionController>(
+        ChangeNotifierProvider(
           create: (_) => ConfiguracionController(),
         ),
-        ChangeNotifierProvider<ReservasController>(
+        ChangeNotifierProvider(
           create: (_) => ReservasController(),
         ),
-        ChangeNotifierProvider<AgenciasController>(
+        ChangeNotifierProvider(
           create: (_) => AgenciasController(),
         ),
       ],
@@ -44,20 +116,3 @@ void main() async {
     ),
   );
 }
-
-// /// Recorre todas las reservas y asigna "tarde" si no existía el campo turno.
-// Future<void> _assignDefaultTurno() async {
-//   final db = FirebaseFirestore.instance;
-//   final snapshot = await db.collection('reservas').get();
-//   var updated = 0;
-//   for (final doc in snapshot.docs) {
-//     final data = doc.data();
-//     // Sólo si no tiene campo turno
-//     if (data['turno'] == null) {
-//       // guardamos exactamente el string que espera tu modelo
-//       await doc.reference.update({'turno': TurnoType.tarde.toString().split('.').last});
-//       updated++;
-//     }
-//   }
-//   debugPrint('✅ Turnos por defecto asignados en $updated reservas');
-// }

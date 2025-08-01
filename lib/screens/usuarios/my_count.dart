@@ -108,7 +108,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
                       Text(
                         'Información de Perfil',
                         style: TextStyle(
-                          fontSize: 24.sp, // Tamaño de fuente más grande
+                          fontSize: 18.sp, // Tamaño de fuente más grande
                           fontWeight: FontWeight.w800, // Más negrita
                           color: _nightBlue, // Color azul noche
                         ),
@@ -210,7 +210,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
                               : Icon(Icons.save_alt, size: 22.w),
                           label: Text(
                             _isUpdatingProfile ? 'Guardando...' : 'Guardar Cambios',
-                            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700), // Texto más grande y negrita
+                            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700), // Texto más grande y negrita
                           ),
                         ),
                       ),
@@ -234,7 +234,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
                       Text(
                         'Actualizar Contraseña',
                         style: TextStyle(
-                          fontSize: 24.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w800,
                           color: _nightBlue,
                         ),
@@ -312,7 +312,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
                               : Icon(Icons.vpn_key_outlined, size: 22.w),
                           label: Text(
                             _isUpdatingPassword ? 'Actualizando...' : 'Actualizar Contraseña',
-                            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
+                            style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
@@ -343,14 +343,14 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
       keyboardType: keyboardType,
       readOnly: readOnly, // Aplicar el estado de solo lectura
       style: TextStyle(
-        fontSize: 17.sp, // Tamaño de fuente ligeramente más grande
+        fontSize: 14.sp, // Tamaño de fuente ligeramente más grande
         color: readOnly ? _mediumGreyText : _darkGreyText, // Color de texto diferente si es de solo lectura
         fontWeight: readOnly ? FontWeight.w500 : FontWeight.w600,
       ),
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: _mediumGreyText, fontSize: 16.sp),
+        labelStyle: TextStyle(color: _mediumGreyText, fontSize: 12.sp),
         prefixIcon: Icon(icon, size: 22.w, color: _nightBlue), // Icono azul noche
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r), // Bordes más redondeados
@@ -389,7 +389,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.w600, // Más negrita
                   color: _mediumGreyText, // Gris medio
                 ),
@@ -398,7 +398,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 18.sp, // Tamaño de fuente más grande
+                  fontSize: 10.sp, // Tamaño de fuente más grande
                   fontWeight: FontWeight.w700, // Más negrita
                   color: _darkGreyText, // Gris oscuro
                 ),
