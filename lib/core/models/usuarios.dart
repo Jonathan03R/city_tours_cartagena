@@ -6,6 +6,7 @@ class Usuarios {
   String? nombre;
   String? email; // Opcional
   String? telefono; // Opcional
+  String? agenciaId; // Opcional, si es un usuario de agencia
   List<String> roles;
   bool activo;
 
@@ -15,6 +16,7 @@ class Usuarios {
     this.nombre,
     this.email,
     this.telefono,
+    this.agenciaId,
     List<String>? roles,
     this.activo = true,
   }) : roles = roles ?? [Roles.verReservas];
@@ -29,6 +31,7 @@ class Usuarios {
     nombre = json['nombre'];
     email = json['email'];
     telefono = json['telefono'];
+    agenciaId = json['agencia'];
   }
 
   Map<String, dynamic> toJson() {
@@ -40,6 +43,7 @@ class Usuarios {
     data['telefono'] = telefono;
     data['rol'] = roles;
     data['activo'] = activo;
+    data['agencia'] = agenciaId;
     return data;
   }
 
@@ -48,6 +52,7 @@ class Usuarios {
     String? nombre,
     String? email,
     String? telefono,
+    String? agenciaId,
     List<String>? roles,
     bool? activo,
   }) {
@@ -57,6 +62,7 @@ class Usuarios {
       nombre: nombre ?? this.nombre,
       email: email ?? this.email,
       telefono: telefono ?? this.telefono,
+      agenciaId: agenciaId ?? this.agenciaId,
       roles: roles ?? this.roles,
       activo: activo ?? this.activo,
     );
@@ -68,6 +74,7 @@ class Usuarios {
       nombre = map['nombre'] as String?,
       email = map['email'] as String?,
       telefono = map['telefono'] as String?,
+      agenciaId = map['agencia'] as String?,
       roles =
           (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
           [Roles.verReservas],

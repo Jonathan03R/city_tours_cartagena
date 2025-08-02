@@ -160,6 +160,7 @@ Future<void> logout() async {
     required String name,
     String? email,
     String? phone,
+    String? agenciaId,
     required List<String> roles,
   }) async {
     isLoading = true;
