@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
 import 'package:citytourscartagena/core/services/permission_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../models/usuarios.dart'; // Importa tu modelo Usuarios
@@ -135,6 +136,7 @@ class AuthController extends ChangeNotifier {
 
     debugPrint('[AuthController] Login: User is active. Proceeding.');
     user = cred.user; // asegúrate de actualizarlo manualmente
+    await FirebaseMessaging.instance.subscribeToTopic('pruebas');
     _subscribeToAppUser(overrideUser: user);
 
   } on FirebaseAuthException {
@@ -153,6 +155,9 @@ Future<void> logout() async {
   appUser = null;
   isLoading = false;
   notifyListeners();
+
+
+  await FirebaseMessaging.instance.unsubscribeFromTopic('pruebas');
 }
 
   Future<void> adminCreateUser({

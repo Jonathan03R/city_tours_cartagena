@@ -14,6 +14,7 @@ import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -81,6 +82,15 @@ class _ReservasViewState extends State<ReservasView> {
     _precioController.dispose();
     _precioMananaController.dispose();
     _precioTardeController.dispose();
+    // Guardar timestamp de última visita al salir de la pantalla
+    final authController = context.read<AuthController>();
+    final userId = authController.user?.uid;
+    if (userId != null) {
+      final now = DateTime.now();
+      FirebaseFirestore.instance.collection('usuarios').doc(userId).update({
+        'lastSeenReservas': Timestamp.fromDate(now),
+      });
+    }
     super.dispose();
   }
 
@@ -360,6 +370,9 @@ class _ReservasViewState extends State<ReservasView> {
                   );
                 }
 
+                // Obtener el timestamp de última visita del usuario
+                final authController = context.read<AuthController>();
+                final lastSeen = authController.appUser?.lastSeenReservas;
                 return Column(
                   children: [
                     _isTableView
@@ -376,6 +389,7 @@ class _ReservasViewState extends State<ReservasView> {
                               );
                             },
                             currentFilter: reservasController.selectedFilter,
+                            lastSeenReservas: lastSeen, // <-- PASA EL TIMESTAMP
                           )
                         : ListView.builder(
                             shrinkWrap: true,
@@ -390,87 +404,7 @@ class _ReservasViewState extends State<ReservasView> {
                               );
                             },
                           ),
-                    // Controles de paginación (mantener igual)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            onPressed:
-                                reservasController.canGoPrevious &&
-                                    !reservasController.isFetchingPage
-                                ? reservasController.previousPage
-                                : null,
-                            child:
-                                reservasController.isFetchingPage &&
-                                    reservasController.canGoPrevious
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('Anterior'),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            'Página ${reservasController.currentPage}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          ElevatedButton(
-                            onPressed:
-                                reservasController.canGoNext &&
-                                    !reservasController.isFetchingPage
-                                ? reservasController.nextPage
-                                : null,
-                            child:
-                                reservasController.isFetchingPage &&
-                                    reservasController.canGoNext
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('Siguiente'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('Elementos por página:'),
-                          const SizedBox(width: 8),
-                          DropdownButton<int>(
-                            value: reservasController.itemsPerPage,
-                            items: const [10, 20, 50].map((int value) {
-                              return DropdownMenuItem<int>(
-                                value: value,
-                                child: Text('$value'),
-                              );
-                            }).toList(),
-                            onChanged: (int? newValue) {
-                              if (newValue != null) {
-                                reservasController.setItemsPerPage(newValue);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                    // ...existing code...
                   ],
                 );
               },

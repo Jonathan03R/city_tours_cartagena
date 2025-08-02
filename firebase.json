@@ -39,8 +39,8 @@
   },
   "functions": [
     {
-      "source": "functions",
-      "codebase": "default",
+      "source": "functions-cititours",
+      "codebase": "functions-cititours",
       "ignore": [
         "node_modules",
         ".git",
@@ -56,6 +56,9 @@
   "emulators": {
     "functions": {
       "port": 5001
+    },
+    "firestore": {
+      "port": 8080
     },
     "ui": {
       "enabled": true
