@@ -374,6 +374,7 @@ class _MainScreenState extends State<MainScreen> {
                                           MapEntry(agencyById[e.key]!, e.value),
                                     )
                                     .toList();
+                                filteredAgencies.sort((a, b) => b.value.compareTo(a.value));
                                 return Visibility(
                                   visible:
                                       _currentIndex ==

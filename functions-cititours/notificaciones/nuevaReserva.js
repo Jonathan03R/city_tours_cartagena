@@ -20,7 +20,7 @@ exports.onNuevaReserva = onDocumentCreated("reservas/{reservaId}", async (event)
   console.log("▶️ Nueva reserva detectada:", reservaId, newReserva);
 
   const message = {
-    topic: "pruebas",
+    topic: "nueva_reserva",
     notification: {
       title: `🎉 ¡Nueva reserva!`,
       body: `Cliente: ${nombreCliente} (${pax} pax, ${turno}, ${fechaReserva})`,

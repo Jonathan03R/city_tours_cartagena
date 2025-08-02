@@ -42,14 +42,40 @@ class _ReservasViewState extends State<ReservasView> {
   final TextEditingController _precioMananaController = TextEditingController();
   final TextEditingController _precioTardeController = TextEditingController();
 
+  String? _reservaIdNotificada;
   String? _editingTurno; // 'manana' o 'tarde'
-
+  late AuthController _authController;
   AgenciaConReservas? _currentAgencia;
   StreamSubscription<List<AgenciaConReservas>>? _agenciasSub;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reservaId = ModalRoute.of(context)?.settings.arguments as String?;
+    if (reservaId != null && reservaId != _reservaIdNotificada) {
+      setState(() {
+        _reservaIdNotificada = reservaId;
+      });
+
+      // Cambia el filtro a "todas" si viene desde notificación
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final reservasController = Provider.of<ReservasController>(
+          context,
+          listen: false,
+        );
+        reservasController.updateFilter(
+          DateFilterType.all,
+          agenciaId: widget.agencia?.id,
+          turno: widget.turno,
+        );
+      });
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
+    _authController = Provider.of<AuthController>(context, listen: false);
     _currentAgencia = widget.agencia;
 
     final agenciasCtrl = context.read<AgenciasController>();
@@ -83,8 +109,8 @@ class _ReservasViewState extends State<ReservasView> {
     _precioMananaController.dispose();
     _precioTardeController.dispose();
     // Guardar timestamp de última visita al salir de la pantalla
-    final authController = context.read<AuthController>();
-    final userId = authController.user?.uid;
+    // final authController = context.read<AuthController>();
+    final userId = _authController.user?.uid;
     if (userId != null) {
       final now = DateTime.now();
       FirebaseFirestore.instance.collection('usuarios').doc(userId).update({
@@ -389,7 +415,8 @@ class _ReservasViewState extends State<ReservasView> {
                               );
                             },
                             currentFilter: reservasController.selectedFilter,
-                            lastSeenReservas: lastSeen, // <-- PASA EL TIMESTAMP
+                            lastSeenReservas: lastSeen,
+                            reservaIdNotificada: _reservaIdNotificada,
                           )
                         : ListView.builder(
                             shrinkWrap: true,
@@ -409,7 +436,7 @@ class _ReservasViewState extends State<ReservasView> {
                 );
               },
             ),
-            const SizedBox(height: 100),
+            const SizedBox(height: 300),
           ],
         ),
       ),
@@ -884,7 +911,9 @@ class _ReservasViewState extends State<ReservasView> {
                     }
 
                     if (!mounted) return;
-                    final bool canViewDeuda = authController.hasPermission(Permission.ver_deuda_reservas);
+                    final bool canViewDeuda = authController.hasPermission(
+                      Permission.ver_deuda_reservas,
+                    );
                     final pdfService = PdfExportService();
                     await pdfService.exportarReservasConAgencia(
                       reservasConAgencia:

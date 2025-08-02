@@ -19,6 +19,7 @@ class ReservasTable extends StatefulWidget {
   final TurnoType? turno;
   final String? agenciaId;
   final DateTime? lastSeenReservas; // <-- NUEVO
+  final String? reservaIdNotificada; // <-- NUEVO
   const ReservasTable({
     super.key,
     required this.reservas,
@@ -27,6 +28,7 @@ class ReservasTable extends StatefulWidget {
     required this.turno,
     required this.agenciaId,
     this.lastSeenReservas,
+    this.reservaIdNotificada,
   });
   @override
   State<ReservasTable> createState() => _ReservasTableState();
@@ -447,6 +449,75 @@ class _ReservasTableState extends State<ReservasTable> {
             ],
           ),
         ),
+
+        // --- Botones de paginación ---
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed:
+                    _controller.canGoPrevious && !_controller.isFetchingPage
+                    ? _controller.previousPage
+                    : null,
+                child: _controller.isFetchingPage && _controller.canGoPrevious
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Anterior'),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                'Página ${_controller.currentPage}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: _controller.canGoNext && !_controller.isFetchingPage
+                    ? _controller.nextPage
+                    : null,
+                child: _controller.isFetchingPage && _controller.canGoNext
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Siguiente'),
+              ),
+            ],
+          ),
+        ),
+        // --- Selector de elementos por página ---
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Elementos por página:'),
+              const SizedBox(width: 8),
+              DropdownButton<int>(
+                value: _controller.itemsPerPage,
+                items: const [10, 20, 50]
+                    .map(
+                      (value) => DropdownMenuItem<int>(
+                        value: value,
+                        child: Text('$value'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) _controller.setItemsPerPage(newValue);
+                },
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -467,6 +538,11 @@ class _ReservasTableState extends State<ReservasTable> {
         ? fechaRegistro.isAfter(lastSeen)
         : false;
 
+    // --- Detectar si la reserva es la notificada ---
+    final esNotificada =
+        widget.reservaIdNotificada != null &&
+        widget.reservaIdNotificada == r.id;
+    debugPrint('Resaltando reserva: ${widget.reservaIdNotificada}');
     final List<DataCell> cells = [
       // Celda de selección
       DataCell(
@@ -807,16 +883,19 @@ class _ReservasTableState extends State<ReservasTable> {
     ]);
 
     Color? rowColor;
-      if (isSelected) {
-        rowColor = Colors.blue.shade100;
-      } else if (esNueva) {
-        rowColor = Colors.yellow.shade100; // Color para nuevas reservas
-      }
-    // Aplicar color de fondo si está seleccionada
+    if (isSelected) {
+      rowColor = Colors.blue.shade100;
+    } else if (esNotificada) {
+      rowColor =
+          Colors.orange.shade200; // Color especial para la reserva notificada
+    } else if (esNueva) {
+      rowColor = Colors.yellow.shade100; // Color para nuevas reservas
+    }
+    // Aplicar color de fondo si está seleccionada o notificada
     return DataRow(
-    color: rowColor != null ? WidgetStateProperty.all(rowColor) : null,
-    cells: cells,
-  );
+      color: rowColor != null ? WidgetStateProperty.all(rowColor) : null,
+      cells: cells,
+    );
   }
 
   Widget _buildAgenciaDropdown(ReservaConAgencia reserva) {

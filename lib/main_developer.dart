@@ -87,8 +87,14 @@ Future<void> main() async {
   });
 
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    // Navega a la pantalla de reservas
-    navigatorKey.currentState?.pushNamed('/reservas');
+    final reservaId = message.data['reservaId'];
+    if (reservaId != null) {
+      // Navega a la pantalla de reservas y pasa el ID como argumento
+      debugPrint('Notificación abierta, reservaId: $reservaId');
+      navigatorKey.currentState?.pushNamed('/reservas', arguments: reservaId);
+    } else {
+      navigatorKey.currentState?.pushNamed('/reservas');
+    }
   });
 
   // Obtener y guardar token FCM (opcional si usa topics)
