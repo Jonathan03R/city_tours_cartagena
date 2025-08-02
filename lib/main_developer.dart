@@ -5,7 +5,7 @@ import 'package:citytourscartagena/core/controller/configuracion_controller.dart
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/user_service.dart' show UserService;
-import 'package:citytourscartagena/firebase_options.dart';
+import 'package:citytourscartagena/firebase_options_dev.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -25,7 +25,10 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   debugPrint('🔔 Notificación en segundo plano: ${message.notification?.title}');
+    print('📝 apps en este isolate: ${Firebase.apps.map((a)=>a.name).toList()}');
+
 }
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +37,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+    print('📝 apps en este isolate: ${Firebase.apps.map((a)=>a.name).toList()}');
 
   // Crear canal de notificaciones para Android 8+
   const AndroidNotificationChannel channel = AndroidNotificationChannel(

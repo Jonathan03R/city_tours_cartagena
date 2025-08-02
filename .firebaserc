@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "citytourscartagena"
-  }
+    "default": "citytourscartagena",
+    "dev": "citytourscartagena-dev"
+  },
+  "targets": {},
+  "etags": {}
 }

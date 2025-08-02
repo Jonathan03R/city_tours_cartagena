@@ -12,6 +12,22 @@ android {
     namespace = "com.example.citytourscartagena"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    // Configuración de sabores de producto
+    flavorDimensions += "env"
+    productFlavors {
+        // Flavor de producción
+        create("prod") {
+            dimension = "env"
+            // opcional: packageName igual al defaultConfig
+            // applicationId = "com.example.citytourscartagena"
+        }
+        // Flavor de desarrollo
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix  = "-dev"
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
