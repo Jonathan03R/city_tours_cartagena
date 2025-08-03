@@ -1,6 +1,6 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
-import 'package:citytourscartagena/core/widgets/agencia_selector.dart';           // ← nuevo import
+import 'package:citytourscartagena/core/widgets/agencia_selector.dart'; // ← nuevo import
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -9,15 +9,18 @@ import 'package:provider/provider.dart';
 const Color _nightBlue = Color(0xFF1A237E); // Azul noche profundo
 const Color _lightNightBlue = Color(0xFF3F51B5); // Azul más claro para acentos
 const Color _white = Colors.white;
-const Color _lightGrey = Color(0xFFF5F5F5); // Gris muy claro para fondos de campos
-const Color _darkGreyText = Color(0xFF212121); // Gris oscuro para texto principal
+const Color _lightGrey = Color(
+  0xFFF5F5F5,
+); // Gris muy claro para fondos de campos
+const Color _darkGreyText = Color(
+  0xFF212121,
+); // Gris oscuro para texto principal
 
 class CreateUserScreen extends StatefulWidget {
   const CreateUserScreen({super.key});
 
   @override
   State<CreateUserScreen> createState() => _CreateUserScreenState();
-  
 }
 
 class _CreateUserScreenState extends State<CreateUserScreen> {
@@ -27,10 +30,10 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final List<String> _selectedRoles = [Roles.verReservas];
-  
+  String _accountType = 'empresa'; // 'empresa' o 'agencia'
 
-  String? _selectedAgenciaId;  // ← para guardar la agencia elegida
-  bool _agencyError = false;    // ← para validar selección
+  String? _selectedAgenciaId; // ← para guardar la agencia elegida
+  bool _agencyError = false; // ← para validar selección
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -38,7 +41,9 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
         content: Text(message, style: const TextStyle(color: _white)),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+        ),
         margin: EdgeInsets.all(16.r),
         elevation: 6.h,
       ),
@@ -110,8 +115,9 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                 controller: _nameController,
                 label: 'Nombre Completo',
                 icon: Icons.badge_outlined,
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Ingrese el nombre completo.' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Ingrese el nombre completo.'
+                    : null,
               ),
               SizedBox(height: 20.h),
               _buildTextField(
@@ -136,8 +142,9 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                 keyboardType: TextInputType.phone,
               ),
               SizedBox(height: 30.h),
+              // Selector de tipo de cuenta
               Text(
-                'Roles de Usuario',
+                'Tipo de Cuenta',
                 style: TextStyle(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.w700,
@@ -145,51 +152,106 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                 ),
               ),
               SizedBox(height: 16.h),
-              Wrap(
-                spacing: 10.w,
-                runSpacing: 10.h,
-                children: Roles.allRoles.map((role) {
-                  final isSelected = _selectedRoles.contains(role);
-                  return ChoiceChip(
-                    label: Text(role),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedRoles.add(role);
-                        } else {
-                          _selectedRoles.remove(role);
-                          if (role == Roles.agencia) {
-                            _selectedAgenciaId = null;
-                          }
-                        }
-                      });
-                    },
-                    selectedColor: _lightNightBlue,
-                    backgroundColor: _white,
-                    labelStyle: TextStyle(
-                      color: isSelected ? _white : _darkGreyText,
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w500,
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<String>(
+                      title: const Text('Empresa'),
+                      value: 'empresa',
+                      groupValue: _accountType,
+                      onChanged: (value) {
+                        setState(() {
+                          _accountType = value!;
+                          _selectedRoles.clear();
+                          _selectedRoles.add(Roles.verReservas);
+                          _selectedAgenciaId = null;
+                        });
+                      },
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.r),
-                      side: BorderSide(
-                        color: isSelected ? _lightNightBlue : Colors.grey.shade400,
-                        width: 1.5.w,
-                      ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<String>(
+                      title: const Text('Agencia'),
+                      value: 'agencia',
+                      groupValue: _accountType,
+                      onChanged: (value) {
+                        setState(() {
+                          _accountType = value!;
+                          _selectedRoles.clear();
+                          _selectedRoles.add(Roles.agencia);
+                        });
+                      },
                     ),
-                    elevation: isSelected ? 4.h : 1.h,
-                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
-
-              // ← Aquí insertamos el selector de agencia
-              if (_selectedRoles.contains(Roles.agencia)) ...[
+              SizedBox(height: 16.h),
+              if (_accountType == 'empresa') ...[
+                Text(
+                  'Roles de Usuario',
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _darkGreyText,
+                  ),
+                ),
                 SizedBox(height: 16.h),
-                Text('Agencia *',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                Wrap(
+                  spacing: 10.w,
+                  runSpacing: 10.h,
+                  children: Roles.allRoles
+                      .where((role) => role != Roles.agencia)
+                      .map((role) {
+                        final isSelected = _selectedRoles.contains(role);
+                        return ChoiceChip(
+                          label: Text(role),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedRoles.add(role);
+                              } else {
+                                _selectedRoles.remove(role);
+                              }
+                            });
+                          },
+                          selectedColor: _lightNightBlue,
+                          backgroundColor: _white,
+                          labelStyle: TextStyle(
+                            color: isSelected ? _white : _darkGreyText,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20.r),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? _lightNightBlue
+                                  : Colors.grey.shade400,
+                              width: 1.5.w,
+                            ),
+                          ),
+                          elevation: isSelected ? 4.h : 1.h,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 18.w,
+                            vertical: 10.h,
+                          ),
+                        );
+                      })
+                      .toList(),
+                ),
+              ],
+
+              // Mostrar selector de agencia solo si es tipo agencia
+              if (_accountType == 'agencia') ...[
+                SizedBox(height: 16.h),
+                Text(
+                  'Agencia *',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                  ),
+                ),
                 SizedBox(height: 8.h),
                 AgenciaSelector(
                   selectedAgenciaId: _selectedAgenciaId,
@@ -205,7 +267,10 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                     padding: EdgeInsets.only(top: 4.h, left: 4.w),
                     child: Text(
                       'Debes seleccionar una agencia',
-                      style: TextStyle(color: Colors.red.shade700, fontSize: 12.sp),
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 12.sp,
+                      ),
                     ),
                   ),
                 SizedBox(height: 20.h),
@@ -216,46 +281,59 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                 width: double.infinity,
                 height: 56.h,
                 child: ElevatedButton.icon(
-                  onPressed: authController.isLoading ? null : () async {
-                    if (_formKey.currentState!.validate()) {
-                      // validar agencia si aplica
-                      if (_selectedRoles.contains(Roles.agencia) &&
-                          _selectedAgenciaId == null) {
-                        setState(() => _agencyError = true);
-                        return;
-                      }
-                      if (_selectedRoles.isEmpty) {
-                        _showSnackBar('Seleccione al menos un rol para el usuario.',
-                            isError: true);
-                        return;
-                      }
-                      try {
-                        // Aquí se mantiene la llamada a tu AuthController
-                        await authController.adminCreateUser(
-                          username: _usernameController.text.trim(),
-                          name: _nameController.text.trim(),
-                          email: _emailController.text.trim().isEmpty
-                              ? null
-                              : _emailController.text.trim(),
-                          phone: _phoneController.text.trim().isEmpty
-                              ? null
-                              : _phoneController.text.trim(),
-                          roles: _selectedRoles,
-                          agenciaId: _selectedAgenciaId,
-                        );
-                        _showSnackBar('Usuario creado con éxito.');
-                        Navigator.of(context).pop();
-                      } catch (e) {
-                        final msg =
-                            e.toString().replaceFirst('Exception: ', '');
-                        _showSnackBar('Error: $msg', isError: true);
-                      }
-                    }
-                  },
+                  onPressed: authController.isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            // validar agencia si aplica
+                            if (_formKey.currentState!.validate()) {
+                              if (_selectedRoles.contains(Roles.agencia) &&
+                                  _selectedAgenciaId == null) {
+                                setState(() => _agencyError = true);
+                                return;
+                              }
+                              print(
+                                'Agencia seleccionada: $_selectedAgenciaId',
+                              ); // <-- Depuración
+                              // ... resto del código ...
+                            }
+                            if (_selectedRoles.isEmpty) {
+                              _showSnackBar(
+                                'Seleccione al menos un rol para el usuario.',
+                                isError: true,
+                              );
+                              return;
+                            }
+                            try {
+                              // Aquí se mantiene la llamada a tu AuthController
+                              await authController.adminCreateUser(
+                                username: _usernameController.text.trim(),
+                                name: _nameController.text.trim(),
+                                email: _emailController.text.trim().isEmpty
+                                    ? null
+                                    : _emailController.text.trim(),
+                                phone: _phoneController.text.trim().isEmpty
+                                    ? null
+                                    : _phoneController.text.trim(),
+                                roles: _selectedRoles,
+                                agenciaId: _selectedAgenciaId,
+                              );
+                              _showSnackBar('Usuario creado con éxito.');
+                              Navigator.of(context).pop();
+                            } catch (e) {
+                              final msg = e.toString().replaceFirst(
+                                'Exception: ',
+                                '',
+                              );
+                              _showSnackBar('Error: $msg', isError: true);
+                            }
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _nightBlue,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r)),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
                     elevation: 8.h,
                     shadowColor: _nightBlue.withOpacity(0.4),
                     padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -269,14 +347,18 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                             strokeWidth: 3,
                           ),
                         )
-                      : Icon(Icons.person_add_alt_1_outlined,
-                          size: 24.w, color: _white),
+                      : Icon(
+                          Icons.person_add_alt_1_outlined,
+                          size: 24.w,
+                          color: _white,
+                        ),
                   label: Text(
                     authController.isLoading ? 'Creando...' : 'Crear Usuario',
                     style: TextStyle(
-                        fontSize: 18.sp,
-                        color: _white,
-                        fontWeight: FontWeight.w700),
+                      fontSize: 18.sp,
+                      color: _white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -301,10 +383,8 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle:
-            TextStyle(color: Colors.grey.shade700, fontSize: 16.sp),
-        prefixIcon:
-            Icon(icon, size: 22.w, color: _lightNightBlue),
+        labelStyle: TextStyle(color: Colors.grey.shade700, fontSize: 16.sp),
+        prefixIcon: Icon(icon, size: 22.w, color: _lightNightBlue),
         filled: true,
         fillColor: _lightGrey,
         border: OutlineInputBorder(
@@ -313,26 +393,21 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide:
-              BorderSide(color: Colors.grey.shade300, width: 1.w),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.w),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide:
-              BorderSide(color: _lightNightBlue, width: 2.5.w),
+          borderSide: BorderSide(color: _lightNightBlue, width: 2.5.w),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide:
-              BorderSide(color: Colors.red.shade600, width: 2.w),
+          borderSide: BorderSide(color: Colors.red.shade600, width: 2.w),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide:
-              BorderSide(color: Colors.red.shade800, width: 2.5.w),
+          borderSide: BorderSide(color: Colors.red.shade800, width: 2.5.w),
         ),
-        contentPadding:
-            EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
+        contentPadding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
       ),
     );
   }

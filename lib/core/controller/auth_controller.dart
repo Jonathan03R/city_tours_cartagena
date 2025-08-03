@@ -165,6 +165,7 @@ Future<void> logout() async {
   }) async {
     isLoading = true;
     notifyListeners();
+    print('adminCreateUser: agenciaId recibido = $agenciaId');
     try {
       final String password = username;
       // *** CAMBIO CLAVE: Usar adminSignUp para no afectar la sesión actual ***
@@ -181,6 +182,7 @@ Future<void> logout() async {
         telefono: phone,
         roles: roles,
         activo: true,
+        agenciaId: agenciaId,
       );
       await _userService.saveUserData(uid, newUser);
       debugPrint('Usuario $username creado por admin. UID: $uid');
