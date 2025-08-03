@@ -30,7 +30,8 @@ class ReservasView extends StatefulWidget {
   final TurnoType? turno;
   final AgenciaConReservas? agencia;
   final VoidCallback? onBack;
-  const ReservasView({super.key, this.turno, this.agencia, this.onBack});
+  final bool isAgencyUser;
+  const ReservasView({super.key, this.turno, this.agencia, this.onBack, this.isAgencyUser = false});
 
   @override
   State<ReservasView> createState() => _ReservasViewState();

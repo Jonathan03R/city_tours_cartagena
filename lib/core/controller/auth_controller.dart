@@ -186,10 +186,12 @@ class AuthController extends ChangeNotifier {
     required String name,
     String? email,
     String? phone,
+    String? agenciaId,
     required List<String> roles,
   }) async {
     isLoading = true;
     notifyListeners();
+    print('adminCreateUser: agenciaId recibido = $agenciaId');
     try {
       final String password = username;
       // *** CAMBIO CLAVE: Usar adminSignUp para no afectar la sesión actual ***
@@ -207,6 +209,7 @@ class AuthController extends ChangeNotifier {
         telefono: phone,
         roles: roles,
         activo: true,
+        agenciaId: agenciaId,
       );
       await _userService.saveUserData(uid, newUser);
       debugPrint('Usuario $username creado por admin. UID: $uid');

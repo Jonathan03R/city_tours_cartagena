@@ -6,6 +6,7 @@ class Usuarios {
   String? nombre;
   String? email; // Opcional
   String? telefono; // Opcional
+  String? agenciaId; // Opcional, si es un usuario de agencia
   List<String> roles;
   bool activo;
 
@@ -17,6 +18,7 @@ class Usuarios {
     this.nombre,
     this.email,
     this.telefono,
+    this.agenciaId,
     List<String>? roles,
     this.activo = true,
     this.lastSeenReservas,
@@ -32,6 +34,9 @@ class Usuarios {
     nombre = json['nombre'];
     email = json['email'];
     telefono = json['telefono'];
+
+    agenciaId = json['agencia'];
+
     lastSeenReservas = json['lastSeenReservas'] != null
         ? (json['lastSeenReservas'] is DateTime
             ? json['lastSeenReservas']
@@ -41,6 +46,7 @@ class Usuarios {
                     ? DateTime.fromMillisecondsSinceEpoch(json['lastSeenReservas'])
                     : null)))
         : null;
+
   }
 
   Map<String, dynamic> toJson() {
@@ -52,9 +58,13 @@ class Usuarios {
     data['telefono'] = telefono;
     data['rol'] = roles;
     data['activo'] = activo;
+
+    data['agencia'] = agenciaId;
+
     if (lastSeenReservas != null) {
       data['lastSeenReservas'] = lastSeenReservas!.toIso8601String();
     }
+
     return data;
   }
 
@@ -63,6 +73,7 @@ class Usuarios {
     String? nombre,
     String? email,
     String? telefono,
+    String? agenciaId,
     List<String>? roles,
     bool? activo,
     DateTime? lastSeenReservas,
@@ -73,6 +84,7 @@ class Usuarios {
       nombre: nombre ?? this.nombre,
       email: email ?? this.email,
       telefono: telefono ?? this.telefono,
+      agenciaId: agenciaId ?? this.agenciaId,
       roles: roles ?? this.roles,
       activo: activo ?? this.activo,
       lastSeenReservas: lastSeenReservas ?? this.lastSeenReservas,
@@ -80,6 +92,18 @@ class Usuarios {
   }
 
   Usuarios.fromMap(Map<String, dynamic> map)
+
+    : id = map['id'] as String?,
+      usuario = map['usuario'] as String?,
+      nombre = map['nombre'] as String?,
+      email = map['email'] as String?,
+      telefono = map['telefono'] as String?,
+      agenciaId = map['agencia'] as String?,
+      roles =
+          (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          [Roles.verReservas],
+      activo = map['activo'] == true;
+
       : id = map['id'] as String?,
         usuario = map['usuario'] as String?,
         nombre = map['nombre'] as String?,
@@ -98,4 +122,5 @@ class Usuarios {
                         ? DateTime.fromMillisecondsSinceEpoch(map['lastSeenReservas'])
                         : null)))
             : null;
+
 }
