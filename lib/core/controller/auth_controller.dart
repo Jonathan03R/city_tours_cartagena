@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
 import 'package:citytourscartagena/core/services/permission_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../models/usuarios.dart'; // Importa tu modelo Usuarios
@@ -17,26 +18,31 @@ class AuthController extends ChangeNotifier {
   Usuarios? appUser; // Tipo cambiado de AppUser a Usuarios
   bool isLoading = false;
   StreamSubscription<User?>? _fbAuthSub;
-  StreamSubscription<Usuarios?>? _appUserSub; // Tipo cambiado de AppUser a Usuarios
+  StreamSubscription<Usuarios?>?
+  _appUserSub; // Tipo cambiado de AppUser a Usuarios
   final PermissionService _permissionService = PermissionService();
 
   AuthController(this._authService, this._userService) {
+    user = FirebaseAuth.instance.currentUser;
+    _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) {
+      user = u;
+      notifyListeners();
 
-  user = FirebaseAuth.instance.currentUser;
-  _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) {
-  user = u;
-  notifyListeners();
+      if (user != null) {
+        // SUSCRIBIRSE AL TOPIC SIEMPRE QUE HAYA USUARIO LOGUEADO
+        FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+        debugPrint('[AuthController] Suscrito a topic nueva_reserva');
+        _subscribeToAppUser();
+      } else {
+        // DESUSCRIBIRSE SI EL USUARIO SE DESLOGUEA
+        FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
+        debugPrint('[AuthController] Desuscrito de topic nueva_reserva');
+      }
+    });
 
-  if (user != null) {
-    debugPrint('[AuthController] Login: Llamando a _subscribeToAppUser con user: ${user?.uid}');
-    _subscribeToAppUser(); // <- solo si hay usuario
-
+    // Elimina esta llamada temprana:
+    // _subscribeToAppUser();
   }
-});
-
-  // Elimina esta llamada temprana:
-  // _subscribeToAppUser();
-}
 
   /// Suscribirse a los cambios del usuario en Firestore
   /// lo que quiere decir que cada vez que el usuario
@@ -44,116 +50,136 @@ class AuthController extends ChangeNotifier {
   /// y notifica a los listeners.
 
   void _subscribeToAppUser({User? overrideUser}) {
-  _appUserSub?.cancel();
-  final currentUser = overrideUser ?? user;
+    _appUserSub?.cancel();
+    final currentUser = overrideUser ?? user;
 
-  if (currentUser == null) {
+    if (currentUser == null) {
+      appUser = null;
+      isLoading = false;
+      notifyListeners();
+      debugPrint(
+        '[AuthController] _subscribeToAppUser: NO HAY USUARIO LOGEADO',
+      );
+      return;
+    }
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _appUserSub = _userService
+          .getUserStream(currentUser.uid)
+          .listen(
+            (u) async {
+              debugPrint(
+                '[AuthController] Stream ha recibido un _appUserSub: $u',
+              );
+              if (u != null) {
+                debugPrint(
+                  '[AuthController] Stream appUser.activo: ${u.activo}',
+                );
+              }
+
+              if (u == null) {
+                debugPrint(
+                  '[AuthController] Stream: User profile not found in Firestore, creating new one.',
+                );
+                final correo = user!.email ?? '';
+                final soloUsuario = correo.contains('@')
+                    ? correo.split('@').first
+                    : correo;
+
+                final nuevoUsuario = Usuarios(
+                  id: user!.uid,
+                  usuario: soloUsuario,
+                  nombre: null,
+                  email: correo.isNotEmpty ? correo : null,
+                  telefono: null,
+                  roles: [Roles.verReservas],
+                  activo: true,
+                );
+                await _userService.saveUserData(user!.uid, nuevoUsuario);
+                appUser = nuevoUsuario;
+              } else if (u.activo == false) {
+                debugPrint(
+                  '[AuthController] Stream: User is inactive in stream, signing out.',
+                );
+                await _authService.signOut();
+                user = null;
+                appUser = null;
+                isLoading = false;
+                notifyListeners();
+                return;
+              } else {
+                appUser = u;
+                debugPrint(
+                  '[AuthController] Stream: User is active in stream, setting appUser.',
+                );
+              }
+
+              isLoading = false;
+              notifyListeners();
+            },
+            onError: (e) {
+              debugPrint('[AuthController] Error in userStream: $e');
+              appUser = null;
+              isLoading = false;
+              notifyListeners();
+            },
+          );
+    });
+  }
+
+  Future<void> login(String username, String password) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final cred = await _authService.signIn(username, password);
+      final uid = cred.user!.uid;
+      debugPrint(
+        '[AuthController] Login: Firebase Auth successful for UID: $uid',
+      );
+
+      final userData = await _userService.getUserOnce(uid);
+      debugPrint('[AuthController] Login: Fetched userData once: $userData');
+
+      if (userData == null) {
+        await _authService.signOut();
+        throw FirebaseAuthException(
+          code: 'user-not-registered',
+          message: 'El usuario no está registrado en la base de datos.',
+        );
+      }
+
+      if (userData.activo == false) {
+        await _authService.signOut();
+        throw FirebaseAuthException(
+          code: 'user-inactive',
+          message: 'Tu cuenta ha sido desactivada. Contacta al administrador.',
+        );
+      }
+
+      debugPrint('[AuthController] Login: User is active. Proceeding.');
+      user = cred.user; // asegúrate de actualizarlo manualmente
+      await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+      _subscribeToAppUser(overrideUser: user);
+    } on FirebaseAuthException {
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> logout() async {
+    await _authService.signOut();
+    _fbAuthSub?.cancel();
+    _appUserSub?.cancel();
+    user = null;
     appUser = null;
     isLoading = false;
     notifyListeners();
-    debugPrint('[AuthController] _subscribeToAppUser: NO HAY USUARIO LOGEADO');
-    return;
+
+    await FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
   }
-
-  Future.delayed(const Duration(milliseconds: 300), () {
-    _appUserSub = _userService.getUserStream(currentUser.uid).listen(
-      (u) async {
-        debugPrint('[AuthController] Stream ha recibido un _appUserSub: $u');
-        if (u != null) {
-          debugPrint('[AuthController] Stream appUser.activo: ${u.activo}');
-        }
-
-        if (u == null) {
-          debugPrint('[AuthController] Stream: User profile not found in Firestore, creating new one.');
-          final correo = user!.email ?? '';
-          final soloUsuario = correo.contains('@') ? correo.split('@').first : correo;
-
-          final nuevoUsuario = Usuarios(
-            id: user!.uid,
-            usuario: soloUsuario,
-            nombre: null,
-            email: correo.isNotEmpty ? correo : null,
-            telefono: null,
-            roles: [Roles.verReservas],
-            activo: true,
-          );
-          await _userService.saveUserData(user!.uid, nuevoUsuario);
-          appUser = nuevoUsuario;
-        } else if (u.activo == false) {
-          debugPrint('[AuthController] Stream: User is inactive in stream, signing out.');
-          await _authService.signOut();
-          user = null;
-          appUser = null;
-          isLoading = false;
-          notifyListeners();
-          return;
-        } else {
-          appUser = u;
-          debugPrint('[AuthController] Stream: User is active in stream, setting appUser.');
-        }
-
-        isLoading = false;
-        notifyListeners();
-      },
-      onError: (e) {
-        debugPrint('[AuthController] Error in userStream: $e');
-        appUser = null;
-        isLoading = false;
-        notifyListeners();
-      },
-    );
-  });
-}
-
-  Future<void> login(String username, String password) async {
-  isLoading = true;
-  notifyListeners();
-
-  try {
-    final cred = await _authService.signIn(username, password);
-    final uid = cred.user!.uid;
-    debugPrint('[AuthController] Login: Firebase Auth successful for UID: $uid');
-
-    final userData = await _userService.getUserOnce(uid);
-    debugPrint('[AuthController] Login: Fetched userData once: $userData');
-
-    if (userData == null) {
-      await _authService.signOut();
-      throw FirebaseAuthException(
-        code: 'user-not-registered',
-        message: 'El usuario no está registrado en la base de datos.',
-      );
-    }
-
-    if (userData.activo == false) {
-      await _authService.signOut();
-      throw FirebaseAuthException(
-        code: 'user-inactive',
-        message: 'Tu cuenta ha sido desactivada. Contacta al administrador.',
-      );
-    }
-
-    debugPrint('[AuthController] Login: User is active. Proceeding.');
-    user = cred.user; // asegúrate de actualizarlo manualmente
-    _subscribeToAppUser(overrideUser: user);
-
-  } on FirebaseAuthException {
-    rethrow;
-  } finally {
-    isLoading = false;
-    notifyListeners();
-  }
-}
-
-Future<void> logout() async {
-  await _authService.signOut();
-  _fbAuthSub?.cancel();
-  _appUserSub?.cancel();
-  user = null;
-  appUser = null;
-  isLoading = false;
-  notifyListeners();
-}
 
   Future<void> adminCreateUser({
     required String username,
@@ -174,7 +200,8 @@ Future<void> logout() async {
         password,
       );
       final String uid = userCredential.user!.uid;
-      final Usuarios newUser = Usuarios( // Usando Usuarios
+      final Usuarios newUser = Usuarios(
+        // Usando Usuarios
         id: uid,
         usuario: username,
         nombre: name,
@@ -283,10 +310,14 @@ Future<void> logout() async {
 
   /// Verifica si el usuario actual tiene un permiso específico.
   bool hasPermission(Permission permission) {
-    if (appUser == null) { // Usando appUser
+    if (appUser == null) {
+      // Usando appUser
       return false; // Si no hay usuario logueado, no tiene permisos
     }
-    return _permissionService.hasAnyPermission(appUser!.roles, permission); // Usando appUser
+    return _permissionService.hasAnyPermission(
+      appUser!.roles,
+      permission,
+    ); // Usando appUser
   }
 
   @override
