@@ -67,9 +67,11 @@ class _ReservasViewState extends State<ReservasView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl = Provider.of<ReservasController>(context, listen: false);
+      final authCtrl = Provider.of<AuthController>(context, listen: false);
+      final userAgId = widget.agencia?.id ?? authCtrl.appUser?.agenciaId;
       ctrl.updateFilter(
         DateFilterType.today,
-        agenciaId: widget.agencia?.id,
+        agenciaId: userAgId,
         turno: widget.turno,
       );
     });
@@ -90,11 +92,15 @@ class _ReservasViewState extends State<ReservasView> {
     TurnoType? turno,
   }) {
     final ctrl = Provider.of<ReservasController>(context, listen: false);
+    final authCtrl = Provider.of<AuthController>(context, listen: false);
+    final userAgId = widget.agencia?.id ?? authCtrl.appUser?.agenciaId;
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final agId = widget.agencia?.id ?? auth.appUser?.agenciaId;
     ctrl.updateFilter(
       filter,
       date: date,
-      agenciaId: widget.agencia?.id,
-      turno: turno ?? ctrl.turnoFilter,
+      agenciaId: agId,
+      turno: turno,
     );
   }
 
@@ -180,6 +186,8 @@ class _ReservasViewState extends State<ReservasView> {
     final configuracionController = context.watch<ConfiguracionController>();
     final configuracion = configuracionController.configuracion;
     final authRole = context.read<AuthController>();
+    // Determine agency filter: explicit widget.agencia or logged-in user's agenciaId
+    final userAgId = widget.agencia?.id ?? authRole.appUser?.agenciaId;
 
     return Scaffold(
       appBar: AppBar(
@@ -224,10 +232,12 @@ class _ReservasViewState extends State<ReservasView> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              final authCtrl = context.read<AuthController>();
+              final userAgId = widget.agencia?.id ?? authCtrl.appUser?.agenciaId;
               reservasController.updateFilter(
                 reservasController.selectedFilter,
                 date: reservasController.customDate,
-                agenciaId: widget.agencia?.id,
+                agenciaId: userAgId,
                 turno: reservasController.turnoFilter,
               );
             },
@@ -244,10 +254,11 @@ class _ReservasViewState extends State<ReservasView> {
                 TurnoFilterButtons(
                   selectedTurno: reservasController.turnoFilter,
                   onTurnoChanged: (nuevoTurno) {
+                    final userAgId = widget.agencia?.id ?? authRole.appUser?.agenciaId;
                     reservasController.updateFilter(
                       reservasController.selectedFilter,
                       date: reservasController.customDate,
-                      agenciaId: widget.agencia?.id,
+                      agenciaId: userAgId,
                       turno: nuevoTurno,
                     );
                   },
@@ -256,10 +267,11 @@ class _ReservasViewState extends State<ReservasView> {
                 EstadoFilterButtons(
                   selectedEstado: reservasController.estadoFilter,
                   onEstadoChanged: (nuevoEstado) {
+                    final userAgId = widget.agencia?.id ?? authRole.appUser?.agenciaId;
                     reservasController.updateFilter(
                       reservasController.selectedFilter,
                       date: reservasController.customDate,
-                      agenciaId: widget.agencia?.id,
+                      agenciaId: userAgId,
                       turno: reservasController.turnoFilter,
                       estado: nuevoEstado,
                     );
