@@ -4,7 +4,9 @@ import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
-import 'package:citytourscartagena/core/services/user_service.dart' show UserService;
+import 'package:citytourscartagena/core/services/user_service.dart'
+    show UserService;
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/firebase_options_dev.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,23 +23,23 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 /// Handler de notificaciones cuando la app está en segundo plano o cerrada
 Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint(
+    '🔔 Notificación en segundo plano: ${message.notification?.title}',
   );
-  debugPrint('🔔 Notificación en segundo plano: ${message.notification?.title}');
-    print('📝 apps en este isolate: ${Firebase.apps.map((a)=>a.name).toList()}');
-
+  print(
+    '📝 apps en este isolate: ${Firebase.apps.map((a) => a.name).toList()}',
+  );
 }
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializar Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print(
+    '📝 apps en este isolate: ${Firebase.apps.map((a) => a.name).toList()}',
   );
-    print('📝 apps en este isolate: ${Firebase.apps.map((a)=>a.name).toList()}');
 
   // Crear canal de notificaciones para Android 8+
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -49,7 +51,8 @@ Future<void> main() async {
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(channel);
 
   // Configurar handler de background
@@ -59,7 +62,7 @@ Future<void> main() async {
   await FirebaseMessaging.instance.requestPermission();
 
   // Suscribirse al topic de nuevas reservas
-  await FirebaseMessaging.instance.subscribeToTopic('nuevas-reservas');
+  // await FirebaseMessaging.instance.subscribeToTopic('pruebas');
 
   // Mostrar notificaciones cuando la app está en primer plano
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -73,13 +76,24 @@ Future<void> main() async {
         notification.body,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            channel.id,
-            channel.name,
-            channelDescription: channel.description,
-            icon: android.smallIcon,
+            'canal_reservas',
+            'Reservas',
+            channelDescription: 'Notificaciones de nuevas reservas',
+            icon: android.smallIcon ?? '@mipmap/ic_launcher',
           ),
         ),
       );
+    }
+  });
+
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    final reservaId = message.data['reservaId'];
+    if (reservaId != null) {
+      // Navega a la pantalla de reservas y pasa el ID como argumento
+      debugPrint('Notificación abierta, reservaId: $reservaId');
+      navigatorKey.currentState?.pushNamed('/reservas', arguments: reservaId);
+    } else {
+      navigatorKey.currentState?.pushNamed('/reservas');
     }
   });
 
@@ -89,10 +103,9 @@ Future<void> main() async {
   if (fcmToken != null) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(uid)
-          .update({'fcmToken': fcmToken});
+      await FirebaseFirestore.instance.collection('usuarios').doc(uid).update({
+        'fcmToken': fcmToken,
+      });
     }
   }
 
@@ -106,15 +119,9 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (_) => AuthController(AuthService(), UserService()),
         ),
-        ChangeNotifierProvider(
-          create: (_) => ConfiguracionController(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ReservasController(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => AgenciasController(),
-        ),
+        ChangeNotifierProvider(create: (_) => ConfiguracionController()),
+        ChangeNotifierProvider(create: (_) => ReservasController()),
+        ChangeNotifierProvider(create: (_) => AgenciasController()),
       ],
       child: const MyApp(),
     ),
