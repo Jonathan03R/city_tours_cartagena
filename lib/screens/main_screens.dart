@@ -430,7 +430,7 @@ class _MainScreenState extends State<MainScreen> {
                                                           MainAxisSize.min,
                                                       children: [
                                                         CircleAvatar(
-                                                          radius: 10,
+                                                          radius: 20,
                                                           backgroundImage:
                                                               agencia.imagenUrl !=
                                                                   null
@@ -451,7 +451,7 @@ class _MainScreenState extends State<MainScreen> {
                                                                       .toUpperCase(),
                                                                   style: const TextStyle(
                                                                     fontSize:
-                                                                        10,
+                                                                        14,
                                                                     fontWeight:
                                                                         FontWeight
                                                                             .bold,
@@ -473,7 +473,7 @@ class _MainScreenState extends State<MainScreen> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w600,
-                                                              fontSize: 10,
+                                                              fontSize: 14,
                                                             ),
                                                             overflow:
                                                                 TextOverflow

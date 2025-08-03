@@ -9,6 +9,7 @@ import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
+import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
@@ -469,6 +470,14 @@ class _ReservasViewState extends State<ReservasView> {
                   heroTag: "pro_button",
                 ),
                 const SizedBox(height: 16),
+                FloatingActionButton.extended(
+                  onPressed: _showAddReservaForm,
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.add),
+                  label: const Text('registro manual'),
+                  heroTag: "manual_button",
+                ),
               ],
             )
           : null,
@@ -627,67 +636,28 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  // Future<void> _exportToExcel(List<ReservaConAgencia> reservas) async {
-  //   try {
-  //     var status = await Permission.manageExternalStorage.request();
-  //     if (!status.isGranted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(
-  //           content: Text('Permiso denegado. No se puede guardar el archivo'),
-  //           backgroundColor: Colors.red,
-  //         ),
-  //       );
-  //       return;
-  //     }
-  //     final excel = xls.Excel.createExcel();
-  //     final sheet = excel['Reservas'];
-  //     sheet.appendRow([
-  //       xls.TextCellValue('HOTEL'),
-  //       xls.TextCellValue('CLIENTE'),
-  //       xls.TextCellValue('FECHA'),
-  //       xls.TextCellValue('PAX'),
-  //       xls.TextCellValue('SALDO'),
-  //       xls.TextCellValue('AGENCIA'),
-  //       xls.TextCellValue('OBSERVACIONES'),
-  //       xls.TextCellValue('ESTADO'),
-  //     ]);
-  //     for (var r in reservas) {
-  //       sheet.appendRow([
-  //         xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
-  //         xls.TextCellValue(r.nombreCliente),
-  //         xls.TextCellValue(Formatters.formatDate(r.fecha)),
-  //         xls.IntCellValue(r.pax),
-  //         xls.DoubleCellValue(r.saldo),
-  //         xls.TextCellValue(r.nombreAgencia),
-  //         xls.TextCellValue(
-  //           r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
-  //         ),
-  //         xls.TextCellValue(Formatters.getEstadoText(r.estado)),
-  //       ]);
-  //     }
-  //     final bytes = excel.encode();
-  //     if (bytes == null) return;
-  //     final directory = Directory('/storage/emulated/0/Download');
-  //     if (!directory.existsSync()) {
-  //       directory.createSync(recursive: true);
-  //     }
-  //     final filePath =
-  //         '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-  //     final file = File(filePath);
-  //     await file.writeAsBytes(bytes);
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Archivo guardado en Descargas')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
-  //     }
-  //   }
-  // }
+  void _showAddReservaForm() {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AddReservaForm(
+        agenciaId: widget.agencia!.id, // id de la agencia seleccionada
+        onAdd: () {
+          reservasController.updateFilter(
+            reservasController.selectedFilter,
+            date: reservasController.customDate,
+            agenciaId: widget.agencia?.id,
+            turno: reservasController.turnoFilter,
+          );
+        },
+      ),
+    );
+  }
 
   void _guardarNuevoPrecio(Configuracion? configuracion) async {
     if (widget.agencia != null) {
