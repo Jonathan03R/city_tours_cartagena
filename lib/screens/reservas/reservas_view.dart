@@ -28,7 +28,8 @@ class ReservasView extends StatefulWidget {
   final TurnoType? turno;
   final AgenciaConReservas? agencia;
   final VoidCallback? onBack;
-  const ReservasView({super.key, this.turno, this.agencia, this.onBack});
+  final bool isAgencyUser;
+  const ReservasView({super.key, this.turno, this.agencia, this.onBack, this.isAgencyUser = false});
 
   @override
   State<ReservasView> createState() => _ReservasViewState();
@@ -67,11 +68,9 @@ class _ReservasViewState extends State<ReservasView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl = Provider.of<ReservasController>(context, listen: false);
-      final authCtrl = Provider.of<AuthController>(context, listen: false);
-      final userAgId = widget.agencia?.id ?? authCtrl.appUser?.agenciaId;
       ctrl.updateFilter(
         DateFilterType.today,
-        agenciaId: userAgId,
+        agenciaId: widget.agencia?.id,
         turno: widget.turno,
       );
     });
@@ -92,15 +91,11 @@ class _ReservasViewState extends State<ReservasView> {
     TurnoType? turno,
   }) {
     final ctrl = Provider.of<ReservasController>(context, listen: false);
-    final authCtrl = Provider.of<AuthController>(context, listen: false);
-    final userAgId = widget.agencia?.id ?? authCtrl.appUser?.agenciaId;
-    final auth = Provider.of<AuthController>(context, listen: false);
-    final agId = widget.agencia?.id ?? auth.appUser?.agenciaId;
     ctrl.updateFilter(
       filter,
       date: date,
-      agenciaId: agId,
-      turno: turno,
+      agenciaId: widget.agencia?.id,
+      turno: turno ?? ctrl.turnoFilter,
     );
   }
 
@@ -186,8 +181,6 @@ class _ReservasViewState extends State<ReservasView> {
     final configuracionController = context.watch<ConfiguracionController>();
     final configuracion = configuracionController.configuracion;
     final authRole = context.read<AuthController>();
-    // Determine agency filter: explicit widget.agencia or logged-in user's agenciaId
-    final userAgId = widget.agencia?.id ?? authRole.appUser?.agenciaId;
 
     return Scaffold(
       appBar: AppBar(
@@ -232,12 +225,10 @@ class _ReservasViewState extends State<ReservasView> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              final authCtrl = context.read<AuthController>();
-              final userAgId = widget.agencia?.id ?? authCtrl.appUser?.agenciaId;
               reservasController.updateFilter(
                 reservasController.selectedFilter,
                 date: reservasController.customDate,
-                agenciaId: userAgId,
+                agenciaId: widget.agencia?.id,
                 turno: reservasController.turnoFilter,
               );
             },
@@ -254,11 +245,10 @@ class _ReservasViewState extends State<ReservasView> {
                 TurnoFilterButtons(
                   selectedTurno: reservasController.turnoFilter,
                   onTurnoChanged: (nuevoTurno) {
-                    final userAgId = widget.agencia?.id ?? authRole.appUser?.agenciaId;
                     reservasController.updateFilter(
                       reservasController.selectedFilter,
                       date: reservasController.customDate,
-                      agenciaId: userAgId,
+                      agenciaId: widget.agencia?.id,
                       turno: nuevoTurno,
                     );
                   },
@@ -267,11 +257,10 @@ class _ReservasViewState extends State<ReservasView> {
                 EstadoFilterButtons(
                   selectedEstado: reservasController.estadoFilter,
                   onEstadoChanged: (nuevoEstado) {
-                    final userAgId = widget.agencia?.id ?? authRole.appUser?.agenciaId;
                     reservasController.updateFilter(
                       reservasController.selectedFilter,
                       date: reservasController.customDate,
-                      agenciaId: userAgId,
+                      agenciaId: widget.agencia?.id,
                       turno: reservasController.turnoFilter,
                       estado: nuevoEstado,
                     );

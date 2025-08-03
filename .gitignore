@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+macos/
+node_modules/
+functions-cititours/node_modules/
 # IntelliJ related
 *.iml
 *.ipr
