@@ -31,7 +31,13 @@ class ReservasView extends StatefulWidget {
   final AgenciaConReservas? agencia;
   final VoidCallback? onBack;
   final bool isAgencyUser;
-  const ReservasView({super.key, this.turno, this.agencia, this.onBack, this.isAgencyUser = false});
+  const ReservasView({
+    super.key,
+    this.turno,
+    this.agencia,
+    this.onBack,
+    this.isAgencyUser = false,
+  });
 
   @override
   State<ReservasView> createState() => _ReservasViewState();
@@ -458,33 +464,34 @@ class _ReservasViewState extends State<ReservasView> {
       //         ],
       //       )
       //     : null,
-      floatingActionButton: authRole.hasPermission(Permission.crear_reserva)
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton.extended(
-                  onPressed: _showAddReservaProForm,
-                  backgroundColor: Colors.purple.shade600,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('registro rapido'),
-                  heroTag: "pro_button",
-                ),
-                const SizedBox(height: 16),
-                FloatingActionButton.extended(
-                  onPressed: _showAddReservaForm,
-                  backgroundColor: Colors.green.shade600,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text('registro manual'),
-                  heroTag: "manual_button",
-                ),
-              ],
-            )
-          : null,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          if (authRole.hasPermission(Permission.crear_reserva))
+            FloatingActionButton.extended(
+              onPressed: _showAddReservaProForm,
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('registro rapido'),
+              heroTag: "pro_button",
+            ),
+          const SizedBox(height: 16),
+          if (authRole.hasPermission(Permission.crear_agencias_agencias))
+            FloatingActionButton.extended(
+              onPressed: _showAddReservaForm,
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('registro manual'),
+              heroTag: "manual_button",
+            ),
+        ],
+      ),
     );
   }
 
+  /// Esto es para construir los controles de la parte derecha del header
   Widget _buildAgencyHeader(AgenciaConReservas agencia) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -637,6 +644,8 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
+  /// Método para mostrar el formulario de agregar reserva manual
+  /// Este formulario permite agregar reservas de forma manual, sin usar el registro rápido
   void _showAddReservaForm() {
     final reservasController = Provider.of<ReservasController>(
       context,

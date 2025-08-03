@@ -92,35 +92,22 @@ class Usuarios {
   }
 
   Usuarios.fromMap(Map<String, dynamic> map)
-
     : id = map['id'] as String?,
       usuario = map['usuario'] as String?,
       nombre = map['nombre'] as String?,
       email = map['email'] as String?,
       telefono = map['telefono'] as String?,
       agenciaId = map['agencia'] as String?,
-      roles =
-          (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-          [Roles.verReservas],
-      activo = map['activo'] == true;
-
-      : id = map['id'] as String?,
-        usuario = map['usuario'] as String?,
-        nombre = map['nombre'] as String?,
-        email = map['email'] as String?,
-        telefono = map['telefono'] as String?,
-        roles =
-            (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-            [Roles.verReservas],
-        activo = map['activo'] == true,
-        lastSeenReservas = map['lastSeenReservas'] != null
-            ? (map['lastSeenReservas'] is DateTime
-                ? map['lastSeenReservas']
-                : (map['lastSeenReservas'] is String
-                    ? DateTime.tryParse(map['lastSeenReservas'])
-                    : (map['lastSeenReservas'] is int
-                        ? DateTime.fromMillisecondsSinceEpoch(map['lastSeenReservas'])
-                        : null)))
-            : null;
+      roles = (map['rol'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [Roles.verReservas],
+      activo = map['activo'] == true,
+      lastSeenReservas = map['lastSeenReservas'] != null
+          ? (map['lastSeenReservas'] is DateTime
+              ? map['lastSeenReservas']
+              : (map['lastSeenReservas'] is String
+                  ? DateTime.tryParse(map['lastSeenReservas'])
+                  : (map['lastSeenReservas'] is int
+                      ? DateTime.fromMillisecondsSinceEpoch(map['lastSeenReservas'])
+                      : null)))
+          : null;
 
 }
