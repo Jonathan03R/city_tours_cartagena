@@ -107,6 +107,9 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                   if (value.contains('@') || value.contains(' ')) {
                     return 'El usuario no debe contener "@" ni espacios.';
                   }
+                  if (value.length < 6) {
+                    return 'El usuario debe tener al menos 6 caracteres.';
+                  }
                   return null;
                 },
               ),
@@ -296,6 +299,11 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                                 'Agencia seleccionada: $_selectedAgenciaId',
                               ); // <-- Depuración
                               // ... resto del código ...
+                            } else {
+                              _showSnackBar(
+                                'Se necesitan mínimo 6 caracteres para crear al usuario.',
+                                isError: true,
+                              );
                             }
                             if (_selectedRoles.isEmpty) {
                               _showSnackBar(
