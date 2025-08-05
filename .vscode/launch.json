@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "citytourscartagena (dev)",
+            "type": "dart",
+            "request": "launch",
+            "program": "lib/main_developer.dart",
+            "args": ["--flavor", "dev"]
+        },
+        {
+            "name": "citytourscartagena (prod)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": ["--flavor", "prod"]
+        },
+        {
             "name": "citytourscartagena",
             "request": "launch",
             "type": "dart"

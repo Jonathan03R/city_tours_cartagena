@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "258997063737",
+    "project_id": "citytourscartagena",
+    "storage_bucket": "citytourscartagena.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8",
+        "android_client_info": {
+          "package_name": "com.example.citytourscartagena"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCu8OYk8ONP8SwMTxccdyBWxLRk1twTUbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

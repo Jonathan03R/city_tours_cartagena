@@ -11,6 +11,7 @@ class Reserva {
   final double saldo; //ES lo que la empresa a dadato de lo que debe
   final String observacion;
   final DateTime fecha; // es la fecha de la reserva
+  final DateTime? fechaRegistro;
   final String agenciaId; // es el id de la agencia que hizo la reserva
   final EstadoReserva estado; // es el estado de la reserva (pendiente, confirmada, cancelada)
   final double costoAsiento; // es el costo por asiento de la reserva
@@ -27,6 +28,7 @@ class Reserva {
     required this.saldo,
     required this.observacion,
     required this.fecha,
+    this.fechaRegistro,
     required this.agenciaId,
     required this.estado,
     required this.costoAsiento,
@@ -46,6 +48,9 @@ class Reserva {
       saldo: (data['saldo'] as num?)?.toDouble() ?? 0.0,
       observacion: data['observacion'] as String? ?? '',
       fecha: (data['fechaReserva'] as Timestamp).toDate(),
+      fechaRegistro: data['fechaRegistro'] != null
+          ? (data['fechaRegistro'] as Timestamp).toDate()
+          : null,
       agenciaId: data['agenciaId'] as String? ?? '',
       estado: _mapEstado(data['estado'] as String? ?? 'pendiente'),
       costoAsiento: (data['costoAsiento'] as num?)?.toDouble() ?? 0.0,

@@ -10,6 +10,11 @@ class PermissionService {
     //   // Un colaborador puede editar, ver deuda, contactar, etc., pero no eliminar ni cambiar agencia
     // ],
     Roles.agencia: [
+      Permission.ver_reservas,
+      Permission.contact_whatsapp,
+      Permission.ver_pagina_usuarios,
+      // Permission.crear_reserva,
+      Permission.crear_agencias_agencias,
       // Permission.manage_observations,
       // Permission.select_reservas,
       // Una agencia solo puede contactar, ver observaciones y seleccionar

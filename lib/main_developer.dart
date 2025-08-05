@@ -7,7 +7,7 @@ import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/user_service.dart'
     show UserService;
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
-import 'package:citytourscartagena/firebase_options.dart';
+import 'package:citytourscartagena/firebase_options_dev.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
