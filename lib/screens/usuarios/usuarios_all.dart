@@ -144,17 +144,15 @@ class TodosUsuariosTab extends StatelessWidget {
 class UserCard extends StatelessWidget {
   final Usuarios usuario;
   final AuthController authController;
+
   const UserCard({
     super.key,
     required this.usuario,
     required this.authController,
   });
 
-  void _showSnackBar(
-    BuildContext context,
-    String message, {
-    bool isError = false,
-  }) {
+  void _showSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -170,91 +168,78 @@ class UserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Aunque el filtrado ya se hizo, esta lógica sigue siendo útil si la tarjeta se usa en otro contexto
-    final currentUserId = authController.appUser?.id;
-    final isCurrentUser = usuario.id == currentUserId;
+    final isCurrentUser = usuario.id == authController.appUser?.id;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(12.r),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => UserDetailScreen(usuario: usuario)),
-        );
-      },
-      child: Card(
-        margin: EdgeInsets.only(bottom: 12.h),
-        elevation: 2.h,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
+    return Card(
+      elevation: 1.5,
+      margin: EdgeInsets.only(bottom: 12.h),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.r),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => UserDetailScreen(usuario: usuario),
+            ),
+          );
+        },
         child: Padding(
-          padding: EdgeInsets.all(16.r),
+          padding: EdgeInsets.all(14.r),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 28.r,
-                backgroundColor: Colors.blue.shade50,
-                child: Icon(
-                  Icons.person_outline,
-                  size: 28.w,
-                  color: Colors.blue.shade600,
-                ),
-              ),
-              SizedBox(width: 16.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      usuario.usuario ?? 'N/A',
+                      usuario.usuario ?? 'Usuario',
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey.shade800,
                       ),
-                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 2.h),
                     Text(
-                      usuario.email ?? 'N/A',
+                      usuario.email ?? 'Email',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 10.sp,
                         color: Colors.grey.shade600,
                       ),
-                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                     SizedBox(height: 8.h),
                     Wrap(
                       spacing: 6.w,
                       runSpacing: 4.h,
                       children: usuario.roles
-                          .map(
-                            (rol) => Chip(
-                              label: Text(
-                                rol,
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: Colors.white,
+                          .map((rol) => Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w,
+                                  vertical: 2.h,
                                 ),
-                              ),
-                              backgroundColor: Colors.blue.shade400,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 8.w,
-                                vertical: 4.h,
-                              ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          )
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(6.r),
+                                ),
+                                child: Text(
+                                  rol,
+                                  style: TextStyle(
+                                    fontSize: 9.sp,
+                                    color: Colors.blue.shade600,
+                                  ),
+                                ),
+                              ))
                           .toList(),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: 10.w),
-              // Indicador de estado activo/inactivo
               Column(
                 children: [
                   Icon(
@@ -264,12 +249,13 @@ class UserCard extends StatelessWidget {
                     color: usuario.activo
                         ? Colors.green.shade400
                         : Colors.red.shade400,
-                    size: 24.w,
+                    size: 20.w,
                   ),
+                  SizedBox(height: 2.h),
                   Text(
                     usuario.activo ? 'Activo' : 'Inactivo',
                     style: TextStyle(
-                      fontSize: 10.sp,
+                      fontSize: 9.sp,
                       color: usuario.activo
                           ? Colors.green.shade400
                           : Colors.red.shade400,
@@ -277,16 +263,10 @@ class UserCard extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(width: 10.w),
-              // Botón de opciones (activar/desactivar)
-              // Solo muestra el botón si NO es el usuario actualmente logeado
-              if (!isCurrentUser)
+              if (!isCurrentUser) ...[
+                SizedBox(width: 10.w),
                 PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: Colors.grey.shade600,
-                    size: 24.w,
-                  ),
+                  icon: Icon(Icons.more_vert, size: 20.w),
                   onSelected: (value) async {
                     if (value == 'toggle_status') {
                       try {
@@ -294,42 +274,44 @@ class UserCard extends StatelessWidget {
                           usuario.id!,
                           !usuario.activo,
                         );
-                        if (!context.mounted)
-                          return; // <- evita usar context si ya se desmontó
-                        _showSnackBar(context, 'Usuario … con éxito.');
+                        if (!context.mounted) return;
+                        _showSnackBar(
+                          context,
+                          'Estado actualizado con éxito.',
+                        );
                       } catch (e) {
                         if (!context.mounted) return;
-                        _showSnackBar(context, 'Error: ${e}', isError: true);
+                        _showSnackBar(context, 'Error: $e', isError: true);
                       }
                     }
                   },
-                  itemBuilder: (BuildContext context) {
-                    return [
-                      PopupMenuItem<String>(
-                        value: 'toggle_status',
-                        child: Row(
-                          children: [
-                            Icon(
-                              usuario.activo
-                                  ? Icons.block
-                                  : Icons.check_circle_outline,
-                              color: usuario.activo
-                                  ? Colors.red.shade400
-                                  : Colors.green.shade400,
-                              size: 20.w,
-                            ),
-                            SizedBox(width: 8.w),
-                            Text(
-                              usuario.activo
-                                  ? 'Desactivar Usuario'
-                                  : 'Activar Usuario',
-                            ),
-                          ],
-                        ),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'toggle_status',
+                      child: Row(
+                        children: [
+                          Icon(
+                            usuario.activo
+                                ? Icons.block
+                                : Icons.check_circle_outline,
+                            color: usuario.activo
+                                ? Colors.red.shade400
+                                : Colors.green.shade400,
+                            size: 18.w,
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            usuario.activo
+                                ? 'Desactivar'
+                                : 'Activar',
+                            style: TextStyle(fontSize: 11.sp),
+                          ),
+                        ],
                       ),
-                    ];
-                  },
+                    ),
+                  ],
                 ),
+              ],
             ],
           ),
         ),

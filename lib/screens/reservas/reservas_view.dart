@@ -9,11 +9,13 @@ import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
+import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,7 +30,14 @@ class ReservasView extends StatefulWidget {
   final TurnoType? turno;
   final AgenciaConReservas? agencia;
   final VoidCallback? onBack;
-  const ReservasView({super.key, this.turno, this.agencia, this.onBack});
+  final bool isAgencyUser;
+  const ReservasView({
+    super.key,
+    this.turno,
+    this.agencia,
+    this.onBack,
+    this.isAgencyUser = false,
+  });
 
   @override
   State<ReservasView> createState() => _ReservasViewState();
@@ -41,14 +50,40 @@ class _ReservasViewState extends State<ReservasView> {
   final TextEditingController _precioMananaController = TextEditingController();
   final TextEditingController _precioTardeController = TextEditingController();
 
+  String? _reservaIdNotificada;
   String? _editingTurno; // 'manana' o 'tarde'
-
+  late AuthController _authController;
   AgenciaConReservas? _currentAgencia;
   StreamSubscription<List<AgenciaConReservas>>? _agenciasSub;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reservaId = ModalRoute.of(context)?.settings.arguments as String?;
+    if (reservaId != null && reservaId != _reservaIdNotificada) {
+      setState(() {
+        _reservaIdNotificada = reservaId;
+      });
+
+      // Cambia el filtro a "todas" si viene desde notificación
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final reservasController = Provider.of<ReservasController>(
+          context,
+          listen: false,
+        );
+        reservasController.updateFilter(
+          DateFilterType.all,
+          agenciaId: widget.agencia?.id,
+          turno: widget.turno,
+        );
+      });
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
+    _authController = Provider.of<AuthController>(context, listen: false);
     _currentAgencia = widget.agencia;
 
     final agenciasCtrl = context.read<AgenciasController>();
@@ -81,6 +116,15 @@ class _ReservasViewState extends State<ReservasView> {
     _precioController.dispose();
     _precioMananaController.dispose();
     _precioTardeController.dispose();
+    // Guardar timestamp de última visita al salir de la pantalla
+    // final authController = context.read<AuthController>();
+    final userId = _authController.user?.uid;
+    if (userId != null) {
+      final now = DateTime.now();
+      FirebaseFirestore.instance.collection('usuarios').doc(userId).update({
+        'lastSeenReservas': Timestamp.fromDate(now),
+      });
+    }
     super.dispose();
   }
 
@@ -360,6 +404,9 @@ class _ReservasViewState extends State<ReservasView> {
                   );
                 }
 
+                // Obtener el timestamp de última visita del usuario
+                final authController = context.read<AuthController>();
+                final lastSeen = authController.appUser?.lastSeenReservas;
                 return Column(
                   children: [
                     _isTableView
@@ -376,6 +423,8 @@ class _ReservasViewState extends State<ReservasView> {
                               );
                             },
                             currentFilter: reservasController.selectedFilter,
+                            lastSeenReservas: lastSeen,
+                            reservaIdNotificada: _reservaIdNotificada,
                           )
                         : ListView.builder(
                             shrinkWrap: true,
@@ -390,92 +439,12 @@ class _ReservasViewState extends State<ReservasView> {
                               );
                             },
                           ),
-                    // Controles de paginación (mantener igual)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            onPressed:
-                                reservasController.canGoPrevious &&
-                                    !reservasController.isFetchingPage
-                                ? reservasController.previousPage
-                                : null,
-                            child:
-                                reservasController.isFetchingPage &&
-                                    reservasController.canGoPrevious
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('Anterior'),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            'Página ${reservasController.currentPage}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          ElevatedButton(
-                            onPressed:
-                                reservasController.canGoNext &&
-                                    !reservasController.isFetchingPage
-                                ? reservasController.nextPage
-                                : null,
-                            child:
-                                reservasController.isFetchingPage &&
-                                    reservasController.canGoNext
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('Siguiente'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('Elementos por página:'),
-                          const SizedBox(width: 8),
-                          DropdownButton<int>(
-                            value: reservasController.itemsPerPage,
-                            items: const [10, 20, 50].map((int value) {
-                              return DropdownMenuItem<int>(
-                                value: value,
-                                child: Text('$value'),
-                              );
-                            }).toList(),
-                            onChanged: (int? newValue) {
-                              if (newValue != null) {
-                                reservasController.setItemsPerPage(newValue);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                    // ...existing code...
                   ],
                 );
               },
             ),
-            const SizedBox(height: 100),
+            const SizedBox(height: 300),
           ],
         ),
       ),
@@ -495,26 +464,34 @@ class _ReservasViewState extends State<ReservasView> {
       //         ],
       //       )
       //     : null,
-      floatingActionButton: authRole.hasPermission(Permission.crear_reserva)
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton.extended(
-                  onPressed: _showAddReservaProForm,
-                  backgroundColor: Colors.purple.shade600,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('registro rapido'),
-                  heroTag: "pro_button",
-                ),
-                const SizedBox(height: 16),
-              ],
-            )
-          : null,
-    
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          if (authRole.hasPermission(Permission.crear_reserva))
+            FloatingActionButton.extended(
+              onPressed: _showAddReservaProForm,
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('registro rapido'),
+              heroTag: "pro_button",
+            ),
+          const SizedBox(height: 16),
+          if (authRole.hasPermission(Permission.crear_agencias_agencias))
+            FloatingActionButton.extended(
+              onPressed: _showAddReservaForm,
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('registro manual'),
+              heroTag: "manual_button",
+            ),
+        ],
+      ),
     );
   }
 
+  /// Esto es para construir los controles de la parte derecha del header
   Widget _buildAgencyHeader(AgenciaConReservas agencia) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -667,67 +644,30 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  // Future<void> _exportToExcel(List<ReservaConAgencia> reservas) async {
-  //   try {
-  //     var status = await Permission.manageExternalStorage.request();
-  //     if (!status.isGranted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(
-  //           content: Text('Permiso denegado. No se puede guardar el archivo'),
-  //           backgroundColor: Colors.red,
-  //         ),
-  //       );
-  //       return;
-  //     }
-  //     final excel = xls.Excel.createExcel();
-  //     final sheet = excel['Reservas'];
-  //     sheet.appendRow([
-  //       xls.TextCellValue('HOTEL'),
-  //       xls.TextCellValue('CLIENTE'),
-  //       xls.TextCellValue('FECHA'),
-  //       xls.TextCellValue('PAX'),
-  //       xls.TextCellValue('SALDO'),
-  //       xls.TextCellValue('AGENCIA'),
-  //       xls.TextCellValue('OBSERVACIONES'),
-  //       xls.TextCellValue('ESTADO'),
-  //     ]);
-  //     for (var r in reservas) {
-  //       sheet.appendRow([
-  //         xls.TextCellValue(r.hotel.isEmpty ? 'Sin hotel' : r.hotel),
-  //         xls.TextCellValue(r.nombreCliente),
-  //         xls.TextCellValue(Formatters.formatDate(r.fecha)),
-  //         xls.IntCellValue(r.pax),
-  //         xls.DoubleCellValue(r.saldo),
-  //         xls.TextCellValue(r.nombreAgencia),
-  //         xls.TextCellValue(
-  //           r.observacion.isEmpty ? 'Sin observaciones' : r.observacion,
-  //         ),
-  //         xls.TextCellValue(Formatters.getEstadoText(r.estado)),
-  //       ]);
-  //     }
-  //     final bytes = excel.encode();
-  //     if (bytes == null) return;
-  //     final directory = Directory('/storage/emulated/0/Download');
-  //     if (!directory.existsSync()) {
-  //       directory.createSync(recursive: true);
-  //     }
-  //     final filePath =
-  //         '${directory.path}/reservas_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-  //     final file = File(filePath);
-  //     await file.writeAsBytes(bytes);
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Archivo guardado en Descargas')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text('Error exportando: $e')));
-  //     }
-  //   }
-  // }
+  /// Método para mostrar el formulario de agregar reserva manual
+  /// Este formulario permite agregar reservas de forma manual, sin usar el registro rápido
+  void _showAddReservaForm() {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AddReservaForm(
+        agenciaId: widget.agencia!.id, // id de la agencia seleccionada
+        onAdd: () {
+          reservasController.updateFilter(
+            reservasController.selectedFilter,
+            date: reservasController.customDate,
+            agenciaId: widget.agencia?.id,
+            turno: reservasController.turnoFilter,
+          );
+        },
+      ),
+    );
+  }
 
   void _guardarNuevoPrecio(Configuracion? configuracion) async {
     if (widget.agencia != null) {
@@ -951,7 +891,9 @@ class _ReservasViewState extends State<ReservasView> {
                     }
 
                     if (!mounted) return;
-
+                    final bool canViewDeuda = authController.hasPermission(
+                      Permission.ver_deuda_reservas,
+                    );
                     final pdfService = PdfExportService();
                     await pdfService.exportarReservasConAgencia(
                       reservasConAgencia:
@@ -961,6 +903,7 @@ class _ReservasViewState extends State<ReservasView> {
                       fechaPersonalizada: reservasController.customDate,
                       turnoFiltrado: reservasController.turnoFilter,
                       agenciaEspecifica: _currentAgencia?.agencia,
+                      canViewDeuda: canViewDeuda,
                     );
                   },
                   icon: Icon(

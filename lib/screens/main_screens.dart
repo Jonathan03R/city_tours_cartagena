@@ -89,6 +89,9 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // Obtener el AuthController para verificar los roles
     final authController = context.watch<AuthController>();
+    final agenciasController = context.watch<AgenciasController>();
+    final appUser = authController.appUser;
+
     final canViewReservas = authController.hasPermission(
       Permission.ver_reservas,
     );
@@ -101,24 +104,35 @@ class _MainScreenState extends State<MainScreen> {
 
     final authRole = context.read<AuthController>();
 
+    final isAgencyUser = appUser != null &&
+        appUser.agenciaId != null &&
+        appUser.roles.contains('agencia');
+    final agencia = isAgencyUser
+        ? agenciasController.agencias.firstWhereOrNull((a) => a.agencia.id == appUser.agenciaId)
+        : null;
     // Definir las páginas según permisos
     final pages = <Widget>[
       if (canViewReservas)
         (_currentIndex == 0
-            ? (_turnoSeleccionado == null
-                  ? TurnoSelectorWidget(
-                      onTurnoSelected: (turno) => setState(() {
-                        _turnoSeleccionado = turno;
-                      }),
-                    )
-                  : ReservasView(
-                      turno: _turnoSeleccionado,
-                      onBack: () => setState(() {
-                        _turnoSeleccionado = null;
-                      }),
-                    ))
+            ? (isAgencyUser
+                ? ReservasView(agencia: agencia, isAgencyUser: true)
+                : (_turnoSeleccionado == null
+                    ? TurnoSelectorWidget(
+                        onTurnoSelected: (turno) => setState(() {
+                          _turnoSeleccionado = turno;
+                        }),
+                      )
+                    : ReservasView(
+                        turno: _turnoSeleccionado,
+                        onBack: () => setState(() {
+                          _turnoSeleccionado = null;
+                        }),
+                      )))
             : const SizedBox.shrink()),
-      if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
+      if (canViewAgencias)
+        AgenciasView(
+          searchTerm: _searchTerm,
+        ),
       if (canViewUsuarios) const UsuariosScreen(),
     ];
     // Definir los ítems del bottom bar según permisos
@@ -374,6 +388,7 @@ class _MainScreenState extends State<MainScreen> {
                                           MapEntry(agencyById[e.key]!, e.value),
                                     )
                                     .toList();
+                                filteredAgencies.sort((a, b) => b.value.compareTo(a.value));
                                 return Visibility(
                                   visible:
                                       _currentIndex ==
@@ -429,7 +444,7 @@ class _MainScreenState extends State<MainScreen> {
                                                           MainAxisSize.min,
                                                       children: [
                                                         CircleAvatar(
-                                                          radius: 10,
+                                                          radius: 20,
                                                           backgroundImage:
                                                               agencia.imagenUrl !=
                                                                   null
@@ -450,7 +465,7 @@ class _MainScreenState extends State<MainScreen> {
                                                                       .toUpperCase(),
                                                                   style: const TextStyle(
                                                                     fontSize:
-                                                                        10,
+                                                                        14,
                                                                     fontWeight:
                                                                         FontWeight
                                                                             .bold,
@@ -472,7 +487,7 @@ class _MainScreenState extends State<MainScreen> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w600,
-                                                              fontSize: 10,
+                                                              fontSize: 14,
                                                             ),
                                                             overflow:
                                                                 TextOverflow

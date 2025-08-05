@@ -12,10 +12,28 @@ android {
     namespace = "com.example.citytourscartagena"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    // Configuración de sabores de producto
+    flavorDimensions += "env"
+    productFlavors {
+        // Flavor de producción
+        create("prod") {
+            dimension = "env"
+            // opcional: packageName igual al defaultConfig
+            // applicationId = "com.example.citytourscartagena"
+        }
+        // Flavor de desarrollo
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix  = "-dev"
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // Habilita desugaring para librerías JDK
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -40,6 +58,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    // Si ya tienes otras dependencias (como implementation "…"), déjalas
+    // y SOLO añade esta línea para activar el desugaring:
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
 }
 
 flutter {

@@ -1,14 +1,13 @@
 import 'package:citytourscartagena/auth/auth_gate.dart';
 import 'package:citytourscartagena/core/models/usuarios.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // Agregar esta importación
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-
-// ...existing code (navigatorKey, etc.)...
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -47,6 +46,10 @@ class MyApp extends StatelessWidget {
           child: MaterialApp(
             title: 'Reservas App',
             navigatorKey: navigatorKey,
+            routes: {
+              '/reservas': (context) => ReservasView(),
+              // ...otras rutas
+            },
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,

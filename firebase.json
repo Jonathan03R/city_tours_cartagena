@@ -1,1 +1,68 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"citytourscartagena","appId":"1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"citytourscartagena","configurations":{"android":"1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8","ios":"1:258997063737:ios:b5a79e2c80316706c2bde8","macos":"1:258997063737:ios:b5a79e2c80316706c2bde8","web":"1:258997063737:web:70cf8632f46b517cc2bde8","windows":"1:258997063737:web:e1090c344a9ab61ac2bde8"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "citytourscartagena-dev",
+          "appId": "1:629054859101:android:55eb90cdb60026c7f4eab4",
+          "fileOutput": "android/app/src/prod/google-services.json"
+        },
+        "dev": {
+          "projectId": "citytourscartagena-dev",
+          "appId": "1:629054859101:android:55eb90cdb60026c7f4eab4",
+          "fileOutput": "android/app/src/dev/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "citytourscartagena",
+          "configurations": {
+            "android": "1:258997063737:android:ff6bd8ba3d0cb9a8c2bde8",
+            "ios": "1:258997063737:ios:b5a79e2c80316706c2bde8",
+            "macos": "1:258997063737:ios:b5a79e2c80316706c2bde8",
+            "web": "1:258997063737:web:70cf8632f46b517cc2bde8",
+            "windows": "1:258997063737:web:e1090c344a9ab61ac2bde8"
+          }
+        },
+        "lib/firebase_options_dev.dart": {
+          "projectId": "citytourscartagena-dev",
+          "configurations": {
+            "android": "1:629054859101:android:55eb90cdb60026c7f4eab4",
+            "ios": "1:629054859101:ios:85ed376e9230a69cf4eab4",
+            "macos": "1:629054859101:ios:85ed376e9230a69cf4eab4",
+            "web": "1:629054859101:web:bbd62549d1476189f4eab4",
+            "windows": "1:629054859101:web:ddf6805ccc1e6cf4f4eab4"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions-cititours",
+      "codebase": "functions-cititours",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ],
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}
