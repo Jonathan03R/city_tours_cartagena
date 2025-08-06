@@ -1,12 +1,12 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
-import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -534,7 +534,7 @@ class _ReservasTableState extends State<ReservasTable> {
     // --- Detectar si la reserva es "nueva" para el usuario ---
     final fechaRegistro = r.fechaRegistro ?? r.fecha;
     final lastSeen = widget.lastSeenReservas;
-    final esNueva = lastSeen != null && fechaRegistro != null
+    final esNueva = lastSeen != null
         ? fechaRegistro.isAfter(lastSeen)
         : false;
 

@@ -1,4 +1,4 @@
-import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:flutter/material.dart';
 
 class TurnoFilterButtons extends StatelessWidget {

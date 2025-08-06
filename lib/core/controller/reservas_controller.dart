@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/firestore_service.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
-import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 

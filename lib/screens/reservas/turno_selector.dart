@@ -1,6 +1,5 @@
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:flutter/material.dart';
-
-import '../main_screens.dart';
 
 class TurnoSelectorWidget extends StatelessWidget {
   final ValueChanged<TurnoType> onTurnoSelected;

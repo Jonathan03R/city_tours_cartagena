@@ -1,4 +1,4 @@
-import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum EstadoReserva { pendiente, pagada, cancelada }

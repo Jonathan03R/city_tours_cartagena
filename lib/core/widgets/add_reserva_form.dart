@@ -4,10 +4,10 @@ import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 // Importa tus modelos y controladores reales
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart'; // Asumiendo que tienes esta clase
-import 'package:citytourscartagena/screens/main_screens.dart'; // Para TurnoType y EstadoReserva si están allí
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Para formatear fechas
 import 'package:provider/provider.dart'; // Para acceder a los controladores
@@ -115,8 +115,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
   // Función para recalcular el estado y el costo total
   void _recalculateStatusAndTotal() {
     if (!mounted) return;
-    final int pax = int.tryParse(_paxController.text) ?? 1;
-    final double saldo = double.tryParse(_saldoController.text) ?? 0.0;
 
     // Recalcula el costo del asiento por si ha cambiado la configuración o el turno
     final currentCostoAsiento = _obtenerPrecioAsiento(

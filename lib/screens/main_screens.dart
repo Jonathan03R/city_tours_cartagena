@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
@@ -19,7 +20,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
-enum TurnoType { manana, tarde }
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -119,7 +119,7 @@ class _MainScreenState extends State<MainScreen> {
                 : (_turnoSeleccionado == null
                     ? TurnoSelectorWidget(
                         onTurnoSelected: (turno) => setState(() {
-                          _turnoSeleccionado = turno;
+                          _turnoSeleccionado = turno as TurnoType?;
                         }),
                       )
                     : ReservasView(
