@@ -256,6 +256,8 @@ class _ReservasTableState extends State<ReservasTable> {
       if (showFechaColumn) const DataColumn(label: Text('Fecha')),
       const DataColumn(label: Text('Pax')),
       const DataColumn(label: Text('Saldo')),
+      const DataColumn(label: Text('Ticket')),
+      const DataColumn(label: Text('N° Habitación')),
       const DataColumn(label: Text('Observaciones')),
       const DataColumn(label: Text('Agencia')),
       if (authController.hasPermission(Permission.ver_deuda_reservas))
@@ -409,6 +411,8 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
+                  const DataCell(Text('')),
+                  const DataCell(Text('')),
                   const DataCell(Text('')),
                   const DataCell(Text('')),
                   if (authController.hasPermission(
@@ -739,6 +743,10 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
+      // Celda de Ticket
+      DataCell(Text(r.ticket ?? '')),  
+      // Celda de N° Habitación
+      DataCell(Text(r.habitacion ?? '')),  
       // Celda de Observaciones
       DataCell(
         IconButton(

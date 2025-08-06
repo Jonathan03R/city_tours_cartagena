@@ -18,6 +18,8 @@ class Reserva {
   final String telefono;
   final bool whatsappContactado;
   final TurnoType? turno;
+  final String? ticket; // es el id de los tickets asociados a la reserva (opcional)
+  final String? habitacion; // numero de habitación asociado a la reserva (opcional)
 
 
   Reserva({
@@ -35,6 +37,8 @@ class Reserva {
     required this.telefono,
     this.whatsappContactado = false,
     required this.turno,
+    this.ticket,
+    this.habitacion,
   });
 
   //este constructor es para crear una reserva desde un mapa de datos
@@ -57,6 +61,8 @@ class Reserva {
       telefono: data['telefono'] as String? ?? '',
       whatsappContactado: data['whatsappContactado'] as bool? ?? false,
       turno: _mapTurno(data['turno'] as String? ?? 'normal'),
+      ticket: data['tickets'] != null ? data['tickets'] as String : null,
+      habitacion: data['habitacion'] != null ? data['habitacion'] as String : null,
     );
   }
 
@@ -79,6 +85,8 @@ class Reserva {
       'telefono': telefono,
       'whatsappContactado': whatsappContactado,
       'turno': turno?.toString().split('.').last, // Convertir TurnoType a String
+      'tickets': ticket, // id de ticket (opcional)
+      'habitacion': habitacion, // numero de habitación (opcional)
     };
   }
 
@@ -121,6 +129,8 @@ class Reserva {
     String? telefono,
     bool? whatsappContactado,
     TurnoType? turno,
+    String? ticket, // Cambiado de tickets a ticket
+    String? habitacion,
 
   }) {
     return Reserva(
@@ -137,6 +147,8 @@ class Reserva {
       telefono: telefono ?? this.telefono,
       whatsappContactado: whatsappContactado ?? this.whatsappContactado,
       turno: turno ?? this.turno,
+      ticket: ticket ?? this.ticket, // Cambiado de tickets a ticket
+      habitacion: habitacion ?? this.habitacion,
     );
   }
 }

@@ -34,6 +34,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
   final _saldoController = TextEditingController(text: '0');
   final _observacionController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _ticketController = TextEditingController();
+  final _habitacionController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   TurnoType? _selectedTurno; // Selector manual para el turno
@@ -67,6 +69,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
     _saldoController.dispose();
     _observacionController.dispose();
     _telefonoController.dispose();
+    _ticketController.dispose();
+    _habitacionController.dispose();
     super.dispose();
   }
 
@@ -215,6 +219,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
         costoAsiento: currentCostoAsiento,
         telefono: _telefonoController.text.trim(),
         turno: _selectedTurno,
+        ticket: _ticketController.text.trim(),
+        habitacion: _habitacionController.text.trim(),
       );
 
       final reservasController = context.read<ReservasController>();
@@ -260,10 +266,13 @@ class _AddReservaFormState extends State<AddReservaForm> {
     final EstadoReserva currentComputedEstado =
         _computeEstado(_costoAsiento, currentPax, currentSaldo);
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      padding: const EdgeInsets.all(16),
-      child: Form(
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        padding: const EdgeInsets.all(16),
+        child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,6 +323,18 @@ class _AddReservaFormState extends State<AddReservaForm> {
                     _buildTextField('Observaciones', _observacionController, Icons.note,
                         maxLines: 3),
                     const SizedBox(height: 16),
+                    _buildTextField(
+                      'Tickets',
+                      _ticketController,
+                      Icons.confirmation_number_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      'N° Habitación',
+                      _habitacionController,
+                      Icons.meeting_room,
+                    ),
+                    const SizedBox(height: 16),
                     // Muestra el precio por asiento calculado
                     _buildPriceInfo(),
                     const SizedBox(height: 16),
@@ -360,6 +381,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
           ],
         ),
       ),
+    ),
     );
   }
 
