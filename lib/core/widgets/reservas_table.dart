@@ -4,7 +4,6 @@ import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
-import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

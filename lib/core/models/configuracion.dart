@@ -18,7 +18,7 @@ class Configuracion {
     required this.tipoDocumento,
     required this.numeroDocumento,
     this.nombreBeneficiario,
-    this.nombreEmpresa = "City Tours Cartagena",
+    required this.nombreEmpresa,
   });
 
   factory Configuracion.fromMap(Map<String, dynamic> data) {

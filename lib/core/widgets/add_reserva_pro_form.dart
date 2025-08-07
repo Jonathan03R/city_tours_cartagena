@@ -3,7 +3,6 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
-import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
 import 'package:flutter/material.dart';
