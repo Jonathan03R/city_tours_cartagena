@@ -303,9 +303,30 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error creando reserva: $e')));
+      final msg = e.toString();
+      final isBloqueo = msg.contains('los cupos están bloqueados');
+      if (isBloqueo) {
+        await showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Cupos bloqueados'),
+            content: Text(msg.replaceFirst('Exception: ', '')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Aceptar'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creando reserva: $msg'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 

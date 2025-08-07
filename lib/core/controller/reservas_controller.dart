@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/services/fechas_bloquedas_service.dart';
 import 'package:citytourscartagena/core/services/firestore_service.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
@@ -330,8 +331,17 @@ class ReservasController extends ChangeNotifier {
         );
   }
 
-  // Métodos CRUD sin cambios
+  // Métodos CRUD con validación de bloqueo de cupos
   Future<void> addReserva(Reserva reserva) async {
+    // Validar bloqueo de cupos antes de crear la reserva
+    final bloqueo = await FechasBloquedasService.getBloqueoParaFecha(reserva.fecha).first;
+    if (bloqueo != null && bloqueo.cerrado == true) {
+      // Si el turno bloqueado es 'ambos' o coincide con el turno de la reserva, bloquear
+      final turnoReserva = reserva.turno?.name ?? '';
+      if (bloqueo.turno == 'ambos' || bloqueo.turno == turnoReserva) {
+        throw Exception('No se puede crear la reserva: los cupos están bloqueados para esta fecha y turno. Motivo: ${bloqueo.motivo ?? ''}');
+      }
+    }
     await _firestoreService.addReserva(reserva);
   }
 

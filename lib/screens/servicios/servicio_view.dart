@@ -1,4 +1,5 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart' as agencia_model;
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
@@ -6,6 +7,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ServiciosView extends StatefulWidget {
   final String searchTerm; // Recibir el término de búsqueda desde MainScreen
@@ -17,6 +19,8 @@ class ServiciosView extends StatefulWidget {
 }
 
 class _ServiciosViewState extends State<ServiciosView> {
+  String? _contactWhatsapp;
+  String? _nombreEmpresa;
 
   @override
   void initState() {
@@ -43,6 +47,9 @@ class _ServiciosViewState extends State<ServiciosView> {
     final authController = context.read<AuthController>();
     final reservasController = context.watch<ReservasController>();
     final agenciaId = authController.appUser?.agenciaId;
+    final configuracion = context.watch<ConfiguracionController>().configuracion;
+    _contactWhatsapp = configuracion?.contact_whatsapp;
+    _nombreEmpresa = configuracion?.nombreEmpresa ?? 'City Tours Climatizado';
 
     if (agenciaId == null) {
       return const Center(
@@ -105,46 +112,60 @@ class _ServiciosViewState extends State<ServiciosView> {
                 r.fecha.day == today.day
               ).toList();
               final totalPaxHoy = reservasHoy.fold<int>(0, (sum, r) => sum + r.pax);
-              const int maxCupos = 20;
-              final cuposDisponibles = (maxCupos - totalPaxHoy).clamp(0, maxCupos);
+              const int maxCupos = 5;
 
-              // Badge color y texto según cupos
+              // Badge simplificado: solo mensaje, sin números
               Color badgeColor;
               Color badgeTextColor;
               String badgeText;
-              if (cuposDisponibles == 0) {
-                badgeColor = Colors.red.shade600;
-                badgeTextColor = Colors.white;
-                badgeText = 'Sin cupos disponibles';
-              } else if (cuposDisponibles <= 5) {
+              if (totalPaxHoy >= maxCupos) {
                 badgeColor = Colors.orange.shade600;
                 badgeTextColor = Colors.white;
-                badgeText = '$cuposDisponibles cupos disponibles';
-              } else if (cuposDisponibles <= 10) {
-                badgeColor = Colors.amber.shade200;
-                badgeTextColor = Colors.blue.shade900;
-                badgeText = '$cuposDisponibles cupos disponibles';
+                badgeText = 'Verificar disponibilidad';
               } else {
                 badgeColor = Colors.blue.shade600;
                 badgeTextColor = Colors.white;
-                badgeText = '$cuposDisponibles cupos disponibles';
+                badgeText = 'Disponible';
               }
 
               // Personalización visual premium por turno
               Color borderColor;
               IconData iconoTurno;
               Color iconColor = Colors.blue.shade700;
+              // Lógica de cupos cerrados y cupos máximos
+              final bool cuposCerrados = (configuracion?.cuposCerradas ?? false) && (turno == TurnoType.manana || turno == TurnoType.tarde);
+              int maxCuposTurno = 5;
+              if (turno == TurnoType.manana) {
+                maxCuposTurno = configuracion?.maxCuposTurnoManana ?? 5;
+              } else if (turno == TurnoType.tarde) {
+                maxCuposTurno = configuracion?.maxCuposTurnoTarde ?? 5;
+              }
+
+              if (cuposCerrados) {
+                borderColor = Colors.red;
+              } else if ((turno == TurnoType.manana || turno == TurnoType.tarde) && totalPaxHoy >= maxCuposTurno) {
+                borderColor = Colors.orange.shade600;
+              } else {
+                switch (turno) {
+                  case TurnoType.manana:
+                    borderColor = Colors.blue.shade300;
+                    break;
+                  case TurnoType.tarde:
+                    borderColor = Colors.blue.shade500;
+                    break;
+                  case TurnoType.privado:
+                    borderColor = Colors.blue.shade900;
+                    break;
+                }
+              }
               switch (turno) {
                 case TurnoType.manana:
-                  borderColor = Colors.blue.shade300;
                   iconoTurno = Icons.wb_sunny;
                   break;
                 case TurnoType.tarde:
-                  borderColor = Colors.blue.shade500;
                   iconoTurno = Icons.wb_twilight;
                   break;
                 case TurnoType.privado:
-                  borderColor = Colors.blue.shade900;
                   iconoTurno = Icons.lock;
                   break;
               }
@@ -229,9 +250,9 @@ class _ServiciosViewState extends State<ServiciosView> {
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              // Nombre empresa
+                              // Nombre empresa dinámico
                               Text(
-                                'City Tours Climatizado',
+                                _nombreEmpresa ?? 'No configurado',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 16,
@@ -245,25 +266,105 @@ class _ServiciosViewState extends State<ServiciosView> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        // Badge de cupos disponibles
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              color: badgeTextColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                        // Badge de cupos disponibles o botón si es 'Verificar disponibilidad'
+                        if (badgeText == 'Verificar disponibilidad')
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: badgeColor,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            ),
+                            onPressed: _contactWhatsapp == null || _contactWhatsapp!.isEmpty
+                                ? () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => const AlertDialog(
+                                        title: Text('No configurado'),
+                                        content: Text('No hay número de WhatsApp configurado.'),
+                                      ),
+                                    );
+                                  }
+                                : () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Abrir WhatsApp'),
+                                        content: Text('¿Deseas abrir WhatsApp para contactar a la empresa?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            child: const Text('Abrir'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      final telefono = _contactWhatsapp!.replaceAll('+', '').replaceAll(' ', '');
+                                      final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
+                                      final uriWeb = Uri.parse('https://wa.me/$telefono');
+                                      try {
+                                        if (await canLaunchUrl(uriApp)) {
+                                          await launchUrl(uriApp, mode: LaunchMode.externalApplication);
+                                          return;
+                                        }
+                                        if (await canLaunchUrl(uriWeb)) {
+                                          await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
+                                          return;
+                                        }
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('No se pudo abrir WhatsApp'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      } catch (_) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('No se pudo abrir WhatsApp'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                            child: Text(
+                              badgeText,
+                              style: TextStyle(
+                                color: badgeTextColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: badgeColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              badgeText,
+                              style: TextStyle(
+                                color: badgeTextColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),

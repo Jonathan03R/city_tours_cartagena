@@ -1,10 +1,46 @@
+import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/configuracion.dart';
-import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
 
 class ConfiguracionService {
+  /// Actualiza el estado de cupos cerradas
+
+  /// Actualiza el WhatsApp de contacto
+  static Future<void> actualizarWhatsapp(String? numero) async {
+    await _doc.update({
+      'contact_whatsapp': numero,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ WhatsApp de contacto actualizado: $numero');
+  }
+  /// Actualiza el nombre de la empresa
+  static Future<void> actualizarNombreEmpresa(String nombre) async {
+    await _doc.update({
+      'nombre_empresa': nombre,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Nombre empresa actualizado: $nombre');
+  }
+
+  /// Actualiza el máximo de cupos para el turno de la mañana
+  static Future<void> actualizarMaxCuposTurnoManana(int cupos) async {
+    await _doc.update({
+      'max_cupos_turno_manana': cupos,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Max cupos turno mañana actualizado: $cupos');
+  }
+
+  /// Actualiza el máximo de cupos para el turno de la tarde
+  static Future<void> actualizarMaxCuposTurnoTarde(int cupos) async {
+    await _doc.update({
+      'max_cupos_turno_tarde': cupos,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Max cupos turno tarde actualizado: $cupos');
+  }
   static final _doc = FirebaseFirestore.instance
       .collection('configuracion')
       .doc('general');

@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/controller/reservas_controller.dart';
 import '../../core/widgets/add_reserva_pro_form.dart';
+import '../../core/widgets/bloqueo_fecha_widget.dart';
 import '../../core/widgets/date_filter_buttons.dart';
 import '../../core/widgets/reserva_card_item.dart';
 import '../../core/widgets/reserva_details.dart';
@@ -317,6 +318,28 @@ class _ReservasViewState extends State<ReservasView> {
               selectedTurno: reservasController.turnoFilter,
               onFilterChanged: _onFilterChanged,
             ),
+            // Widget de bloqueo de fecha/turno
+            if (authRole.hasPermission(Permission.edit_configuracion) &&
+                (reservasController.selectedFilter == DateFilterType.today || reservasController.selectedFilter == DateFilterType.custom))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+                child: BloqueoFechaWidget(
+                  key: ValueKey((reservasController.selectedFilter == DateFilterType.custom
+                      ? (reservasController.customDate ?? DateTime.now())
+                      : DateTime.now()).toIso8601String()),
+                  fecha: reservasController.selectedFilter == DateFilterType.custom
+                      ? (reservasController.customDate ?? DateTime.now())
+                      : DateTime.now(),
+                  turnoActual: reservasController.turnoFilter == null
+                      ? 'ambos'
+                      : reservasController.turnoFilter == TurnoType.manana
+                          ? 'manana'
+                          : reservasController.turnoFilter == TurnoType.tarde
+                              ? 'tarde'
+                              : 'ambos',
+                  puedeEditar: true,
+                ),
+              ),
             if (_currentAgencia != null) _buildAgencyHeader(_currentAgencia!),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -656,7 +679,7 @@ class _ReservasViewState extends State<ReservasView> {
       context: context,
       isScrollControlled: true,
       builder: (context) => AddReservaForm(
-        agenciaId: widget.agencia!.id, // id de la agencia seleccionada
+        agenciaId: widget.agencia?.id, // Puede ser null, el form lo maneja
         onAdd: () {
           reservasController.updateFilter(
             reservasController.selectedFilter,

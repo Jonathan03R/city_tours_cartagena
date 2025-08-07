@@ -10,6 +10,11 @@ class Configuracion {
   final String? nombreBeneficiario;
 
   final String nombreEmpresa;
+  final int maxCuposTurnoManana; 
+  final int maxCuposTurnoTarde;
+
+  final String? contact_whatsapp;
+  final bool? cuposCerradas;
 
   Configuracion({
     required this.precioGeneralAsientoTarde,
@@ -19,6 +24,10 @@ class Configuracion {
     required this.numeroDocumento,
     this.nombreBeneficiario,
     required this.nombreEmpresa,
+    required this.maxCuposTurnoManana, // Valor por defecto
+    required this.maxCuposTurnoTarde,
+    this.contact_whatsapp,
+    this.cuposCerradas,
   });
 
   factory Configuracion.fromMap(Map<String, dynamic> data) {
@@ -39,6 +48,10 @@ class Configuracion {
       numeroDocumento: data['numero_documento'],
       nombreBeneficiario: data['nombre_beneficiario'],
       nombreEmpresa: data['nombre_empresa'],
+      maxCuposTurnoManana: _parseMaxCupos(data['max_cupos_turno_manana']),
+      maxCuposTurnoTarde: _parseMaxCupos(data['max_cupos_turno_tarde']),
+      contact_whatsapp: data['contact_whatsapp'],
+      cuposCerradas: data['cuposCerradas'],
     );
   }
 
@@ -52,6 +65,10 @@ class Configuracion {
       'numero_documento': numeroDocumento,
       'nombre_beneficiario': nombreBeneficiario,
       'nombre_empresa': nombreEmpresa,
+      'max_cupos_turno_manana': maxCuposTurnoManana,
+      'max_cupos_turno_tarde': maxCuposTurnoTarde,
+      'contact_whatsapp': contact_whatsapp,
+      'cuposCerradas': cuposCerradas,
     };
   }
 
@@ -63,5 +80,14 @@ class Configuracion {
       return precioGeneralAsientoTarde;
     }
     return precioGeneralAsientoTemprano;
+  }
+  /// Parsea el valor de max cupos de forma robusta
+  static int _parseMaxCupos(dynamic value) {
+    if (value is int) return value;
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      if (parsed != null) return parsed;
+    }
+    throw ArgumentError('El valor de max_cupos_turno es inválido o nulo: $value');
   }
 }
