@@ -11,6 +11,8 @@ import 'package:citytourscartagena/core/utils/parsers/rules/observacion_rule.dar
 import 'package:citytourscartagena/core/utils/parsers/rules/pax_rule.dart';
 import 'package:citytourscartagena/core/utils/parsers/rules/saldo_rule.dart';
 import 'package:citytourscartagena/core/utils/parsers/rules/telefono_rule.dart';
+import 'package:citytourscartagena/core/utils/parsers/rules/habitacion_rule.dart';
+import 'package:citytourscartagena/core/utils/parsers/rules/ticket_rule.dart';
 
 /// Clase principal para parsear texto de reservas usando el patrón Chain of Responsibility.
 class TextParser {
@@ -28,6 +30,8 @@ class TextParser {
           EstadoRule(),
           TelefonoRule(),
           CostoAsientoRule(), // Añadida la nueva regla
+          HabitacionRule(), // Añadida la nueva regla
+          TicketRule(), // Añadida la nueva regla
         ],
         _agenciaRule = AgenciaRule(); // Instancia de la regla de agencia
 
