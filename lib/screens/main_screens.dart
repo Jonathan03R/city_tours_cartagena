@@ -15,11 +15,11 @@ import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart';
+import 'package:citytourscartagena/screens/servicios/servicio_view.dart';
 import 'package:citytourscartagena/screens/usuarios/tabar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -53,6 +53,9 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
+  /// Inicia la precarga de imágenes de agencias globalmente.
+  /// Escucha el stream de agencias con reservas y precarga las imágenes
+  /// de cada agencia que tenga una URL de imagen válida.
   void _startGlobalImagePreloading(BuildContext context) {
     final agenciasController = Provider.of<AgenciasController>(
       context,
@@ -70,6 +73,10 @@ class _MainScreenState extends State<MainScreen> {
           },
         );
   }
+
+  /// Precachea las imágenes de las agencias que tengan una URL válida.
+  /// Utiliza [precacheImage] para cargar las imágenes en caché.
+  /// Si ocurre un error al precargar una imagen, se captura y se imprime en el log.
 
   void _precacheAgencyImages(List<AgenciaConReservas> agencias) {
     for (var agencia in agencias) {
@@ -92,6 +99,7 @@ class _MainScreenState extends State<MainScreen> {
     final agenciasController = context.watch<AgenciasController>();
     final appUser = authController.appUser;
 
+    /// Verificar permisos del usuario
     final canViewReservas = authController.hasPermission(
       Permission.ver_reservas,
     );
@@ -102,56 +110,78 @@ class _MainScreenState extends State<MainScreen> {
       Permission.ver_pagina_usuarios,
     );
 
+    /// Si no tiene permisos, redirigir a la pantalla de configuración
     final authRole = context.read<AuthController>();
 
-    final isAgencyUser = appUser != null &&
+    /// Verificar si el usuario es de una agencia
+    /// Si es así, obtener la agencia asociada
+    /// y mostrar las reservas de esa agencia
+    final isAgencyUser =
+        appUser != null &&
         appUser.agenciaId != null &&
         appUser.roles.contains('agencia');
+    // Si es usuario de agencia, buscar la agencia asociada
     final agencia = isAgencyUser
-        ? agenciasController.agencias.firstWhereOrNull((a) => a.agencia.id == appUser.agenciaId)
+        ? agenciasController.agencias.firstWhereOrNull(
+            (a) => a.agencia.id == appUser.agenciaId,
+          )
         : null;
     // Definir las páginas según permisos
+    // Si es usuario de agencia, mostrar reservas de esa agencia
+    // Si no, mostrar selector de turno o reservas según el turno seleccionado
+    // Si no tiene permisos, mostrar un SizedBox vacío
+    // Si no hay permisos para ver reservas, agencias o usuarios, mostrar un SizedBox vacío
     final pages = <Widget>[
-      if (canViewReservas)
-        (_currentIndex == 0
-            ? (isAgencyUser
-                ? ReservasView(agencia: agencia, isAgencyUser: true)
-                : (_turnoSeleccionado == null
-                    ? TurnoSelectorWidget(
-                        onTurnoSelected: (turno) => setState(() {
-                          _turnoSeleccionado = turno as TurnoType?;
-                        }),
-                      )
-                    : ReservasView(
-                        turno: _turnoSeleccionado,
-                        onBack: () => setState(() {
-                          _turnoSeleccionado = null;
-                        }),
-                      )))
-            : const SizedBox.shrink()),
-      if (canViewAgencias)
-        AgenciasView(
-          searchTerm: _searchTerm,
-        ),
-      if (canViewUsuarios) const UsuariosScreen(),
+      if (isAgencyUser) ...[
+        const ServiciosView(), // Pestaña de servicios
+        const UsuariosScreen(), // Pestaña de colaboradores
+      ] else ...[
+        if (canViewReservas)
+          (_turnoSeleccionado == null
+              ? TurnoSelectorWidget(
+                  onTurnoSelected: (turno) => setState(() {
+                    _turnoSeleccionado = turno as TurnoType?;
+                  }),
+                )
+              : ReservasView(
+                  turno: _turnoSeleccionado,
+                  onBack: () => setState(() {
+                    _turnoSeleccionado = null;
+                  }),
+                )),
+        if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
+        if (canViewUsuarios) const UsuariosScreen(),
+      ],
     ];
     // Definir los ítems del bottom bar según permisos
+
     final navItems = <BottomNavigationBarItem>[
-      if (canViewReservas)
+      if (isAgencyUser) ...[
         const BottomNavigationBarItem(
-          icon: Icon(Icons.event),
-          label: 'Reservas',
+          icon: Icon(Icons.room_service),
+          label: 'Servicios',
         ),
-      if (canViewAgencias)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.business),
-          label: 'Agencias',
-        ),
-      if (canViewUsuarios)
         const BottomNavigationBarItem(
           icon: Icon(Icons.people),
           label: 'Colaboradores',
         ),
+      ] else ...[
+        if (canViewReservas)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.event),
+            label: 'Reservas',
+          ),
+        if (canViewAgencias)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.business),
+            label: 'Agencias',
+          ),
+        if (canViewUsuarios)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.people),
+            label: 'Colaboradores',
+          ),
+      ],
     ];
     // Asegurar que currentIndex esté dentro de los límites de navItems
     final int maxIndex = navItems.length - 1;
@@ -170,7 +200,7 @@ class _MainScreenState extends State<MainScreen> {
           backgroundColor: Colors.white,
           elevation: 2,
           iconTheme: const IconThemeData(color: Color(0xFF06142F)),
-          title: _currentIndex == 1
+          title: !isAgencyUser && _currentIndex == 1
               ? Container(
                   height: 40,
                   decoration: BoxDecoration(
@@ -388,7 +418,9 @@ class _MainScreenState extends State<MainScreen> {
                                           MapEntry(agencyById[e.key]!, e.value),
                                     )
                                     .toList();
-                                filteredAgencies.sort((a, b) => b.value.compareTo(a.value));
+                                filteredAgencies.sort(
+                                  (a, b) => b.value.compareTo(a.value),
+                                );
                                 return Visibility(
                                   visible:
                                       _currentIndex ==

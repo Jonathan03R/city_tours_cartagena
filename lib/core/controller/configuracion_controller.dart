@@ -1,11 +1,50 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/models/configuracion.dart';
-import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
+import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:flutter/material.dart';
 
 class ConfiguracionController extends ChangeNotifier {
+ 
+  /// Actualizar WhatsApp de contacto
+  Future<void> actualizarWhatsapp(String? numero) async {
+    try {
+      await ConfiguracionService.actualizarWhatsapp(numero);
+    } catch (e) {
+      debugPrint('❌ Error actualizando WhatsApp: $e');
+      rethrow;
+    }
+  }
+  /// Actualizar nombre de la empresa
+  Future<void> actualizarNombreEmpresa(String nombre) async {
+    try {
+      await ConfiguracionService.actualizarNombreEmpresa(nombre);
+    } catch (e) {
+      debugPrint('❌ Error actualizando nombre de empresa: $e');
+      rethrow;
+    }
+  }
+
+  /// Actualizar max cupos turno mañana
+  Future<void> actualizarMaxCuposTurnoManana(int cupos) async {
+    try {
+      await ConfiguracionService.actualizarMaxCuposTurnoManana(cupos);
+    } catch (e) {
+      debugPrint('❌ Error actualizando max cupos turno mañana: $e');
+      rethrow;
+    }
+  }
+
+  /// Actualizar max cupos turno tarde
+  Future<void> actualizarMaxCuposTurnoTarde(int cupos) async {
+    try {
+      await ConfiguracionService.actualizarMaxCuposTurnoTarde(cupos);
+    } catch (e) {
+      debugPrint('❌ Error actualizando max cupos turno tarde: $e');
+      rethrow;
+    }
+  }
   Configuracion? _configuracion;
   StreamSubscription<Configuracion?>? _configSub;
 

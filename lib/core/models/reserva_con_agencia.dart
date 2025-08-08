@@ -1,16 +1,14 @@
 // Este archivo debe contener la definición de ReservaConAgencia.
 // Ya no extiende Agencia, sino que la contiene.
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 
 class ReservaConAgencia {
   final Reserva reserva;
   final Agencia agencia;
 
-  ReservaConAgencia({
-    required this.reserva,
-    required this.agencia,
-  });
+  ReservaConAgencia({required this.reserva, required this.agencia});
 
   // Exponer propiedades de la Reserva y Agencia internas para conveniencia
   String get id => reserva.id;
@@ -27,6 +25,7 @@ class ReservaConAgencia {
   double get costoAsiento => reserva.costoAsiento;
   double get deuda => reserva.deuda;
   bool get whatsappContactado => reserva.whatsappContactado;
+  TurnoType? get turno => reserva.turno;
 }
 
 // También puedes definir AgenciaConReservas aquí, ya que es un DTO combinado.
@@ -35,10 +34,7 @@ class AgenciaConReservas {
   final Agencia agencia;
   final int totalReservas;
 
-  AgenciaConReservas({
-    required this.agencia,
-    required this.totalReservas,
-  });
+  AgenciaConReservas({required this.agencia, required this.totalReservas});
 
   // Exponer propiedades de la Agencia interna para conveniencia
   String get id => agencia.id;

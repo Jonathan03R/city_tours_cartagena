@@ -92,49 +92,6 @@ class FirestoreService {
     return query;
   }
 
-  // ========== RESERVAS ==========
-  /// Obtiene reservas filtradas por turno, fecha y agencia.
-  /// @param turno El tipo de turno a filtrar (opcional).
-  /// @param filter El tipo de filtro de fecha a aplicar (opcional, por defecto es DateFilterType.all).
-  /// @param customDate Una fecha personalizada para el filtro (opcional).
-  // Stream<List<Reserva>> getReservasFiltered({
-  //   TurnoType? turno,
-  //   DateFilterType filter = DateFilterType.all,
-  //   DateTime? customDate,
-  //   String? agenciaId,
-  // }) {
-  //   var query =
-  //       _db
-  //               .collection('reservas')
-  //               .withConverter<Reserva>(
-  //                 fromFirestore: (snap, _) =>
-  //                     Reserva.fromFirestore(snap.data()!, snap.id),
-  //                 toFirestore: (res, _) => res.toFirestore(),
-  //               )
-  //           as Query<Reserva>;
-
-  //   if (turno != null) {
-  //     final t = turno.toString().split('.').last;
-  //     query = query.where('turno', isEqualTo: t);
-  //   }
-
-  //   if (agenciaId != null && agenciaId.isNotEmpty) {
-  //     query = query.where('agenciaId', isEqualTo: agenciaId);
-  //   }
-
-  //   query = _applyDateFilter(
-  //     query,
-  //     filter,
-  //     customDate,
-  //   ); // Usar el método auxiliar
-
-  //   query = query.orderBy('fechaReserva', descending: true);
-
-  //   return query.snapshots().map(
-  //     (snap) => snap.docs.map((d) => d.data()).toList(),
-  //   );
-  // }
-
   /// Obtiene reservas filtradas por turno, fecha y agencia, sin paginación.
   Stream<QuerySnapshot<Reserva>> getReservasFiltered({
     TurnoType? turno,
@@ -191,21 +148,6 @@ class FirestoreService {
     yield* query.snapshots();
   }
 
-  /// Obtiene todas las reservas.
-  /// @return Una lista de reservas.
-
-  // Future<List<Reserva>> getAllReservas() async {
-  //   try {
-  //     final snap = await _db.collection('reservas').get();
-  //     return snap.docs
-  //         .map((d) => Reserva.fromFirestore(d.data(), d.id))
-  //         .toList();
-  //   } catch (e) {
-  //     debugPrint('❌ Error obteniendo todas las reservas: $e');
-  //     return [];
-  //   }
-  // }
-
   /// Obtiene un stream de todas las reservas.
   /// @return Un stream de listas de reservas.
   /// en terminos sencillos, este método devuelve un stream que emite
@@ -222,117 +164,6 @@ class FirestoreService {
           }).toList();
         });
   }
-
-  /// Obtiene reservas por fecha específica.
-  /// @param fecha La fecha para filtrar las reservas.
-
-  // Future<List<Reserva>> getReservasByFecha(DateTime fecha) async {
-  //   final start = DateTime(fecha.year, fecha.month, fecha.day);
-  //   final end = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
-  //   final snap = await _db
-  //       .collection('reservas')
-  //       .where(
-  //         'fechaReserva',
-  //         isGreaterThanOrEqualTo: Timestamp.fromDate(start),
-  //       )
-  //       .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(end))
-  //       .get();
-  //   return snap.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
-  // }
-
-  /// Obtiene un stream de reservas por fecha específica.
-  /// @param fecha La fecha para filtrar las reservas.
-  // Stream<List<Reserva>> getReservasByFechaStream(DateTime fecha) {
-  //   final start = DateTime(fecha.year, fecha.month, fecha.day);
-  //   final end = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
-  //   return _db
-  //       .collection('reservas')
-  //       .where(
-  //         'fechaReserva',
-  //         isGreaterThanOrEqualTo: Timestamp.fromDate(start),
-  //       )
-  //       .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(end))
-  //       .snapshots()
-  //       .map((snapshot) {
-  //         return snapshot.docs
-  //             .map((d) => Reserva.fromFirestore(d.data(), d.id))
-  //             .toList();
-  //       });
-  // }
-
-  /// Obtiene reservas por rango de fechas.
-  /// @param start La fecha de inicio del rango.
-  // Future<List<Reserva>> getReservasByDateRange(
-  //   DateTime start,
-  //   DateTime end,
-  // ) async {
-  //   final snap = await _db
-  //       .collection('reservas')
-  //       .where(
-  //         'fechaReserva',
-  //         isGreaterThanOrEqualTo: Timestamp.fromDate(start),
-  //       )
-  //       .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(end))
-  //       .get();
-  //   return snap.docs.map((d) => Reserva.fromFirestore(d.data(), d.id)).toList();
-  // }
-
-  /// Obtiene un stream de reservas por rango de fechas.
-  /// @param startDate La fecha de inicio del rango.
-  /// @param endDate La fecha de fin del rango.
-
-  // Stream<List<Reserva>> getReservasByDateRangeStream(
-  //   DateTime startDate,
-  //   DateTime endDate,
-  // ) {
-  //   return _db
-  //       .collection('reservas')
-  //       .where(
-  //         'fechaReserva',
-  //         isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
-  //       )
-  //       .where('fechaReserva', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-  //       .snapshots()
-  //       .map((snapshot) {
-  //         return snapshot.docs
-  //             .map((d) => Reserva.fromFirestore(d.data(), d.id))
-  //             .toList();
-  //       });
-  // }
-
-  /// Obtiene reservas por agencia.
-  /// @param agenciaId El ID de la agencia para filtrar las reservas.
-  // Future<List<Reserva>> getReservasByAgencia(String agenciaId) async {
-  //   try {
-  //     final snap = await _db
-  //         .collection('reservas')
-  //         .where('agenciaId', isEqualTo: agenciaId)
-  //         .get();
-  //     final list = snap.docs
-  //         .map((d) => Reserva.fromFirestore(d.data(), d.id))
-  //         .toList();
-  //     list.sort((a, b) => b.fecha.compareTo(a.fecha));
-  //     debugPrint('✅ Reservas obtenidas por agencia: ${list.length}');
-  //     return list;
-  //   } catch (e) {
-  //     debugPrint('Error obteniendo reservas por agencia: $e');
-  //     return [];
-  //   }
-  // }
-
-  // Stream<List<Reserva>> getReservasByAgenciaStream(String agenciaId) {
-  //   return _db
-  //       .collection('reservas')
-  //       .where('agenciaId', isEqualTo: agenciaId)
-  //       .snapshots()
-  //       .map((snapshot) {
-  //         final list = snapshot.docs
-  //             .map((d) => Reserva.fromFirestore(d.data(), d.id))
-  //             .toList();
-  //         list.sort((a, b) => b.fecha.compareTo(a.fecha));
-  //         return list;
-  //       });
-  // }
 
   /// Agrega una nueva reserva.
   /// @param reserva La reserva a agregar.
@@ -555,5 +386,59 @@ class FirestoreService {
     } catch (e) {
       debugPrint('❌ Error inicializando datos: $e');
     }
+  }
+
+  Future<bool> seAlcanzoLimiteCuposFirestore({
+    required TurnoType turno,
+    required DateTime fecha,
+    required int maxCupos,
+  }) async {
+    debugPrint(
+      'Verificando límite de cupos para $turno en fecha $fecha con máximo $maxCupos',
+    );
+    final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
+    final fechaFin = fechaInicio.add(const Duration(days: 1));
+
+    final snapshot = await _db
+        .collection('reservas')
+        .where(
+          'fechaReserva',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(fechaInicio),
+        )
+        .where('fechaReserva', isLessThan: Timestamp.fromDate(fechaFin))
+        .where('turno', isEqualTo: turno.name)
+        .where('estado', isNotEqualTo: 'pagada') // para excluir pagadas
+        .get();
+
+    final totalPax = snapshot.docs.fold<int>(
+      0,
+      (sum, doc) => sum + (doc.data()['pax'] as int? ?? 0),
+    );
+
+    debugPrint('Total de pax reservados: $totalPax');
+
+    return totalPax >= maxCupos;
+  }
+
+  Future<int> getTotalPaxReservados({
+    required TurnoType turno,
+    required DateTime fecha,
+  }) async {
+    final inicio = DateTime(fecha.year, fecha.month, fecha.day);
+    final fin = inicio.add(const Duration(days: 1));
+    final snap = await _db
+        .collection('reservas')
+        .where(
+          'fechaReserva',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(inicio),
+        )
+        .where('fechaReserva', isLessThan: Timestamp.fromDate(fin))
+        .where('turno', isEqualTo: turno.name)
+        .where('estado', isNotEqualTo: 'pagada')
+        .get();
+    return snap.docs.fold<int>(
+      0,
+      (sum, doc) => sum + (doc.data()['pax'] as int? ?? 0),
+    );
   }
 }
