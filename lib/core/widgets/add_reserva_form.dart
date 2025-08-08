@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'agencia_selector.dart';
 
@@ -35,6 +36,50 @@ class AddReservaForm extends StatefulWidget {
 }
 
 class _AddReservaFormState extends State<AddReservaForm> {
+  /// Verifica si hay cupos disponibles para la fecha y turno dados
+  
+
+  /// Muestra un diálogo de verificación de disponibilidad con opción WhatsApp
+  Future<void> _showDialogVerificarDisponibilidad(String? whatsapp) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Verificar disponibilidad'),
+        content: const Text('Se ha superado el límite de cupos para este turno. ¿Deseas contactar al administrador por WhatsApp?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          if (whatsapp != null && whatsapp.isNotEmpty)
+            TextButton.icon(
+              icon: const Icon(Icons.message, color: Colors.green),
+              label: const Text('Contactar WhatsApp'),
+              onPressed: () async {
+                final telefono = whatsapp.replaceAll('+', '').replaceAll(' ', '');
+                final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
+                final uriWeb = Uri.parse('https://wa.me/$telefono');
+                if (await canLaunchUrl(uriApp)) {
+                  await launchUrl(uriApp, mode: LaunchMode.externalApplication);
+                } else if (await canLaunchUrl(uriWeb)) {
+                  await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No se pudo abrir WhatsApp'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+                Navigator.of(ctx).pop();
+              },
+            ),
+        ],
+      ),
+    );
+  }
   // Form
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autovalidateMode = AutovalidateMode.onUserInteraction;
@@ -213,9 +258,30 @@ class _AddReservaFormState extends State<AddReservaForm> {
       return;
     }
 
+
     setState(() => _isLoading = true);
 
     try {
+      // ++++ VALIDACIÓN DE CUPOS ++++
+      final reservasCtrl = context.read<ReservasController>();
+      final estadoCupos = await reservasCtrl.getEstadoCupos(
+        turno: _selectedTurno,
+        fecha: _selectedDate,
+      );
+      if (estadoCupos == CuposEstado.cerrado) {
+        await _showSnackDialog(
+          'No se puede crear la reserva: los cupos están cerrados para este turno.',
+          isError: true,
+        );
+        setState(() => _isLoading = false);
+        return;
+      } else if (estadoCupos == CuposEstado.limiteAlcanzado) {
+        await _showDialogVerificarDisponibilidad(_config?.contact_whatsapp);
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // ---- FIN VALIDACIÓN DE CUPOS ----
       final estado = _estadoPor(currentCostoAsiento, _pax, _saldo);
       final nuevaReserva = Reserva(
         id: '',
@@ -244,13 +310,17 @@ class _AddReservaFormState extends State<AddReservaForm> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       final msg = e.toString();
-      final isBloqueo = msg.contains('los cupos están bloqueados');
-      if (isBloqueo) {
+      if (msg.contains('No hay cupos disponibles')) {
+        // Límite alcanzado, mostrar diálogo de WhatsApp
+        await _showDialogVerificarDisponibilidad(_config?.contact_whatsapp);
+      } else if (msg.contains('los cupos están bloqueados')) {
+        // Bloqueo de cupos por fecha/turno
         await _showSnackDialog(
           msg.replaceFirst('Exception: ', ''),
           isError: true,
         );
       } else {
+        // Otro error genérico
         await _showSnackDialog(
           'Ocurrió un error al crear la reserva. Intenta nuevamente o contacta al administrador.\n\nDetalle: $msg',
           isError: true,
@@ -295,7 +365,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
     context.watch<ConfiguracionController>().configuracion;
 
     final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return SafeArea(
       child: Container(

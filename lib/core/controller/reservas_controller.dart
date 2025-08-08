@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/services/configuracion_service.dart';
 import 'package:citytourscartagena/core/services/fechas_bloquedas_service.dart';
 import 'package:citytourscartagena/core/services/firestore_service.dart';
 import 'package:citytourscartagena/core/utils/extensions.dart';
@@ -12,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 class ReservasController extends ChangeNotifier {
+  /// Retorna todas las reservas (no pagadas) para una fecha y turno específicos
+
   final FirestoreService _firestoreService;
   StreamSubscription? _reservasSubscription;
 
@@ -44,7 +47,7 @@ class ReservasController extends ChangeNotifier {
   List<Agencia> _allAgencias = [];
 
   ReservasController({FirestoreService? firestoreService})
-      : _firestoreService = firestoreService ?? FirestoreService() {
+    : _firestoreService = firestoreService ?? FirestoreService() {
     _initializeController();
 
     _agenciasSub = _firestoreService.getAgenciasStream().listen((all) {
@@ -65,7 +68,7 @@ class ReservasController extends ChangeNotifier {
   DateTime? get customDate => _customDate;
   List<ReservaConAgencia> get currentReservas => _allLoadedReservas;
   TurnoType? get turnoFilter => _turnoFilter;
-   EstadoReserva? get estadoFilter => _estadoFilter;
+  EstadoReserva? get estadoFilter => _estadoFilter;
   bool get isLoading => _isLoading;
 
   // Getters para la paginación
@@ -79,7 +82,7 @@ class ReservasController extends ChangeNotifier {
   Set<String> get selectedReservaIds => Set.from(_selectedReservaIds);
   bool get isSelectionMode => _isSelectionMode;
   int get selectedCount => _selectedReservaIds.length;
-  
+
   // Obtener reservas seleccionadas
   List<ReservaConAgencia> get selectedReservas {
     return _allLoadedReservas
@@ -88,7 +91,7 @@ class ReservasController extends ChangeNotifier {
   }
 
   // --- MÉTODOS PARA SELECCIÓN ---
-  
+
   /// Activa o desactiva el modo de selección
   void toggleSelectionMode() {
     _isSelectionMode = !_isSelectionMode;
@@ -105,12 +108,12 @@ class ReservasController extends ChangeNotifier {
     } else {
       _selectedReservaIds.add(reservaId);
     }
-    
+
     // Si no hay reservas seleccionadas, salir del modo selección
     if (_selectedReservaIds.isEmpty) {
       _isSelectionMode = false;
     }
-    
+
     notifyListeners();
   }
 
@@ -143,7 +146,7 @@ class ReservasController extends ChangeNotifier {
   }
 
   // --- MÉTODOS PARA CÁLCULOS DE SELECCIONADAS ---
-  
+
   /// Calcula el total de PAX de las reservas seleccionadas
   int getSelectedTotalPax() {
     return selectedReservas.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
@@ -151,12 +154,18 @@ class ReservasController extends ChangeNotifier {
 
   /// Calcula el total de saldo de las reservas seleccionadas
   double getSelectedTotalSaldo() {
-    return selectedReservas.fold<double>(0.0, (sum, ra) => sum + ra.reserva.saldo);
+    return selectedReservas.fold<double>(
+      0.0,
+      (sum, ra) => sum + ra.reserva.saldo,
+    );
   }
 
   /// Calcula el total de deuda de las reservas seleccionadas
   double getSelectedTotalDeuda() {
-    return selectedReservas.fold<double>(0.0, (sum, ra) => sum + ra.reserva.deuda);
+    return selectedReservas.fold<double>(
+      0.0,
+      (sum, ra) => sum + ra.reserva.deuda,
+    );
   }
 
   // Métodos existentes sin cambios...
@@ -170,19 +179,27 @@ class ReservasController extends ChangeNotifier {
   }
 
   Stream<List<ReservaConAgencia>> getAllReservasConAgenciaStream() {
-    return Rx.combineLatest2<List<Reserva>, List<Agencia>, List<ReservaConAgencia>>(
+    return Rx.combineLatest2<
+      List<Reserva>,
+      List<Agencia>,
+      List<ReservaConAgencia>
+    >(
       _firestoreService.getReservasStream(),
       _firestoreService.getAgenciasStream(),
       (reservas, agencias) {
-        return reservas.where((r) => agencias.any((a) => a.id == r.agenciaId)).map((r) {
-          final ag = agencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
-              Agencia(
-                id: r.agenciaId,
-                nombre: 'Agencia DesconocidaAA',
-                eliminada: true,
-              );
-          return ReservaConAgencia(reserva: r, agencia: ag);
-        }).toList();
+        return reservas
+            .where((r) => agencias.any((a) => a.id == r.agenciaId))
+            .map((r) {
+              final ag =
+                  agencias.firstWhereOrNull((a) => a.id == r.agenciaId) ??
+                  Agencia(
+                    id: r.agenciaId,
+                    nombre: 'Agencia DesconocidaAA',
+                    eliminada: true,
+                  );
+              return ReservaConAgencia(reserva: r, agencia: ag);
+            })
+            .toList();
       },
     );
   }
@@ -206,12 +223,12 @@ class ReservasController extends ChangeNotifier {
     _customDate = date;
     _agenciaIdFilter = agenciaId;
     _turnoFilter = turno;
-    _estadoFilter = estado;        
-    
+    _estadoFilter = estado;
+
     // Limpiar selección al cambiar filtros
     _selectedReservaIds.clear();
     _isSelectionMode = false;
-    
+
     _updateFilteredReservasStream(resetPagination: true);
     notifyListeners();
   }
@@ -219,33 +236,33 @@ class ReservasController extends ChangeNotifier {
   void setItemsPerPage(int newSize) {
     if (_itemsPerPage == newSize) return;
     _itemsPerPage = newSize;
-    
+
     // Limpiar selección al cambiar paginación
     _selectedReservaIds.clear();
     _isSelectionMode = false;
-    
+
     _updateFilteredReservasStream(resetPagination: true);
   }
 
   void nextPage() {
     if (!canGoNext || _isFetchingPage) return;
     _currentPageIndex++;
-    
+
     // Limpiar selección al cambiar página
     _selectedReservaIds.clear();
     _isSelectionMode = false;
-    
+
     _updateFilteredReservasStream(resetPagination: false);
   }
 
   void previousPage() {
     if (!canGoPrevious || _isFetchingPage) return;
     _currentPageIndex--;
-    
+
     // Limpiar selección al cambiar página
     _selectedReservaIds.clear();
     _isSelectionMode = false;
-    
+
     _updateFilteredReservasStream(resetPagination: false);
   }
 
@@ -334,14 +351,42 @@ class ReservasController extends ChangeNotifier {
   // Métodos CRUD con validación de bloqueo de cupos
   Future<void> addReserva(Reserva reserva) async {
     // Validar bloqueo de cupos antes de crear la reserva
-    final bloqueo = await FechasBloquedasService.getBloqueoParaFecha(reserva.fecha).first;
+    final bloqueo = await FechasBloquedasService.getBloqueoParaFecha(
+      reserva.fecha,
+    ).first;
     if (bloqueo != null && bloqueo.cerrado == true) {
-      // Si el turno bloqueado es 'ambos' o coincide con el turno de la reserva, bloquear
       final turnoReserva = reserva.turno?.name ?? '';
       if (bloqueo.turno == 'ambos' || bloqueo.turno == turnoReserva) {
-        throw Exception('No se puede crear la reserva: los cupos están bloqueados para esta fecha y turno. Motivo: ${bloqueo.motivo ?? ''}');
+        throw Exception(
+          'No se puede crear la reserva: los cupos están bloqueados para esta fecha y turno. Motivo: ${bloqueo.motivo ?? ''}',
+        );
       }
     }
+
+    // --- NUEVA VALIDACIÓN DE CUPOS MÁXIMOS GLOBALES ---
+    final config = await ConfiguracionService.getConfiguracion();
+    if (config == null) {
+      throw Exception('No se pudo obtener la configuración global.');
+    }
+
+    // Determinar maxCupos según el turno
+    final maxCupos = reserva.turno == TurnoType.manana
+        ? config.maxCuposTurnoManana
+        : config.maxCuposTurnoTarde;
+
+    // Validar que el total de pax actuales más los de esta reserva no supere el límite
+    final actuales = await _firestoreService.getTotalPaxReservados(
+      turno: reserva.turno!,
+      fecha: reserva.fecha,
+    );
+    if (actuales + reserva.pax > maxCupos) {
+      final whatsapp = config.contact_whatsapp ?? '';
+      throw Exception(
+        'No hay cupos disponibles. Contacta al administrador por WhatsApp: $whatsapp'
+      );
+    }
+
+    // Si todo está OK, agregar la reserva
     await _firestoreService.addReserva(reserva);
   }
 
@@ -364,4 +409,58 @@ class ReservasController extends ChangeNotifier {
     _filteredReservasSubject.close();
     super.dispose();
   }
+
+
+  /// ShouldShowWhatsAppButton en español es "¿Debería mostrar el botón de WhatsApp?"
+  Future<bool> shouldShowWhatsAppButton({
+    TurnoType? turno,
+    DateTime? fecha,
+  }) async {
+    if (turno == null || fecha == null) return false;
+    final config = await ConfiguracionService.getConfiguracion();
+    if (config == null) return false;
+    final maxCupos = turno == TurnoType.manana
+        ? config.maxCuposTurnoManana
+        : config.maxCuposTurnoTarde;
+    return await _firestoreService.seAlcanzoLimiteCuposFirestore(
+      turno: turno,
+      fecha: fecha,
+      maxCupos: maxCupos,
+    );
+  }
+
+
+  Future<CuposEstado> getEstadoCupos({
+    required TurnoType? turno,
+    required DateTime? fecha,
+  }) async {
+    if (turno == null || fecha == null) return CuposEstado.disponible;
+
+    // 1) Revisar si existe un bloqueo para esa fecha/turno
+    final bloqueo = await FechasBloquedasService.getBloqueoParaFecha(fecha).first;
+    if (bloqueo != null &&
+        bloqueo.cerrado == true &&
+        (bloqueo.turno == 'ambos' || bloqueo.turno == turno.name)) {
+      return CuposEstado.cerrado;
+    }
+
+    // 2) Revisar límite de cupos globales
+    final config = await ConfiguracionService.getConfiguracion();
+    if (config == null) return CuposEstado.disponible;
+    final maxCupos = turno == TurnoType.manana
+        ? config.maxCuposTurnoManana
+        : config.maxCuposTurnoTarde;
+
+    final limite = await _firestoreService.seAlcanzoLimiteCuposFirestore(
+      turno: turno,
+      fecha: fecha,
+      maxCupos: maxCupos,
+    );
+    if (limite) return CuposEstado.limiteAlcanzado;
+
+    // 3) Si llegó aquí, aún hay cupos
+    return CuposEstado.disponible;
+  }
 }
+
+enum CuposEstado { cerrado, limiteAlcanzado, disponible }

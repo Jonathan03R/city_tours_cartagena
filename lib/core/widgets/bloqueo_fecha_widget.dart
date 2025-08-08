@@ -82,6 +82,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                                   final motivo = result?['motivo']?.trim();
                                   final turno = result?['turno'];
                                   if (result != null && motivo != null && motivo.isNotEmpty && turno != null) {
+                                    if (!mounted) return;
                                     await ctrl.bloquear(widget.fecha, turno, motivo);
                                   }
                                 },

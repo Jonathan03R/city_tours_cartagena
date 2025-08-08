@@ -18,6 +18,7 @@ import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/controller/reservas_controller.dart';
 import '../../core/widgets/add_reserva_pro_form.dart';
@@ -319,26 +320,39 @@ class _ReservasViewState extends State<ReservasView> {
               onFilterChanged: _onFilterChanged,
             ),
             // Widget de bloqueo de fecha/turno
-            if (authRole.hasPermission(Permission.edit_configuracion) &&
-                (reservasController.selectedFilter == DateFilterType.today || reservasController.selectedFilter == DateFilterType.custom))
+            if (reservasController.selectedFilter == DateFilterType.today ||
+                reservasController.selectedFilter == DateFilterType.custom)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-                child: BloqueoFechaWidget(
-                  key: ValueKey((reservasController.selectedFilter == DateFilterType.custom
-                      ? (reservasController.customDate ?? DateTime.now())
-                      : DateTime.now()).toIso8601String()),
-                  fecha: reservasController.selectedFilter == DateFilterType.custom
-                      ? (reservasController.customDate ?? DateTime.now())
-                      : DateTime.now(),
-                  turnoActual: reservasController.turnoFilter == null
-                      ? 'ambos'
-                      : reservasController.turnoFilter == TurnoType.manana
-                          ? 'manana'
-                          : reservasController.turnoFilter == TurnoType.tarde
-                              ? 'tarde'
-                              : 'ambos',
-                  puedeEditar: true,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 4,
                 ),
+                child: (() {
+                  // Normaliza la fecha a solo año-mes-día
+                  DateTime selectedDate =
+                      reservasController.selectedFilter == DateFilterType.custom
+                      ? (reservasController.customDate ?? DateTime.now())
+                      : DateTime.now();
+                  DateTime dateOnly = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                  );
+                  return BloqueoFechaWidget(
+                    key: ValueKey(dateOnly.toIso8601String()),
+                    fecha: dateOnly,
+                    turnoActual: reservasController.turnoFilter == null
+                        ? 'ambos'
+                        : reservasController.turnoFilter == TurnoType.manana
+                        ? 'manana'
+                        : reservasController.turnoFilter == TurnoType.tarde
+                        ? 'tarde'
+                        : 'ambos',
+                    puedeEditar: authRole.hasPermission(
+                      Permission.edit_configuracion,
+                    ),
+                  );
+                })(),
               ),
             if (_currentAgencia != null) _buildAgencyHeader(_currentAgencia!),
             Container(
@@ -514,8 +528,18 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  /// Esto es para construir los controles de la parte derecha del header
   Widget _buildAgencyHeader(AgenciaConReservas agencia) {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+    final configuracion = Provider.of<ConfiguracionController>(
+      context,
+      listen: false,
+    ).configuracion;
+    final turno = reservasController.turnoFilter;
+    final hoy = DateTime.now();
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -555,6 +579,60 @@ class _ReservasViewState extends State<ReservasView> {
                 ),
               ],
             ),
+          ),
+          FutureBuilder<bool>(
+            future: reservasController.shouldShowWhatsAppButton(
+              turno: turno,
+              fecha: hoy,
+            ),
+            builder: (ctx, snap) {
+              if (snap.hasData && snap.data == true) {
+                final whatsapp = configuracion?.contact_whatsapp ?? '';
+                return IconButton(
+                  icon: const Icon(
+                    Icons.message,
+                    color: Colors.green,
+                    size: 32,
+                  ),
+                  tooltip: 'Verificar disponibilidad por WhatsApp',
+                  onPressed: () async {
+                    if (whatsapp.isEmpty) return;
+                    final telefono = whatsapp
+                        .replaceAll('+', '')
+                        .replaceAll(' ', '');
+                    final nombreAgencia = agencia.nombre;
+                    final mensaje = Uri.encodeComponent(
+                      'Hola, soy de $nombreAgencia. ¿Hay disponibilidad para el turno de hoy?',
+                    );
+                    final uriApp = Uri.parse(
+                      'whatsapp://send?phone=$telefono&text=$mensaje',
+                    );
+                    final uriWeb = Uri.parse(
+                      'https://wa.me/$telefono?text=$mensaje',
+                    );
+                    if (await canLaunchUrl(uriApp)) {
+                      await launchUrl(
+                        uriApp,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    } else if (await canLaunchUrl(uriWeb)) {
+                      await launchUrl(
+                        uriWeb,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    } else if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No se pudo abrir WhatsApp'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
         ],
       ),
