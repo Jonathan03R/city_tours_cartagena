@@ -20,6 +20,7 @@ class Reserva {
   final TurnoType? turno;
   final String? ticket; // es el id de los tickets asociados a la reserva (opcional)
   final String? habitacion; // numero de habitación asociado a la reserva (opcional)
+  final String? estatusReserva; // estado de la reserva (opcional)
 
 
   Reserva({
@@ -39,6 +40,7 @@ class Reserva {
     required this.turno,
     this.ticket,
     this.habitacion,
+    this.estatusReserva,
   });
 
   //este constructor es para crear una reserva desde un mapa de datos
@@ -63,6 +65,7 @@ class Reserva {
       turno: _mapTurno(data['turno'] as String? ?? 'normal'),
       ticket: data['tickets'] != null ? data['tickets'] as String : null,
       habitacion: data['habitacion'] != null ? data['habitacion'] as String : null,
+      estatusReserva: data['estatusReserva'] as String? ?? '',
     );
   }
 
@@ -87,6 +90,7 @@ class Reserva {
       'turno': turno?.toString().split('.').last, // Convertir TurnoType a String
       'tickets': ticket, // id de ticket (opcional)
       'habitacion': habitacion, // numero de habitación (opcional)
+      'estatusReserva': estatusReserva, // estado de la reserva (opcional)
     };
   }
 
@@ -131,7 +135,7 @@ class Reserva {
     TurnoType? turno,
     String? ticket, // Cambiado de tickets a ticket
     String? habitacion,
-
+    String? estatusReserva,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -149,6 +153,7 @@ class Reserva {
       turno: turno ?? this.turno,
       ticket: ticket ?? this.ticket, // Cambiado de tickets a ticket
       habitacion: habitacion ?? this.habitacion,
+      estatusReserva: estatusReserva ?? this.estatusReserva,
     );
   }
 }

@@ -353,7 +353,8 @@ class FirestoreService {
   /// @return Un Future que completa cuando la reserva se actualiza correctamente.
   Future<void> updateReserva(String id, Reserva reserva) async {
     try {
-      await _db.collection('reservas').doc(id).update(reserva.toFirestore());
+    await _db.collection('reservas').doc(id)
+      .set(reserva.toFirestore(), SetOptions(merge: true));
       debugPrint('✅ Reserva actualizada: ${reserva.nombreCliente}');
     } catch (e) {
       debugPrint('❌ Error actualizando reserva: $e');

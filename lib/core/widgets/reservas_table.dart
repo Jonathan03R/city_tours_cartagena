@@ -259,7 +259,8 @@ class _ReservasTableState extends State<ReservasTable> {
       const DataColumn(label: Text('Ticket')),
       const DataColumn(label: Text('N° Habitación')),
       const DataColumn(label: Text('Observaciones')),
-      const DataColumn(label: Text('Agencia')),
+  const DataColumn(label: Text('Agencia')),
+  const DataColumn(label: Text('Estatus Reserva')),
       if (authController.hasPermission(Permission.ver_deuda_reservas))
         const DataColumn(label: Text('Deuda')),
       if (authController.hasPermission(Permission.edit_reserva))
@@ -294,6 +295,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   const DataCell(Text('')), // Celda de turno vacía
                   const DataCell(Text('')), // Celda de número vacía
                   const DataCell(Text('')), // Celda de hotel vacía
+                    const DataCell(Text('')), // Estatus
                   if (!showFechaColumn)
                     DataCell(
                       Container(
@@ -766,6 +768,30 @@ class _ReservasTableState extends State<ReservasTable> {
             ? _buildAgenciaDropdown(ra)
             : Text(ra.nombreAgencia),
       ),
+      // Celda de Estatus Reserva (A-E)
+      // Celda de Estatus Reserva siempre editable si tiene permiso
+      DataCell(
+        DropdownButton<String>(
+          // Valor por defecto siempre válido
+          value: ['A', 'B', 'C', 'D', 'E'].contains(r.estatusReserva)
+              ? r.estatusReserva!
+              : 'A',
+          items: ['A', 'B', 'C', 'D', 'E']
+              .map((e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e),
+                  ))
+              .toList(),
+          onChanged: (newValue) async {
+            if (newValue != null) {
+              final updated = ra.reserva.copyWith(estatusReserva: newValue);
+              await _controller.updateReserva(r.id, updated);
+            }
+          },
+          underline: const SizedBox.shrink(),
+          isDense: true,
+        ),
+      ),
       if (authController.hasPermission(Permission.ver_deuda_reservas))
         DataCell(
           GestureDetector(
@@ -894,10 +920,27 @@ class _ReservasTableState extends State<ReservasTable> {
     if (isSelected) {
       rowColor = Colors.blue.shade100;
     } else if (esNotificada) {
-      rowColor =
-          Colors.orange.shade200; // Color especial para la reserva notificada
+      rowColor = Colors.orange.shade200; // Color especial para la reserva notificada
     } else if (esNueva) {
       rowColor = Colors.yellow.shade100; // Color para nuevas reservas
+    } else {
+      // Colorear fila según estatusReserva: A (sin color), B (rojo), C (azul), D (verde), E (gris)
+      switch (r.estatusReserva) {
+        case 'B':
+          rowColor = Colors.red.shade100;
+          break;
+        case 'C':
+          rowColor = Colors.blue.shade100;
+          break;
+        case 'D':
+          rowColor = Colors.green.shade100;
+          break;
+        case 'E':
+          rowColor = Colors.grey.shade200;
+          break;
+        default:
+          rowColor = null;
+      }
     }
     // Aplicar color de fondo si está seleccionada o notificada
     return DataRow(

@@ -36,6 +36,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
   final _telefonoController = TextEditingController();
   final _ticketController = TextEditingController();
   final _habitacionController = TextEditingController();
+  final _estatusReservaController = TextEditingController(text: 'A');
 
   DateTime _selectedDate = DateTime.now();
   TurnoType? _selectedTurno; // Selector manual para el turno
@@ -71,6 +72,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
     _telefonoController.dispose();
     _ticketController.dispose();
     _habitacionController.dispose();
+    _estatusReservaController.dispose();
     super.dispose();
   }
 
@@ -221,6 +223,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
         turno: _selectedTurno,
         ticket: _ticketController.text.trim(),
         habitacion: _habitacionController.text.trim(),
+        estatusReserva: _estatusReservaController.text.trim(),
       );
 
       final reservasController = context.read<ReservasController>();
