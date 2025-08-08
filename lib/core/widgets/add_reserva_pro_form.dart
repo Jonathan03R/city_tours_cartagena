@@ -25,7 +25,6 @@ class AddReservaProForm extends StatefulWidget {
 
 class _AddReservaProFormState extends State<AddReservaProForm> {
   final _textController = TextEditingController();
-  final _habitacionController = TextEditingController();
   Map<String, dynamic>? _parsedData;
   bool _showPreview = false;
   bool _isLoading = false;
@@ -73,7 +72,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   void dispose() {
     _textController.dispose();
     super.dispose();
-    _habitacionController.dispose();
   }
 
   double obtenerPrecioAsiento({
@@ -208,7 +206,8 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       costoAsiento: costoAsiento, // Usar el costoAsiento determinado
       telefono: telefono,
       turno: turno,
-      ticket: null, // Asignar un ticket vacío o manejarlo según tu lógica
+      ticket: _parsedData!['ticket'] as String? ?? '',
+      habitacion: _parsedData!['habitacion'] as String? ?? '',
     );
 
     try {
@@ -489,24 +488,20 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                   'Estado calculado',
                                   computedEstado.name,
                                 ),
+                                // Mostrar habitación y ticket detectados
+                                _buildPreviewItem(
+                                  'Habitación',
+                                  _parsedData!['habitacion'] as String?,
+                                ),
+                                _buildPreviewItem(
+                                  'Ticket',
+                                  _parsedData!['ticket'] as String?,
+                                ),
                               ],
                             ),
                           ],
                         ),
                       ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'N° Habitación',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _habitacionController,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Ingrese N° de Habitación',
-                      ),
-                    ),
                     const SizedBox(height: 20),
                     const Text(
                       'Texto de la reserva:',
