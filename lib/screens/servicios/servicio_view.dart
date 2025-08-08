@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/bloqueos_fecha_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
@@ -11,10 +12,9 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Corona para turno privado
-// pubspec.yaml -> dependencies: phosphor_flutter: ^2.1.0
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ServiciosView extends StatefulWidget {
   final String searchTerm;
@@ -31,8 +31,6 @@ class _ServiciosViewState extends State<ServiciosView> {
   @override
   void initState() {
     super.initState();
-    // Importante: usamos el stream de bloqueos para RECONSTRUIR en tiempo real,
-    // pero ya no “bloqueamos por administrador”
     _bloqueosController = BloqueosFechaController(fecha: DateTime.now());
   }
 
@@ -40,6 +38,74 @@ class _ServiciosViewState extends State<ServiciosView> {
   void dispose() {
     // _bloqueosController.dispose(); // si tu controller lo necesita
     super.dispose();
+  }
+
+  bool _isPrivado(TurnoType turno) {
+    // Ajusta si tienes TurnoType.privado explícito
+    return !(turno == TurnoType.manana || turno == TurnoType.tarde);
+  }
+
+  // Abre WhatsApp directo para "servicio privado"
+  Future<void> _abrirWhatsAppPrivado(
+    BuildContext context,
+    String? telefonoRaw,
+  ) async {
+    final raw = (telefonoRaw ?? '').trim();
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay número de WhatsApp configurado.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Obtener el nombre de la agencia logeada
+    final authController = context.read<AuthController>();
+    final agenciasController = context.read<AgenciasController>();
+    final agenciaId = authController.appUser?.agenciaId;
+
+    String nombreAgencia = 'Agencia';
+    final lista = agenciasController.agencias;
+    final agenciaLogeada = lista.firstWhere(
+      (a) => a.agencia.id == agenciaId,
+      orElse: () => agencia_model.AgenciaConReservas(
+        agencia: agencia_model.Agencia(
+          id: agenciaId ?? '',
+          nombre: nombreAgencia,
+          imagenUrl: null,
+          eliminada: false,
+        ),
+        totalReservas: 0,
+      ),
+    );
+    nombreAgencia = agenciaLogeada.agencia.nombre;
+
+    // Deja solo dígitos
+    final telefono = raw.replaceAll(RegExp(r'[^\d]'), '');
+    final mensaje = Uri.encodeComponent(
+      'Hola, le escribo de la agencia $nombreAgencia ¿Hay disponibilidad para servicio privado hoy?',
+    );
+
+    final uriApp = Uri.parse('whatsapp://send?phone=$telefono&text=$mensaje');
+    final uriWeb = Uri.parse('https://wa.me/$telefono?text=$mensaje');
+
+    if (await canLaunchUrl(uriApp)) {
+      await launchUrl(uriApp, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (await canLaunchUrl(uriWeb)) {
+      await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No se pudo abrir WhatsApp'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -62,7 +128,7 @@ class _ServiciosViewState extends State<ServiciosView> {
       );
     }
 
-    // Layout responsivo con Wrap (altura de card se adapta al contenido)
+    // Layout responsivo con Wrap
     final screenWidth = MediaQuery.of(context).size.width;
     final padding = 16.0;
     final columns = screenWidth >= 1100 ? 4 : screenWidth >= 820 ? 3 : 2;
@@ -72,12 +138,12 @@ class _ServiciosViewState extends State<ServiciosView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: null, // sin "Servicios"
+        title: null,
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
-      // 1) Escucha reservas en tiempo real (como antes)
+      // Tiempo real: reservas
       body: StreamBuilder<List<ReservaConAgencia>>(
         stream: reservasController.getAllReservasConAgenciaStream(),
         builder: (context, reservasSnapshot) {
@@ -90,30 +156,46 @@ class _ServiciosViewState extends State<ServiciosView> {
             );
           }
 
-          // 2) Además escuchamos bloqueos para “forzar” rebuilds cuando cambian cupos/configs,
-          // sin bloquear la interacción ni pintar “cerrado por admin”.
+          // Tiempo real: bloqueos (solo para disparar rebuild, no para decidir estado del privado)
           return StreamBuilder<List<FechaBloqueada>>(
             stream: _bloqueosController.bloqueosStream,
             builder: (context, _) {
-              final children = TurnoType.values.map((turno) {
-                final reservasCtrl = context.read<ReservasController>();
-                final today = DateTime.now();
+              final today = DateTime.now();
 
-                // Consultamos el estado de cupos para HOY
+              final children = TurnoType.values.map((turno) {
+                // Usamos SIEMPRE getEstadoCupos para todos los turnos
                 return FutureBuilder<CuposEstado>(
-                  future: reservasCtrl.getEstadoCupos(turno: turno, fecha: today),
+                  future: reservasController.getEstadoCupos(
+                    turno: turno,
+                    fecha: today,
+                  ),
                   builder: (ctx, snap) {
-                    final estado = snap.data ?? CuposEstado.disponible;
+                    final estadoOriginal = snap.data ?? CuposEstado.disponible;
+
+                    // Para "servicio privado": ignorar solo el "límite alcanzado".
+                    final estadoParaMostrar = _isPrivado(turno) && estadoOriginal == CuposEstado.limiteAlcanzado
+                        ? CuposEstado.disponible
+                        : estadoOriginal;
 
                     return SizedBox(
                       width: itemWidth,
                       child: _TurnoCard(
                         turno: turno,
-                        estado: estado,
+                        estado: estadoParaMostrar,
                         empresa: _nombreEmpresa ?? 'Agencia',
-                        onTap: () {
-                          // SIEMPRE navegable (nunca se bloquea)
+                        onTap: () async {
                           HapticFeedback.selectionClick();
+
+                          if (_isPrivado(turno)) {
+                            // Abrir WhatsApp directo (sin shouldShow)
+                            await _abrirWhatsAppPrivado(
+                              context,
+                              configuracion?.contact_whatsapp,
+                            );
+                            return;
+                          }
+
+                          // Resto de turnos: flujo normal
                           final agencia = agencia_model.AgenciaConReservas(
                             agencia: agencia_model.Agencia(
                               id: authController.appUser!.agenciaId!,
@@ -123,6 +205,7 @@ class _ServiciosViewState extends State<ServiciosView> {
                             ),
                             totalReservas: 0,
                           );
+                          if (!mounted) return;
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => ReservasView(agencia: agencia, turno: turno),
@@ -166,10 +249,7 @@ class _TurnoCard extends StatelessWidget {
   final String empresa;
   final VoidCallback onTap;
 
-  bool get _isPrivado {
-    // Si tienes TurnoType.privado explícito, cámbialo directamente a (turno == TurnoType.privado)
-    return !(turno == TurnoType.manana || turno == TurnoType.tarde);
-  }
+  bool get _isPrivado => !(turno == TurnoType.manana || turno == TurnoType.tarde);
 
   @override
   Widget build(BuildContext context) {
@@ -178,9 +258,9 @@ class _TurnoCard extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Turno ${turno.label}${_isPrivado ? " VIP" : ""}',
+      label: _isPrivado ? 'Servicio privado' : 'Turno ${turno.label}',
       child: InkWell(
-        onTap: onTap, // nunca bloqueado
+        onTap: onTap, // Siempre activo
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
@@ -205,13 +285,13 @@ class _TurnoCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min, // altura se adapta al contenido
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 4),
                 _TurnoIcon(turno: turno, isPrivado: _isPrivado),
                 const SizedBox(height: 10),
                 Text(
-                  turno.label,
+                  _isPrivado ? 'Servicio privado' : turno.label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
@@ -233,7 +313,7 @@ class _TurnoCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _EstadoBadge(estado: estado), // siempre “... hoy”
+                _EstadoBadge(estado: estado), // “… hoy”
               ],
             ),
           ),
@@ -242,7 +322,6 @@ class _TurnoCard extends StatelessWidget {
     );
   }
 
-  // Mantiene la misma lógica de colores por estado, sin bloquear la interacción.
   LinearGradient _backgroundGradient(CuposEstado e, bool isPrivado) {
     if (isPrivado) {
       // VIP: negro azulado -> dorado
@@ -253,7 +332,6 @@ class _TurnoCard extends StatelessWidget {
         stops: [0.0, 0.6, 1.0],
       );
     }
-
     if (e == CuposEstado.cerrado) {
       return const LinearGradient(
         colors: [Color(0xFFFF6B8A), Color(0xFF7F3DFF)],
@@ -267,7 +345,6 @@ class _TurnoCard extends StatelessWidget {
         end: Alignment.bottomRight,
       );
     } else {
-      // disponible
       return const LinearGradient(
         colors: [Color(0xFF2DD4BF), Color(0xFF10B981)],
         begin: Alignment.topLeft,
@@ -334,10 +411,7 @@ class _AgencyAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white24, width: 2),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8),
         ],
         image: const DecorationImage(
           image: AssetImage('assets/images/logo.png'),
@@ -417,7 +491,10 @@ class _ErrorBox extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: cs.onErrorContainer, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: cs.onErrorContainer,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

@@ -12,9 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'agencia_selector.dart';
+import 'error_dialogs.dart';
 
 /// AddReservaForm
 /// - Código limpio y robusto: sin mutaciones de estado dentro de build.
@@ -40,46 +40,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
   
 
   /// Muestra un diálogo de verificación de disponibilidad con opción WhatsApp
-  Future<void> _showDialogVerificarDisponibilidad(String? whatsapp) async {
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Verificar disponibilidad'),
-        content: const Text('Se ha superado el límite de cupos para este turno. ¿Deseas contactar al administrador por WhatsApp?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          if (whatsapp != null && whatsapp.isNotEmpty)
-            TextButton.icon(
-              icon: const Icon(Icons.message, color: Colors.green),
-              label: const Text('Contactar WhatsApp'),
-              onPressed: () async {
-                final telefono = whatsapp.replaceAll('+', '').replaceAll(' ', '');
-                final uriApp = Uri.parse('whatsapp://send?phone=$telefono');
-                final uriWeb = Uri.parse('https://wa.me/$telefono');
-                if (await canLaunchUrl(uriApp)) {
-                  await launchUrl(uriApp, mode: LaunchMode.externalApplication);
-                } else if (await canLaunchUrl(uriWeb)) {
-                  await launchUrl(uriWeb, mode: LaunchMode.externalApplication);
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No se pudo abrir WhatsApp'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-                Navigator.of(ctx).pop();
-              },
-            ),
-        ],
-      ),
-    );
-  }
   // Form
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autovalidateMode = AutovalidateMode.onUserInteraction;
@@ -239,22 +199,22 @@ class _AddReservaFormState extends State<AddReservaForm> {
     setState(() => _autovalidateMode = AutovalidateMode.always);
 
     if (!_formKey.currentState!.validate()) {
-      await _showSnackDialog('Por favor, corrige los errores del formulario.', isError: true);
+      await ErrorDialogs.showErrorDialog(context, 'Por favor, corrige los errores del formulario.');
       return;
     }
     if (_selectedAgenciaId == null || _selectedAgencia == null) {
       setState(() => _agencyError = true);
-      await _showSnackDialog('Debes seleccionar una agencia.', isError: true);
+      await ErrorDialogs.showErrorDialog(context, 'Debes seleccionar una agencia.');
       return;
     }
     if (_selectedTurno == null) {
-      await _showSnackDialog('Por favor, selecciona un turno.', isError: true);
+      await ErrorDialogs.showErrorDialog(context, 'Por favor, selecciona un turno.');
       return;
     }
 
     final currentCostoAsiento = _costoAsientoActual;
     if (currentCostoAsiento <= 0) {
-      await _showSnackDialog('Error: precio por asiento no válido, comunícate con el administrador.', isError: true);
+      await ErrorDialogs.showErrorDialog(context, 'Error: precio por asiento no válido, comunícate con el administrador.');
       return;
     }
 
@@ -269,14 +229,11 @@ class _AddReservaFormState extends State<AddReservaForm> {
         fecha: _selectedDate,
       );
       if (estadoCupos == CuposEstado.cerrado) {
-        await _showSnackDialog(
-          'No se puede crear la reserva: los cupos están cerrados para este turno.',
-          isError: true,
-        );
+        await ErrorDialogs.showErrorDialog(context, 'No se puede crear la reserva: los cupos están cerrados para este turno.');
         setState(() => _isLoading = false);
         return;
       } else if (estadoCupos == CuposEstado.limiteAlcanzado) {
-        await _showDialogVerificarDisponibilidad(_config?.contact_whatsapp);
+        await ErrorDialogs.showDialogVerificarDisponibilidad(context, _config?.contact_whatsapp);
         setState(() => _isLoading = false);
         return;
       }
@@ -312,19 +269,13 @@ class _AddReservaFormState extends State<AddReservaForm> {
       final msg = e.toString();
       if (msg.contains('No hay cupos disponibles')) {
         // Límite alcanzado, mostrar diálogo de WhatsApp
-        await _showDialogVerificarDisponibilidad(_config?.contact_whatsapp);
+        await ErrorDialogs.showDialogVerificarDisponibilidad(context, _config?.contact_whatsapp);
       } else if (msg.contains('los cupos están bloqueados')) {
         // Bloqueo de cupos por fecha/turno
-        await _showSnackDialog(
-          msg.replaceFirst('Exception: ', ''),
-          isError: true,
-        );
+        await ErrorDialogs.showErrorDialog(context, msg.replaceFirst('Exception: ', ''));
       } else {
         // Otro error genérico
-        await _showSnackDialog(
-          'Ocurrió un error al crear la reserva. Intenta nuevamente o contacta al administrador.\n\nDetalle: $msg',
-          isError: true,
-        );
+        await ErrorDialogs.showErrorDialog(context, 'Ocurrió un error al crear la reserva. Intenta nuevamente o contacta al administrador.\n\nDetalle: $msg');
       }
     }
   }

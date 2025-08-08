@@ -7,6 +7,7 @@ import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'error_dialogs.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/agencias_controller.dart';
@@ -125,20 +126,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     debugPrint('Submitting reserva with data: $_parsedData');
 
     if (_selectedAgenciaId == null) {
-      // Mostrar mensaje emergente si no hay agencia seleccionada
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Agencia requerida'),
-          content: const Text('Por favor selecciona una agencia.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor selecciona una agencia.');
       return;
     }
     final fechaRaw = _parsedData?['fechaReserva'] as String?;
@@ -148,79 +136,19 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     final turno = _selectedTurno;
 
     if (fechaRaw == null) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Fecha requerida'),
-          content: const Text('Por favor ingresa la fecha de la reserva.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa la fecha de la reserva.');
       return;
     } else if (nombreCliente == null || nombreCliente.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Nombre requerido'),
-          content: const Text('Por favor ingresa el nombre del cliente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa el nombre del cliente.');
       return;
     } else if (telefono == null || telefono.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Teléfono requerido'),
-          content: const Text('Por favor ingresa el teléfono del cliente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa el teléfono del cliente.');
       return;
     } else if (hotel == null || hotel.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Hotel requerido'),
-          content: const Text('Por favor ingresa el hotel del cliente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa el hotel del cliente.');
       return;
     } else if (turno == null) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Turno requerido'),
-          content: const Text('Por favor selecciona un turno.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor selecciona un turno.');
       return;
     }
 
@@ -240,22 +168,14 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       agencia: selectedAgencia,
     );
     if (costoAsiento <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Error: precio por asiento no válido, comunícate con el administrador',
-          ),
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Error: precio por asiento no válido, comunícate con el administrador');
       return;
     }
 
     // Resetear error de agencia y validar que tengamos datos parseados
     if (_agencyError) setState(() => _agencyError = false);
     if (_parsedData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Falta texto o seleccionar agencia')),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Falta texto o seleccionar agencia');
       return;
     }
 
@@ -304,28 +224,16 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       final msg = e.toString();
-      final isBloqueo = msg.contains('los cupos están bloqueados');
-      if (isBloqueo) {
-        await showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Cupos bloqueados'),
-            content: Text(msg.replaceFirst('Exception: ', '')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Aceptar'),
-              ),
-            ],
-          ),
-        );
+      if (msg.contains('los cupos están bloqueados')) {
+        await ErrorDialogs.showErrorDialog(context, msg.replaceFirst('Exception: ', ''));
+      } else if (msg.contains('No hay cupos disponibles')) {
+        // Extraer WhatsApp si viene en el mensaje
+        final regex = RegExp(r'WhatsApp: ([^\s]+)');
+        final match = regex.firstMatch(msg);
+        final whatsapp = match != null ? match.group(1) : null;
+        await ErrorDialogs.showDialogVerificarDisponibilidad(context, whatsapp);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creando reserva: $msg'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        await ErrorDialogs.showErrorDialog(context, 'Error creando reserva: $msg');
       }
     }
   }

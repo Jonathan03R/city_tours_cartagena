@@ -11,6 +11,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
+import 'package:citytourscartagena/core/widgets/agency_header_whatsapp_tag.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
@@ -18,7 +19,6 @@ import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/controller/reservas_controller.dart';
 import '../../core/widgets/add_reserva_pro_form.dart';
@@ -586,51 +586,51 @@ class _ReservasViewState extends State<ReservasView> {
               fecha: hoy,
             ),
             builder: (ctx, snap) {
-              if (snap.hasData && snap.data == true) {
-                final whatsapp = configuracion?.contact_whatsapp ?? '';
-                return IconButton(
-                  icon: const Icon(
-                    Icons.message,
-                    color: Colors.green,
-                    size: 32,
+              if (snap.connectionState == ConnectionState.waiting) {
+                // Loader con el mismo look del tag, para evitar “saltos” visuales
+                return Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.green.shade200),
                   ),
-                  tooltip: 'Verificar disponibilidad por WhatsApp',
-                  onPressed: () async {
-                    if (whatsapp.isEmpty) return;
-                    final telefono = whatsapp
-                        .replaceAll('+', '')
-                        .replaceAll(' ', '');
-                    final nombreAgencia = agencia.nombre;
-                    final mensaje = Uri.encodeComponent(
-                      'Hola, soy de $nombreAgencia. ¿Hay disponibilidad para el turno de hoy?',
-                    );
-                    final uriApp = Uri.parse(
-                      'whatsapp://send?phone=$telefono&text=$mensaje',
-                    );
-                    final uriWeb = Uri.parse(
-                      'https://wa.me/$telefono?text=$mensaje',
-                    );
-                    if (await canLaunchUrl(uriApp)) {
-                      await launchUrl(
-                        uriApp,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } else if (await canLaunchUrl(uriWeb)) {
-                      await launchUrl(
-                        uriWeb,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } else if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('No se pudo abrir WhatsApp'),
-                          backgroundColor: Colors.red,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.green.shade700,
                         ),
-                      );
-                    }
-                  },
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Verificando...',
+                        style: TextStyle(
+                          color: Colors.green.shade800,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               }
+
+              if (snap.hasData && snap.data == true) {
+                final whatsapp = configuracion?.contact_whatsapp ?? '';
+                return VerifyAvailabilityTag(
+                  telefonoRaw: whatsapp,
+                  message:
+                      'Hola, soy de ${agencia.nombre}. ¿Hay disponibilidad para el turno de hoy?',
+                  tooltip: 'Verificar disponibilidad hoy',
+                );
+              }
+
               return const SizedBox.shrink();
             },
           ),
