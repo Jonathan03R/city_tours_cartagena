@@ -11,6 +11,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
+import 'package:citytourscartagena/core/widgets/agency_header_whatsapp_tag.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
@@ -21,6 +22,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/controller/reservas_controller.dart';
 import '../../core/widgets/add_reserva_pro_form.dart';
+import '../../core/widgets/bloqueo_fecha_widget.dart';
 import '../../core/widgets/date_filter_buttons.dart';
 import '../../core/widgets/reserva_card_item.dart';
 import '../../core/widgets/reserva_details.dart';
@@ -317,6 +319,41 @@ class _ReservasViewState extends State<ReservasView> {
               selectedTurno: reservasController.turnoFilter,
               onFilterChanged: _onFilterChanged,
             ),
+            // Widget de bloqueo de fecha/turno
+            if (reservasController.selectedFilter == DateFilterType.today ||
+                reservasController.selectedFilter == DateFilterType.custom)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 4,
+                ),
+                child: (() {
+                  // Normaliza la fecha a solo año-mes-día
+                  DateTime selectedDate =
+                      reservasController.selectedFilter == DateFilterType.custom
+                      ? (reservasController.customDate ?? DateTime.now())
+                      : DateTime.now();
+                  DateTime dateOnly = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                  );
+                  return BloqueoFechaWidget(
+                    key: ValueKey(dateOnly.toIso8601String()),
+                    fecha: dateOnly,
+                    turnoActual: reservasController.turnoFilter == null
+                        ? 'ambos'
+                        : reservasController.turnoFilter == TurnoType.manana
+                        ? 'manana'
+                        : reservasController.turnoFilter == TurnoType.tarde
+                        ? 'tarde'
+                        : 'ambos',
+                    puedeEditar: authRole.hasPermission(
+                      Permission.edit_configuracion,
+                    ),
+                  );
+                })(),
+              ),
             if (_currentAgencia != null) _buildAgencyHeader(_currentAgencia!),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -491,8 +528,18 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  /// Esto es para construir los controles de la parte derecha del header
   Widget _buildAgencyHeader(AgenciaConReservas agencia) {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+    final configuracion = Provider.of<ConfiguracionController>(
+      context,
+      listen: false,
+    ).configuracion;
+    final turno = reservasController.turnoFilter;
+    final hoy = DateTime.now();
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -532,6 +579,60 @@ class _ReservasViewState extends State<ReservasView> {
                 ),
               ],
             ),
+          ),
+          FutureBuilder<bool>(
+            future: reservasController.shouldShowWhatsAppButton(
+              turno: turno,
+              fecha: hoy,
+            ),
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                // Loader con el mismo look del tag, para evitar “saltos” visuales
+                return Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Verificando...',
+                        style: TextStyle(
+                          color: Colors.green.shade800,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (snap.hasData && snap.data == true) {
+                final whatsapp = configuracion?.contact_whatsapp ?? '';
+                return VerifyAvailabilityTag(
+                  telefonoRaw: whatsapp,
+                  message:
+                      'Hola, soy de ${agencia.nombre}. ¿Hay disponibilidad para el turno de hoy?',
+                  tooltip: 'Verificar disponibilidad hoy',
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
           ),
         ],
       ),
@@ -656,7 +757,7 @@ class _ReservasViewState extends State<ReservasView> {
       context: context,
       isScrollControlled: true,
       builder: (context) => AddReservaForm(
-        agenciaId: widget.agencia!.id, // id de la agencia seleccionada
+        agenciaId: widget.agencia?.id, // Puede ser null, el form lo maneja
         onAdd: () {
           reservasController.updateFilter(
             reservasController.selectedFilter,

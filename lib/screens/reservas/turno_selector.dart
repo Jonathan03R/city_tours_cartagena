@@ -10,23 +10,15 @@ class TurnoSelectorWidget extends StatelessWidget {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              // debugPrint('filtro prueba🕘 Botón pulsado: Turno Mañana');
-              onTurnoSelected(TurnoType.manana);
-            },
-            child: const Text('Turno Mañana'),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              // debugPrint('filtro prueba🌙 Botón pulsado: Turno Tarde');
-              onTurnoSelected(TurnoType.tarde);
-            },
-            child: const Text('Turno Tarde'),
-          ),
-        ],
+        children: TurnoType.values.map((turno) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ElevatedButton(
+              onPressed: () => onTurnoSelected(turno),
+              child: Text(turno.label),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
