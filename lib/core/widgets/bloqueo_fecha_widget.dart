@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/controller/bloqueo_fecha_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 class BloqueoFechaWidget extends StatefulWidget {
@@ -36,15 +37,16 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
           // Filtrado por turno: solo mostrar bloqueado si el turno bloqueado coincide o es 'ambos'
           bool estaCerrado = false;
           if (bloqueo?.cerrado == true) {
-            if (bloqueo!.turno == 'ambos' || bloqueo.turno == widget.turnoActual) {
+            if (bloqueo!.turno == 'ambos' ||
+                bloqueo.turno == widget.turnoActual) {
               estaCerrado = true;
             }
           }
           return Card(
             color: estaCerrado ? Colors.red.shade50 : Colors.green.shade50,
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+            margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 0),
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: EdgeInsets.all(12.0.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -54,7 +56,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                         estaCerrado ? Icons.lock : Icons.lock_open,
                         color: estaCerrado ? Colors.red : Colors.green,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8.w),
                       Text(
                         estaCerrado
                             ? 'Cupos bloqueados para este turno'
@@ -62,41 +64,77 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                         style: TextStyle(
                           color: estaCerrado ? Colors.red : Colors.green,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
                         ),
                       ),
                       const Spacer(),
                       if (widget.puedeEditar && !cargando)
                         estaCerrado
                             ? TextButton.icon(
-                                icon: const Icon(Icons.lock_open),
-                                label: const Text('Desbloquear'),
+                                icon: Icon(Icons.lock_open, size: 20.sp),
+                                label: Text(
+                                  'Desbloquear',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12.w,
+                                    vertical: 8.h,
+                                  ),
+                                ),
                                 onPressed: () async {
                                   await ctrl.desbloquear(widget.fecha);
                                 },
                               )
                             : TextButton.icon(
-                                icon: const Icon(Icons.lock),
-                                label: const Text('Bloquear'),
+                                icon: Icon(Icons.lock, size: 20.sp),
+                                label: Text(
+                                  'Bloquear',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12.w,
+                                    vertical: 8.h,
+                                  ),
+                                ),
                                 onPressed: () async {
-                                  final result = await _showBloqueoDialog(context);
+                                  final result = await _showBloqueoDialog(
+                                    context,
+                                  );
                                   final motivo = result?['motivo']?.trim();
                                   final turno = result?['turno'];
-                                  if (result != null && motivo != null && motivo.isNotEmpty && turno != null) {
+                                  if (result != null &&
+                                      motivo != null &&
+                                      motivo.isNotEmpty &&
+                                      turno != null) {
                                     if (!mounted) return;
-                                    await ctrl.bloquear(widget.fecha, turno, motivo);
+                                    await ctrl.bloquear(
+                                      widget.fecha,
+                                      turno,
+                                      motivo,
+                                    );
                                   }
                                 },
                               ),
-                      if (cargando) const SizedBox(width: 16),
-                      if (cargando) const CircularProgressIndicator(strokeWidth: 2),
+                      if (cargando) SizedBox(width: 16.w),
+                      if (cargando) CircularProgressIndicator(strokeWidth: 2),
                     ],
                   ),
-                  if (estaCerrado && bloqueo?.motivo != null && bloqueo!.motivo!.isNotEmpty)
+                  if (estaCerrado &&
+                      bloqueo?.motivo != null &&
+                      bloqueo!.motivo!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         'Motivo: ${bloqueo.motivo}',
-                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                        style: TextStyle(color: Colors.red, fontSize: 13.sp),
                       ),
                     ),
                   if (estaCerrado)
@@ -104,7 +142,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         'Turno cerrado: ${bloqueo?.turno ?? 'ambos'}',
-                        style: const TextStyle(fontSize: 13, color: Colors.red),
+                        style: TextStyle(fontSize: 13.sp, color: Colors.red),
                       ),
                     ),
                   if (error != null)
@@ -125,7 +163,9 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
   }
 
   Future<Map<String, String>?> _showBloqueoDialog(BuildContext context) async {
-    final motivoController = TextEditingController(text: 'Cupos cerrados por administración');
+    final motivoController = TextEditingController(
+      text: 'Cupos cerrados por administración',
+    );
     String turno = _turnoSeleccionado;
     return showDialog<Map<String, String>>(
       context: context,
@@ -138,11 +178,9 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
               TextField(
                 controller: motivoController,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Motivo',
-                ),
+                decoration: const InputDecoration(labelText: 'Motivo'),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.sp),
               DropdownButtonFormField<String>(
                 value: turno,
                 items: const [
@@ -153,7 +191,9 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                 onChanged: (val) {
                   if (val != null) setState(() => turno = val);
                 },
-                decoration: const InputDecoration(labelText: 'Turno a bloquear'),
+                decoration: const InputDecoration(
+                  labelText: 'Turno a bloquear',
+                ),
               ),
             ],
           ),
@@ -163,10 +203,9 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop({
-                'motivo': motivoController.text,
-                'turno': turno,
-              }),
+              onPressed: () => Navigator.of(
+                ctx,
+              ).pop({'motivo': motivoController.text, 'turno': turno}),
               child: const Text('Bloquear'),
             ),
           ],

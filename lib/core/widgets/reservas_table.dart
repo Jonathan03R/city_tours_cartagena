@@ -8,6 +8,7 @@ import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -270,8 +271,9 @@ class _ReservasTableState extends State<ReservasTable> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            columnSpacing: 12,
-            horizontalMargin: 16,
+            /// columnsSpacing es la separación horizontal entre las columnas
+            columnSpacing: 10.h,
+            horizontalMargin: 16.h,
             headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
             columns: columns,
             rows: [
@@ -457,7 +459,7 @@ class _ReservasTableState extends State<ReservasTable> {
 
         // --- Botones de paginación ---
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -482,7 +484,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 16),
+               SizedBox(width: 16.w),
               ElevatedButton(
                 onPressed: _controller.canGoNext && !_controller.isFetchingPage
                     ? _controller.nextPage
@@ -505,7 +507,7 @@ class _ReservasTableState extends State<ReservasTable> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text('Elementos por página:'),
-              const SizedBox(width: 8),
+               SizedBox(width: 8.w),
               DropdownButton<int>(
                 value: _controller.itemsPerPage,
                 items: const [10, 20, 50]
@@ -571,9 +573,9 @@ class _ReservasTableState extends State<ReservasTable> {
                         }
                       : null,
                 )
-              : const Icon(
+              : Icon(
                   Icons.check_box_outline_blank,
-                  size: 16,
+                  size: 16.sp,
                   color: Colors.grey,
                 ),
         ),

@@ -18,6 +18,7 @@ import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/controller/reservas_controller.dart';
@@ -281,6 +282,7 @@ class _ReservasViewState extends State<ReservasView> {
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -298,7 +300,7 @@ class _ReservasViewState extends State<ReservasView> {
                     );
                   },
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 EstadoFilterButtons(
                   selectedEstado: reservasController.estadoFilter,
                   onEstadoChanged: (nuevoEstado) {
@@ -371,9 +373,9 @@ class _ReservasViewState extends State<ReservasView> {
                                   reservasController.customDate,
                                   reservasController.turnoFilter,
                                 ),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                                  fontSize: 18.sp,
                                 ),
                               ),
                             ),
@@ -402,12 +404,12 @@ class _ReservasViewState extends State<ReservasView> {
                                 reservasController.customDate,
                                 reservasController.turnoFilter,
                               ),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: 18.sp,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8.h),
                           ],
                         );
                 },
@@ -505,23 +507,43 @@ class _ReservasViewState extends State<ReservasView> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           if (authRole.hasPermission(Permission.crear_reserva))
-            FloatingActionButton.extended(
-              onPressed: _showAddReservaProForm,
-              backgroundColor: Colors.purple.shade600,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('registro rapido'),
-              heroTag: "pro_button",
+            SizedBox(
+              height: 48.h, // <-- altura responsiva
+              child: FloatingActionButton.extended(
+                onPressed: _showAddReservaProForm,
+                backgroundColor: Colors.purple.shade600,
+                foregroundColor: Colors.white,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                icon: Icon(Icons.auto_awesome, size: 24.sp),
+                label: Text(
+                  'Registro rápido',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                heroTag: "pro_button",
+              ),
             ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           if (authRole.hasPermission(Permission.crear_agencias_agencias))
-            FloatingActionButton.extended(
-              onPressed: _showAddReservaForm,
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('registro manual'),
-              heroTag: "manual_button",
+            SizedBox(
+              height: 48.h, // <-- altura responsiva
+              child: FloatingActionButton.extended(
+                onPressed: _showAddReservaForm,
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                icon: Icon(Icons.add, size: 24.sp),
+                label: Text(
+                  'Registro manual',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                heroTag: "manual_button",
+              ),
             ),
         ],
       ),
@@ -541,41 +563,44 @@ class _ReservasViewState extends State<ReservasView> {
     final hoy = DateTime.now();
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(16.h),
       child: Row(
         children: [
           if (agencia.imagenUrl != null && agencia.imagenUrl!.isNotEmpty)
             CircleAvatar(
-              radius: 50,
+              radius: 50.r,
               backgroundImage: NetworkImage(agencia.imagenUrl!),
               backgroundColor: Colors.grey.shade200,
             )
           else
             CircleAvatar(
-              radius: 50,
+              radius: 50.r,
               backgroundColor: Colors.green.shade100,
               child: Icon(
                 Icons.business,
-                size: 50,
+                size: 50.r,
                 color: Colors.green.shade600,
               ),
             ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   agencia.nombre,
-                  style: const TextStyle(
-                    fontSize: 20,
+                  style: TextStyle(
+                    fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   '${agencia.totalReservas} reserva${agencia.totalReservas != 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -589,8 +614,8 @@ class _ReservasViewState extends State<ReservasView> {
               if (snap.connectionState == ConnectionState.waiting) {
                 // Loader con el mismo look del tag, para evitar “saltos” visuales
                 return Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  height: 36.h,
+                  padding: EdgeInsets.symmetric(horizontal: 12.h),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(999),
@@ -600,8 +625,8 @@ class _ReservasViewState extends State<ReservasView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 16.w,
+                        height: 16.h,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: Colors.green.shade700,
@@ -612,7 +637,7 @@ class _ReservasViewState extends State<ReservasView> {
                         'Verificando...',
                         style: TextStyle(
                           color: Colors.green.shade800,
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -726,7 +751,7 @@ class _ReservasViewState extends State<ReservasView> {
       listen: false,
     );
 
-    debugPrint('la agencia es ${widget.agencia?.agencia.nombre}');
+    // debugPrint('la agencia es ${widget.agencia?.agencia.nombre}');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -936,19 +961,19 @@ class _ReservasViewState extends State<ReservasView> {
       buttonText = "Exportar";
     }
 
-    debugPrint(
-      '🔍 Filtro turno: $turnoFilter, showManana: $showManana, showTarde: $showTarde',
-    );
-    debugPrint(
-      '💰 Precios globales - Mañana: $globalPriceManana, Tarde: $globalPriceTarde',
-    );
+    // debugPrint(
+    //   '🔍 Filtro turno: $turnoFilter, showManana: $showManana, showTarde: $showTarde',
+    // );
+    // debugPrint(
+    //   '💰 Precios globales - Mañana: $globalPriceManana, Tarde: $globalPriceTarde',
+    // );
 
     return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.all(12.h),
+      margin: EdgeInsets.symmetric(horizontal: 8.h),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(8.r),
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
@@ -961,7 +986,7 @@ class _ReservasViewState extends State<ReservasView> {
               Text(
                 reservasText, // NUEVO: Texto dinámico
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
                   color: hasSelections
                       ? Colors.blue.shade700
@@ -1011,7 +1036,7 @@ class _ReservasViewState extends State<ReservasView> {
                     hasSelections
                         ? Icons.file_download_outlined
                         : Icons.file_download, // NUEVO: Ícono dinámico
-                    size: 20,
+                    size: 20.w,
                   ),
                   label: Text(buttonText), // NUEVO: Texto dinámico
                   style: ElevatedButton.styleFrom(
@@ -1019,16 +1044,19 @@ class _ReservasViewState extends State<ReservasView> {
                         ? Colors.blue.shade600
                         : Colors.green.shade600, // NUEVO: Color dinámico
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 8.h,
                     ),
-                    textStyle: const TextStyle(fontSize: 12),
+                    textStyle: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
 
           // Resto del código sin cambios...
           if (ag != null) ...[
@@ -1168,7 +1196,7 @@ class _ReservasViewState extends State<ReservasView> {
             child: Text(
               '$turno: \$${precio.toStringAsFixed(2)}',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
                 color: esHeredado ? Colors.grey.shade600 : Colors.black87,
               ),
@@ -1497,7 +1525,7 @@ class CompactDateFilterButtons extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.filter_list,
-                    size: 18,
+                    size: 18.sp,
                     color: isMoreFiltersSelected ? Colors.white : Colors.blue,
                   ),
                   const SizedBox(width: 4),
@@ -1505,7 +1533,7 @@ class CompactDateFilterButtons extends StatelessWidget {
                     'Más filtros',
                     style: TextStyle(
                       color: isMoreFiltersSelected ? Colors.white : Colors.blue,
-                      fontSize: 12,
+                      fontSize: 12.sp,
                     ),
                   ),
                 ],
@@ -1526,7 +1554,7 @@ class CompactDateFilterButtons extends StatelessWidget {
   }) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        padding: EdgeInsets.symmetric(horizontal: 4.0.w),
         child: ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
@@ -1544,7 +1572,7 @@ class CompactDateFilterButtons extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.sp,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
             textAlign: TextAlign.center,

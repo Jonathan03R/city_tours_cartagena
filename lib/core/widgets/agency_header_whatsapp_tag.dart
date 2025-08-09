@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class VerifyAvailabilityTag extends StatefulWidget {
@@ -111,8 +112,8 @@ class _VerifyAvailabilityTagState extends State<VerifyAvailabilityTag> {
                 children: [
                   if (_isLaunching)
                     SizedBox(
-                      width: 16,
-                      height: 16,
+                      width: 16.w,
+                      height: 16.h,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: icon,
@@ -120,12 +121,12 @@ class _VerifyAvailabilityTagState extends State<VerifyAvailabilityTag> {
                     )
                   else
                     Icon(Icons.message, size: 16, color: icon),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8.w),
                   Text(
                     'Verificar disponibilidad hoy',
                     style: TextStyle(
                       color: text,
-                      fontSize: 12,
+                      fontSize: 11.sp,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.2,
                     ),

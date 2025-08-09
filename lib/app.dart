@@ -15,8 +15,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // Tamaño de diseño base (iPhone X)
+      /// Inicializa ScreenUtil con el tamaño de diseño base
+      designSize: const Size(490, 1074), // Tamaño de diseño base (iPhone X)
+      /// Permite la adaptación del texto a diferentes tamaños de pantalla
       minTextAdapt: true,
+
+      /// Habilita el modo de pantalla dividida
       splitScreenMode: true,
       builder: (context, child) {
         return MultiProvider(
@@ -56,7 +60,18 @@ class MyApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [Locale('es', 'ES')],
-            theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+            theme: ThemeData(
+              dataTableTheme: DataTableThemeData(
+                headingTextStyle: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                dataTextStyle: TextStyle(fontSize: 12.sp),
+                dataRowHeight: 40.h,
+                headingRowHeight: 44.h,
+              ),
+            ),
             home: const AuthGate(),
             debugShowCheckedModeBanner: false,
           ),

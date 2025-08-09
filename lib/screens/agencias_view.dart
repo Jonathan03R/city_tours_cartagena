@@ -12,6 +12,7 @@ import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 class AgenciasView extends StatefulWidget {
@@ -152,10 +153,10 @@ class _AgenciasViewState extends State<AgenciasView> {
                 }
                 
                 if (filteredAgencias.isEmpty) {
-                  return const Center(
+                  return  Center(
                     child: Text(
                       'No se encontraron agencias',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      style: TextStyle(fontSize: 16.sp, color: Colors.grey),
                     ),
                   );
                 }
@@ -176,7 +177,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                     final allReservas = allReservasSnapshot.data ?? [];
 
                     return GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16.sp),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 16,
@@ -211,11 +212,11 @@ class _AgenciasViewState extends State<AgenciasView> {
                           child: Card(
                             elevation: 2,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                               side: selected
                                   ? BorderSide(
                                       color: Colors.blue.shade400,
-                                      width: 2,
+                                      width: 2.w,
                                     )
                                   : BorderSide.none,
                             ),
@@ -226,12 +227,12 @@ class _AgenciasViewState extends State<AgenciasView> {
                               children: [
                                 Positioned.fill(
                                   child: Padding(
-                                    padding: const EdgeInsets.all(8),
+                                    padding: EdgeInsets.all(8.sp),
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         CircleAvatar(
-                                          radius: 50,
+                                          radius: 50.r,
                                           backgroundColor: Colors.grey.shade200,
                                           child: (agencia.imagenUrl != null &&
                                               agencia.imagenUrl!.isNotEmpty)
@@ -239,8 +240,8 @@ class _AgenciasViewState extends State<AgenciasView> {
                                                   child: Image.network(
                                                     agencia.imagenUrl!,
                                                     fit: BoxFit.cover,
-                                                    width: 100,
-                                                    height: 100,
+                                                    width: 100.w,
+                                                    height: 100.h,
                                                     loadingBuilder: (
                                                       BuildContext context,
                                                       Widget child,
@@ -270,7 +271,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                                                     ) {
                                                       return Icon(
                                                         Icons.business,
-                                                        size: 50,
+                                                        size: 50.r,
                                                         color: Colors.green.shade600,
                                                       );
                                                     },
@@ -278,16 +279,16 @@ class _AgenciasViewState extends State<AgenciasView> {
                                                 )
                                               : Icon(
                                                   Icons.business,
-                                                  size: 50,
+                                                  size: 50.r,
                                                   color: Colors.green.shade600,
                                                 ),
                                         ),
-                                        const SizedBox(height: 12),
+                                        SizedBox(height: 12.h),
                                         Text(
                                           agencia.nombre,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 12,
+                                            fontSize: 14.sp,
                                           ),
                                           textAlign: TextAlign.center,
                                           maxLines: 2,
@@ -298,9 +299,9 @@ class _AgenciasViewState extends State<AgenciasView> {
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 5,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 10.h,
+                                                vertical: 5.w,
                                               ),
                                               decoration: BoxDecoration(
                                                 color: Colors.blue.shade50,
@@ -308,21 +309,21 @@ class _AgenciasViewState extends State<AgenciasView> {
                                               ),
                                               child: Text(
                                                 '${agencia.totalReservas} reservas',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   color: Colors.blue,
                                                   fontWeight: FontWeight.w600,
-                                                  fontSize: 8,
+                                                  fontSize: 10.sp,
                                                 ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: 4.h),
                                         authController.hasPermission(Permission.ver_deuda_agencia)
                                             ? Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 5,
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 10.h,
+                                                  vertical: 5.w,
                                                 ),
                                                 decoration: BoxDecoration(
                                                   color: totalDeuda > 0
@@ -337,7 +338,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                                                         ? Colors.red.shade700
                                                         : Colors.green.shade700,
                                                     fontWeight: FontWeight.w600,
-                                                    fontSize: 8,
+                                                    fontSize: 10.sp,
                                                   ),
                                                 ),
                                               )
@@ -372,10 +373,10 @@ class _AgenciasViewState extends State<AgenciasView> {
                                   Positioned(
                                     top: 8,
                                     right: 8,
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.check_circle,
                                       color: Colors.blue,
-                                      size: 24,
+                                      size: 24.sp,
                                     ),
                                   ),
                               ],

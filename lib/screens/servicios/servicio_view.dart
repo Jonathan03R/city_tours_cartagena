@@ -12,6 +12,7 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -137,12 +138,12 @@ class _ServiciosViewState extends State<ServiciosView> {
     final itemWidth = availableWidth / columns;
 
     return Scaffold(
-      appBar: AppBar(
-        title: null,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 0,
-      ),
+      // appBar: AppBar(
+      //   title: null,
+      //   backgroundColor: Theme.of(context).colorScheme.surface,
+      //   foregroundColor: Theme.of(context).colorScheme.onSurface,
+      //   elevation: 0,
+      // ),
       // Tiempo real: reservas
       body: StreamBuilder<List<ReservaConAgencia>>(
         stream: reservasController.getAllReservasConAgenciaStream(),
@@ -295,7 +296,7 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16,
+                    fontSize: 16.sp,
                     color: _isPrivado ? Colors.amber.shade50 : Colors.white,
                     letterSpacing: 0.2,
                   ),
@@ -306,9 +307,9 @@ class _TurnoCard extends StatelessWidget {
                 Text(
                   empresa,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 12.sp,
                     color: Colors.white,
                   ),
                 ),
@@ -334,7 +335,7 @@ class _TurnoCard extends StatelessWidget {
     }
     if (e == CuposEstado.cerrado) {
       return const LinearGradient(
-        colors: [Color(0xFFFF6B8A), Color(0xFF7F3DFF)],
+        colors: [Color(0xFFD8113C), Color.fromARGB(255, 235, 78, 16)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );
@@ -384,7 +385,7 @@ class _TurnoIcon extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: const Color(0xFFFFBF00).withOpacity(0.35),
-                  blurRadius: 16,
+                  blurRadius: 16.r,
                   spreadRadius: 1,
                   offset: const Offset(0, 6),
                 ),
@@ -452,7 +453,7 @@ class _EstadoBadge extends StatelessWidget {
         style: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontSize: 12,
+          fontSize: 10.sp,
           letterSpacing: 0.2,
         ),
       ),
