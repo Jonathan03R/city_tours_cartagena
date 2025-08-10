@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class EstadoFilterButtons extends StatelessWidget {
   final EstadoReserva? selectedEstado;
@@ -17,7 +18,10 @@ class EstadoFilterButtons extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ChoiceChip(
-          label: Text('Pendientes'),
+          label: Text(
+            'Pendientes',
+            style: TextStyle(fontSize: 14.sp),
+          ),
           selected: selectedEstado == EstadoReserva.pendiente,
           onSelected: (_) => onEstadoChanged(
             selectedEstado == EstadoReserva.pendiente 
@@ -27,7 +31,10 @@ class EstadoFilterButtons extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         ChoiceChip(
-          label: Text('Pagadas'),
+          label: Text(
+            'Pagadas',
+            style: TextStyle(fontSize: 14.sp),
+          ),
           selected: selectedEstado == EstadoReserva.pagada,
           onSelected: (_) => onEstadoChanged(
             selectedEstado == EstadoReserva.pagada 

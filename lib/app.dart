@@ -63,12 +63,12 @@ class MyApp extends StatelessWidget {
             theme: ThemeData(
               dataTableTheme: DataTableThemeData(
                 headingTextStyle: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
-                dataTextStyle: TextStyle(fontSize: 12.sp),
-                dataRowHeight: 40.h,
+                dataTextStyle: TextStyle(fontSize: 16.sp),
+                dataRowHeight: 50.h,
                 headingRowHeight: 44.h,
               ),
             ),

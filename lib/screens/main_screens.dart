@@ -197,12 +197,20 @@ class _MainScreenState extends State<MainScreen> {
       child: Scaffold(
         key: _scaffoldKey,
         appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(
+              Icons.menu,
+              size: 28.sp, // <-- aquí controlas el tamaño
+              color: const Color(0xFF06142F),
+            ),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
           backgroundColor: Colors.white,
           elevation: 2,
           iconTheme: const IconThemeData(color: Color(0xFF06142F)),
           title: !isAgencyUser && _currentIndex == 1
               ? Container(
-                  height: 40,
+                  height: 40.h,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(20),
@@ -219,19 +227,19 @@ class _MainScreenState extends State<MainScreen> {
                       hintText: 'Buscar agencia...',
                       hintStyle: TextStyle(
                         color: Colors.grey.shade500,
-                        fontSize: 14,
+                        fontSize: 16.sp,
                       ),
                       prefixIcon: Icon(
                         Icons.search,
                         color: Colors.grey.shade500,
-                        size: 20,
+                        size: 20.sp,
                       ),
                       suffixIcon: _searchTerm.isNotEmpty
                           ? IconButton(
                               icon: Icon(
                                 Icons.clear,
                                 color: Colors.grey.shade500,
-                                size: 20,
+                                size: 20.sp,
                               ),
                               onPressed: () {
                                 _searchController.clear();
@@ -249,12 +257,12 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                 )
-              : const Text(
+              : Text(
                   'CITY TOURS CLIMATIZADO',
                   style: TextStyle(
                     color: Color(0xFF06142F),
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 16.sp,
                     letterSpacing: 1.0,
                   ),
                 ),

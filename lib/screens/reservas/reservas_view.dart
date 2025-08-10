@@ -406,7 +406,7 @@ class _ReservasViewState extends State<ReservasView> {
                               ),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18.sp,
+                                fontSize: 20.sp,
                               ),
                             ),
                             SizedBox(height: 8.h),
@@ -563,22 +563,22 @@ class _ReservasViewState extends State<ReservasView> {
     final hoy = DateTime.now();
 
     return Padding(
-      padding: EdgeInsets.all(16.h),
+      padding: EdgeInsets.all(10.h),
       child: Row(
         children: [
           if (agencia.imagenUrl != null && agencia.imagenUrl!.isNotEmpty)
             CircleAvatar(
-              radius: 50.r,
+              radius: 40.r,
               backgroundImage: NetworkImage(agencia.imagenUrl!),
               backgroundColor: Colors.grey.shade200,
             )
           else
             CircleAvatar(
-              radius: 50.r,
+              radius: 40.r,
               backgroundColor: Colors.green.shade100,
               child: Icon(
                 Icons.business,
-                size: 50.r,
+                size: 40.r,
                 color: Colors.green.shade600,
               ),
             ),
@@ -612,33 +612,40 @@ class _ReservasViewState extends State<ReservasView> {
             ),
             builder: (ctx, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                // Loader con el mismo look del tag, para evitar “saltos” visuales
                 return Container(
-                  height: 36.h,
-                  padding: EdgeInsets.symmetric(horizontal: 12.h),
+                  height: 38.h,
+                  padding: EdgeInsets.symmetric(horizontal: 14.w),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.green.shade200),
+                    border: Border.all(color: Colors.red.shade200, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: 16.w,
-                        height: 16.h,
+                        width: 18.w,
+                        height: 18.h,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.green.shade700,
+                          color: Colors.red.shade700,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Verificando...',
                         style: TextStyle(
-                          color: Colors.green.shade800,
+                          color: Colors.red.shade800,
                           fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -986,7 +993,7 @@ class _ReservasViewState extends State<ReservasView> {
               Text(
                 reservasText, // NUEVO: Texto dinámico
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 20.sp,
                   fontWeight: FontWeight.w500,
                   color: hasSelections
                       ? Colors.blue.shade700
@@ -1004,16 +1011,16 @@ class _ReservasViewState extends State<ReservasView> {
                       // Si hay selecciones, usar solo las seleccionadas
                       reservasParaExportar =
                           reservasController.selectedReservas;
-                      debugPrint(
-                        '📄 Exportando ${reservasParaExportar.length} reservas SELECCIONADAS',
-                      );
+                      // debugPrint(
+                      //   '📄 Exportando ${reservasParaExportar.length} reservas SELECCIONADAS',
+                      // );
                     } else {
                       // Si no hay selecciones, usar todas las filtradas (comportamiento original)
                       reservasParaExportar = await reservasController
                           .getAllFilteredReservasSinPaginacion();
-                      debugPrint(
-                        '📄 Exportando ${reservasParaExportar.length} reservas FILTRADAS',
-                      );
+                      // debugPrint(
+                      //   '📄 Exportando ${reservasParaExportar.length} reservas FILTRADAS',
+                      // );
                     }
 
                     if (!mounted) return;
@@ -1036,7 +1043,7 @@ class _ReservasViewState extends State<ReservasView> {
                     hasSelections
                         ? Icons.file_download_outlined
                         : Icons.file_download, // NUEVO: Ícono dinámico
-                    size: 20.w,
+                    size: 24.w,
                   ),
                   label: Text(buttonText), // NUEVO: Texto dinámico
                   style: ElevatedButton.styleFrom(
@@ -1045,11 +1052,11 @@ class _ReservasViewState extends State<ReservasView> {
                         : Colors.green.shade600, // NUEVO: Color dinámico
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
+                      horizontal: 16.w,
                       vertical: 8.h,
                     ),
                     textStyle: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1190,13 +1197,13 @@ class _ReservasViewState extends State<ReservasView> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 8),
+          Icon(icon, color: color, size: 24.sp),
+          SizedBox(width: 8.w),
           Expanded(
             child: Text(
               '$turno: \$${precio.toStringAsFixed(2)}',
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w500,
                 color: esHeredado ? Colors.grey.shade600 : Colors.black87,
               ),
@@ -1211,7 +1218,7 @@ class _ReservasViewState extends State<ReservasView> {
               ),
               child: Text(
                 'Global',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
               ),
             ),
         ],
@@ -1572,7 +1579,7 @@ class CompactDateFilterButtons extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: 14.sp,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
             textAlign: TextAlign.center,

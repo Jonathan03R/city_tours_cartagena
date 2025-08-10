@@ -15,6 +15,7 @@ class PermissionService {
       Permission.ver_pagina_usuarios,
       // Permission.crear_reserva,
       Permission.crear_agencias_agencias,
+      Permission.ver_deuda_reservas,
       // Permission.manage_observations,
       // Permission.select_reservas,
       // Una agencia solo puede contactar, ver observaciones y seleccionar

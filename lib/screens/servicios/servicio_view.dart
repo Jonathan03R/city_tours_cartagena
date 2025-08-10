@@ -296,7 +296,7 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16.sp,
+                    fontSize: 24.sp,
                     color: _isPrivado ? Colors.amber.shade50 : Colors.white,
                     letterSpacing: 0.2,
                   ),
@@ -308,8 +308,8 @@ class _TurnoCard extends StatelessWidget {
                   empresa,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18.sp,
                     color: Colors.white,
                   ),
                 ),
@@ -453,8 +453,8 @@ class _EstadoBadge extends StatelessWidget {
         style: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontSize: 10.sp,
-          letterSpacing: 0.2,
+          fontSize: 14.sp,
+          // letterSpacing: 0.8,
         ),
       ),
     );
