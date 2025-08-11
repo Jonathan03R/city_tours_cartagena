@@ -75,7 +75,8 @@ class AgenciasController extends ChangeNotifier {
     TipoDocumento? tipoDocumento,
     String? numeroDocumento,
     String? nombreBeneficiario,
-    
+    String? contactoAgencia,
+    String? linkContactoAgencia,
   }) async {
     String? imageUrl;
     if (imagePath != null) {
@@ -91,6 +92,8 @@ class AgenciasController extends ChangeNotifier {
       tipoDocumento: tipoDocumento,
       numeroDocumento: numeroDocumento,
       nombreBeneficiario: nombreBeneficiario,
+      contactoAgencia: contactoAgencia,
+      linkContactoAgencia: linkContactoAgencia,
     ); // NUEVO
     final addedAgencia = await _firestoreService.addAgencia(nuevaAgencia);
     return addedAgencia;
@@ -108,6 +111,8 @@ class AgenciasController extends ChangeNotifier {
     required TipoDocumento? tipoDocumento,
     required String? numeroDocumento,
     required String? nombreBeneficiario,
+    required String? contactoAgencia,
+    required String? linkContactoAgencia,
   }) async {
     // MODIFICADO: Añadir newPrecioPorAsiento
     String? imageUrl = currentImageUrl;
@@ -131,6 +136,8 @@ class AgenciasController extends ChangeNotifier {
       tipoDocumento: tipoDocumento,
       numeroDocumento: numeroDocumento ?? currentAgencia?.numeroDocumento,
       nombreBeneficiario: nombreBeneficiario ?? currentAgencia?.nombreBeneficiario,
+      contactoAgencia: contactoAgencia ?? currentAgencia?.contactoAgencia,
+      linkContactoAgencia: linkContactoAgencia ?? currentAgencia?.linkContactoAgencia,
     );
 
     await _firestoreService.updateAgencia(id, updatedAgencia);

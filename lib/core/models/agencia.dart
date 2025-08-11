@@ -12,6 +12,8 @@ class Agencia {
   final TipoDocumento? tipoDocumento;
   final String? numeroDocumento;
   final String? nombreBeneficiario;
+  final String? contactoAgencia;
+  final String? linkContactoAgencia;
 
   Agencia({
     required this.id,
@@ -24,6 +26,8 @@ class Agencia {
      this.tipoDocumento,
      this.numeroDocumento,
      this.nombreBeneficiario,
+     this.contactoAgencia,
+     this.linkContactoAgencia,
   });
 
   // Añadir el método copyWith para facilitar la creación de nuevas instancias con ID
@@ -38,6 +42,8 @@ class Agencia {
     TipoDocumento? tipoDocumento,
     String? numeroDocumento,
     String? nombreBeneficiario,
+    String? contactoAgencia,
+    String? linkContactoAgencia,
   }) {
     return Agencia(
       id: id ?? this.id,
@@ -51,6 +57,8 @@ class Agencia {
       tipoDocumento: tipoDocumento ?? this.tipoDocumento,
       numeroDocumento: numeroDocumento ?? this.numeroDocumento,
       nombreBeneficiario: nombreBeneficiario ?? this.nombreBeneficiario,
+      contactoAgencia: contactoAgencia ?? this.contactoAgencia,
+      linkContactoAgencia: linkContactoAgencia ?? this.linkContactoAgencia,
     );
   }
 
@@ -75,7 +83,9 @@ class Agencia {
             )
           : null,
       numeroDocumento: data['numeroDocumento'],
-      nombreBeneficiario: data['nombreBeneficiario'], 
+      nombreBeneficiario: data['nombreBeneficiario'],
+      contactoAgencia: data['contactoAgencia'],
+      linkContactoAgencia: data['linkContactoAgencia'],
     );
   }
 
@@ -94,6 +104,8 @@ class Agencia {
       if (tipoDocumento != null) 'tipoDocumento': tipoDocumento!.name,
       'numeroDocumento': numeroDocumento,
       'nombreBeneficiario': nombreBeneficiario,
+      'contactoAgencia': contactoAgencia,
+      'linkContactoAgencia': linkContactoAgencia,
     };
   }
 }
@@ -118,4 +130,6 @@ class AgenciaConReservas {
   TipoDocumento? get tipoDocumento => agencia.tipoDocumento;
   String? get numeroDocumento => agencia.numeroDocumento;
   String? get nombreBeneficiario => agencia.nombreBeneficiario;
+  String? get contactoAgencia => agencia.contactoAgencia;
+  String? get linkContactoAgencia => agencia.linkContactoAgencia;
 }
