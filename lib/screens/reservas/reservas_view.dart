@@ -183,6 +183,8 @@ class _ReservasViewState extends State<ReservasView> {
         initialTipoDocumento: agencia.tipoDocumento,
         initialNumeroDocumento: agencia.numeroDocumento,
         initialNombreBeneficiario: agencia.nombreBeneficiario,
+        initialContactoAgencia: agencia.contactoAgencia,
+        initialLinkContactoAgencia: agencia.linkContactoAgencia,
         onCrear:
             (
               nuevoNombre,
@@ -192,6 +194,8 @@ class _ReservasViewState extends State<ReservasView> {
               nuevoTipoDocumento,
               nuevoNumeroDocumento,
               nuevoNombreBeneficiario,
+              nuevoContactoAgencia,
+              nuevoLinkContactoAgencia,
             ) async {
               final agenciasController = Provider.of<AgenciasController>(
                 parentCtx,
@@ -207,6 +211,8 @@ class _ReservasViewState extends State<ReservasView> {
                 tipoDocumento: nuevoTipoDocumento,
                 numeroDocumento: nuevoNumeroDocumento,
                 nombreBeneficiario: nuevoNombreBeneficiario,
+                contactoAgencia: agencia.contactoAgencia,
+                linkContactoAgencia: agencia.linkContactoAgencia,
               );
               Navigator.of(parentCtx).pop();
               ScaffoldMessenger.of(parentCtx).showSnackBar(
@@ -805,6 +811,8 @@ class _ReservasViewState extends State<ReservasView> {
           tipoDocumento: widget.agencia!.tipoDocumento,
           numeroDocumento: widget.agencia!.numeroDocumento,
           nombreBeneficiario: widget.agencia!.nombreBeneficiario,
+          contactoAgencia: widget.agencia!.contactoAgencia,
+          linkContactoAgencia: widget.agencia!.linkContactoAgencia,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
