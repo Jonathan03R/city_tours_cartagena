@@ -1,6 +1,7 @@
 import 'package:citytourscartagena/auth/auth_gate.dart';
 import 'package:citytourscartagena/core/models/usuarios.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/core/widgets/offline_banner.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
 
       /// Habilita el modo de pantalla dividida
       splitScreenMode: true,
-      builder: (context, child) {
+  builder: (context, child) { 
         return MultiProvider(
           providers: [
             // Stream de FirebaseAuth
@@ -74,6 +75,14 @@ class MyApp extends StatelessWidget {
             ),
             home: const AuthGate(),
             debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  const OfflineBanner(), // overlay global
+                ],
+              );
+            },
           ),
         );
       },

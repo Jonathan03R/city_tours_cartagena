@@ -512,7 +512,7 @@ class _ReservasTableState extends State<ReservasTable> {
                SizedBox(width: 8.w),
               DropdownButton<int>(
                 value: _controller.itemsPerPage,
-                items: const [10, 20, 50]
+                items: const [20, 50, 100]
                     .map(
                       (value) => DropdownMenuItem<int>(
                         value: value,

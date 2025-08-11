@@ -283,7 +283,7 @@ class _TurnoCard extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 16.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -292,11 +292,11 @@ class _TurnoCard extends StatelessWidget {
                 _TurnoIcon(turno: turno, isPrivado: _isPrivado),
                 const SizedBox(height: 10),
                 Text(
-                  _isPrivado ? 'Servicio privado' : turno.label,
+                  _isPrivado ? 'Privado' : turno.label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 24.sp,
+                    fontSize: 20.sp,
                     color: _isPrivado ? Colors.amber.shade50 : Colors.white,
                     letterSpacing: 0.2,
                   ),
@@ -309,7 +309,7 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 18.sp,
+                    fontSize: 14.sp,
                     color: Colors.white,
                   ),
                 ),
@@ -453,7 +453,7 @@ class _EstadoBadge extends StatelessWidget {
         style: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontSize: 14.sp,
+          fontSize: 11.sp,
           // letterSpacing: 0.8,
         ),
       ),

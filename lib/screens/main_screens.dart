@@ -11,6 +11,7 @@ import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
     hide AgenciaConReservas;
 import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/core/widgets/debt_summary_by_turno.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
@@ -96,7 +97,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // Obtener el AuthController para verificar los roles
     final authController = context.watch<AuthController>();
-    final agenciasController = context.watch<AgenciasController>();
+  // final agenciasController = context.watch<AgenciasController>();
     final appUser = authController.appUser;
 
     /// Verificar permisos del usuario
@@ -117,15 +118,9 @@ class _MainScreenState extends State<MainScreen> {
     /// Si es así, obtener la agencia asociada
     /// y mostrar las reservas de esa agencia
     final isAgencyUser =
-        appUser != null &&
-        appUser.agenciaId != null &&
-        appUser.roles.contains('agencia');
+            appUser?.agenciaId != null &&
+            (appUser?.roles.contains('agencia') ?? false);
     // Si es usuario de agencia, buscar la agencia asociada
-    final agencia = isAgencyUser
-        ? agenciasController.agencias.firstWhereOrNull(
-            (a) => a.agencia.id == appUser.agenciaId,
-          )
-        : null;
     // Definir las páginas según permisos
     // Si es usuario de agencia, mostrar reservas de esa agencia
     // Si no, mostrar selector de turno o reservas según el turno seleccionado
@@ -545,6 +540,32 @@ class _MainScreenState extends State<MainScreen> {
                                   ),
                                 );
                               },
+                            );
+                          },
+                        ),
+                      // Resumen por turno reutilizable (muestra en pestaña Reservas)
+                        Consumer2<ReservasController, AuthController>(
+                          builder: (_, resCtrl, auth, __) {
+                            final isAgencyUser = auth.appUser?.agenciaId != null &&
+                                (auth.appUser?.roles.contains('agencia') ?? false);
+
+                            if (!isAgencyUser) {
+                              // No es usuario de agencia: no mostrar el resumen por turno
+                              return const SizedBox.shrink();
+                            }
+
+                            final String agenciaId = auth.appUser!.agenciaId!;
+                            return Visibility(
+                              visible: _currentIndex == 0, // pestaña Reservas
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: DebtSummaryByTurno(
+                                  stream: resCtrl.getAllReservasConAgenciaStream(),
+                                  agenciaId: agenciaId,
+                                  visible: true,
+                                  title: 'Tu deuda por turno',
+                                ),
+                              ),
                             );
                           },
                         ),
