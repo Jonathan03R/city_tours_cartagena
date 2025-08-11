@@ -19,6 +19,8 @@ import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:citytourscartagena/core/widgets/whatsapp_contact_button.dart';
 
 import '../../core/controller/reservas_controller.dart';
 import '../../core/widgets/add_reserva_pro_form.dart';
@@ -211,8 +213,8 @@ class _ReservasViewState extends State<ReservasView> {
                 tipoDocumento: nuevoTipoDocumento,
                 numeroDocumento: nuevoNumeroDocumento,
                 nombreBeneficiario: nuevoNombreBeneficiario,
-                contactoAgencia: agencia.contactoAgencia,
-                linkContactoAgencia: agencia.linkContactoAgencia,
+                contactoAgencia: nuevoContactoAgencia,
+                linkContactoAgencia: nuevoLinkContactoAgencia,
               );
               Navigator.of(parentCtx).pop();
               ScaffoldMessenger.of(parentCtx).showSnackBar(
@@ -510,6 +512,12 @@ class _ReservasViewState extends State<ReservasView> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Botón WhatsApp reutilizable
+          WhatsappContactButton(
+            contacto: _currentAgencia?.contactoAgencia,
+            link: _currentAgencia?.linkContactoAgencia,
+          ),
+          const SizedBox(height: 16),
           if (authRole.hasPermission(Permission.crear_reserva))
             FloatingActionButton.extended(
               onPressed: _showAddReservaProForm,
