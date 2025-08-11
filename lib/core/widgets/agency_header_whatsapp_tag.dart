@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class VerifyAvailabilityTag extends StatefulWidget {
@@ -17,15 +18,42 @@ class VerifyAvailabilityTag extends StatefulWidget {
   final String telefonoRaw;
   final String message;
   final String tooltip;
-  // Si compact true, usa un padding más pequeño (por si el espacio es muy reducido)
   final bool compact;
 
   @override
   State<VerifyAvailabilityTag> createState() => _VerifyAvailabilityTagState();
 }
 
-class _VerifyAvailabilityTagState extends State<VerifyAvailabilityTag> {
+class _VerifyAvailabilityTagState extends State<VerifyAvailabilityTag>
+    with SingleTickerProviderStateMixin {
   bool _isLaunching = false;
+  late final AnimationController _shadowController;
+  late final Animation<double> _shadowOpacity;
+
+  late final Animation<double> _scaleAnimation;
+
+  @override
+void initState() {
+  super.initState();
+  _shadowController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  )..repeat(reverse: true);
+
+  // esto es para la sombra
+  _shadowOpacity = Tween<double>(begin: 0.5, end: 0.80).animate(
+    CurvedAnimation(parent: _shadowController, curve: Curves.easeInOut),
+  );
+
+  _scaleAnimation = Tween<double>(begin: 1.0, end: 1.005).animate(
+    CurvedAnimation(parent: _shadowController, curve: Curves.easeInOut),
+  );
+}
+  @override
+  void dispose() {
+    _shadowController.dispose();
+    super.dispose();
+  }
 
   Future<void> _openWhatsApp() async {
     if (_isLaunching) return;
@@ -45,7 +73,6 @@ class _VerifyAvailabilityTagState extends State<VerifyAvailabilityTag> {
 
     setState(() => _isLaunching = true);
     try {
-      // Conserva solo dígitos
       final telefono = raw.replaceAll(RegExp(r'[^\d]'), '');
       final mensaje = Uri.encodeComponent(widget.message);
 
@@ -79,63 +106,78 @@ class _VerifyAvailabilityTagState extends State<VerifyAvailabilityTag> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final bg = Colors.green.shade50;
-    final border = Colors.green.shade200;
-    final text = Colors.green.shade800;
-    final icon = Colors.green.shade700;
+Widget build(BuildContext context) {
+  final bg = Colors.red.shade600;
+  final border = Colors.red.shade800;
+  final textColor = Colors.white;
+  final iconColor = Colors.white;
 
-    final padding = widget.compact
-        ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
-        : const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+  final padding = EdgeInsets.symmetric(
+    horizontal: widget.compact ? 14.w : 18.w,
+    vertical: widget.compact ? 8.h : 12.h,
+  );
 
-    return Semantics(
-      button: true,
-      label: 'Verificar disponibilidad hoy en WhatsApp',
-      child: Tooltip(
-        message: widget.tooltip,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+  return AnimatedBuilder(
+    animation: _shadowController,
+    builder: (context, _) {
+      return Transform.scale(
+        scale: _scaleAnimation.value,
+        child: Container(
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            onTap: _isLaunching ? null : _openWhatsApp,
-            child: Ink(
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(_shadowOpacity.value),
+                blurRadius: 25,
+                spreadRadius: 5,
               ),
-              padding: padding,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_isLaunching)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: icon,
+            ],
+          ),
+          child: Material(
+            color: bg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: BorderSide(color: border, width: 2),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              splashColor: Colors.white.withOpacity(0.12),
+              onTap: _isLaunching ? null : _openWhatsApp,
+              child: Padding(
+                padding: padding,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isLaunching)
+                      SizedBox(
+                        width: 16.w,
+                        height: 16.w,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: iconColor,
+                        ),
+                      )
+                    else
+                      Icon(Icons.chat_bubble_rounded,
+                          size: 16.sp, color: iconColor),
+                    SizedBox(width: 10.w),
+                    Text(
+                      'Verificar disponibilidad',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
                       ),
-                    )
-                  else
-                    Icon(Icons.message, size: 16, color: icon),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Verificar disponibilidad hoy',
-                    style: TextStyle(
-                      color: text,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
 }

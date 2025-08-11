@@ -26,7 +26,7 @@ class ReservasController extends ChangeNotifier {
   EstadoReserva? _estadoFilter;
 
   // --- Paginación ---
-  int _itemsPerPage = 10;
+  int _itemsPerPage = 20;
   int _currentPageIndex = 0;
   bool _isFetchingPage = false;
   bool _hasMorePages = true;

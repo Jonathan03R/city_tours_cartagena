@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +42,8 @@ Future<void> main() async {
     '📝 apps en este isolate: ${Firebase.apps.map((a) => a.name).toList()}',
   );
 
+
+  if (!kIsWeb) {
   // Crear canal de notificaciones para Android 8+
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'canal_reservas',
@@ -108,7 +111,7 @@ Future<void> main() async {
       });
     }
   }
-
+}
   // Imprimir debug info personalizada
   ReservasController.printDebugInfo();
 

@@ -134,8 +134,7 @@ class FirestoreService {
     // 4) excluir agencias eliminadas: NOT‐IN + ORDER BY campo de inequality
     if (eliminadasIds.isNotEmpty) {
       query = query
-          .where('agenciaId', whereNotIn: eliminadasIds)
-          .orderBy('agenciaId');
+          .where('agenciaId', whereNotIn: eliminadasIds);
     }
 
     // 5) filtros de fecha
@@ -153,15 +152,37 @@ class FirestoreService {
   /// en terminos sencillos, este método devuelve un stream que emite
   /// una lista de reservas cada vez que hay un cambio en la colección de reservas en Firestore.
   /// Esto es útil para mantener la UI actualizada en tiempo real con los datos más recientes
+  // Stream<List<Reserva>> getReservasStream() {
+  //   return _db
+  //       .collection('reservas')
+  //       .orderBy('fechaRegistro', descending: true)
+  //       .snapshots()
+  //       .map((snapshot) {
+  //         return snapshot.docs.map((doc) {
+  //           return Reserva.fromFirestore(doc.data(), doc.id);
+  //         }).toList();
+  //       });
+  // }
   Stream<List<Reserva>> getReservasStream() {
     return _db
         .collection('reservas')
-        .orderBy('fechaRegistro', descending: true)
+        // 1) ordenamos por fechaReserva (no por fechaRegistro)
+        .orderBy('fechaReserva', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return Reserva.fromFirestore(doc.data(), doc.id);
-          }).toList();
+          // 2) mapeamos a modelo
+          final reservas = snapshot.docs
+              .map((doc) => Reserva.fromFirestore(doc.data(), doc.id))
+              .toList();
+          // 3) separamos en dos listas: no pagadas primero, pagadas al final
+          final normales = reservas
+              .where((r) => r.estado != EstadoReserva.pagada)
+              .toList();
+          final pagadas = reservas
+              .where((r) => r.estado == EstadoReserva.pagada)
+              .toList();
+          // 4) combinamos en un solo listado
+          return [...normales, ...pagadas];
         });
   }
 
@@ -184,8 +205,10 @@ class FirestoreService {
   /// @return Un Future que completa cuando la reserva se actualiza correctamente.
   Future<void> updateReserva(String id, Reserva reserva) async {
     try {
-    await _db.collection('reservas').doc(id)
-      .set(reserva.toFirestore(), SetOptions(merge: true));
+      await _db
+          .collection('reservas')
+          .doc(id)
+          .set(reserva.toFirestore(), SetOptions(merge: true));
       debugPrint('✅ Reserva actualizada: ${reserva.nombreCliente}');
     } catch (e) {
       debugPrint('❌ Error actualizando reserva: $e');
@@ -303,7 +326,7 @@ class FirestoreService {
   /// @return Un stream de listas de agencias.
 
   Stream<List<Agencia>> getAgenciasStream() {
-    return _db.collection('agencias').orderBy('nombre').snapshots().map((
+    return _db.collection('agencias').snapshots().map((
       snapshot,
     ) {
       return snapshot.docs
@@ -316,7 +339,7 @@ class FirestoreService {
   /// @return Una lista de agencias ordenadas por nombre.
   Future<List<Agencia>> getAllAgencias() async {
     try {
-      final snapshot = await _db.collection('agencias').orderBy('nombre').get();
+      final snapshot = await _db.collection('agencias').get();
       return snapshot.docs
           .map((doc) => Agencia.fromFirestore(doc.data(), doc.id))
           .toList();

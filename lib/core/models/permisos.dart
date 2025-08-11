@@ -8,6 +8,7 @@ enum Permission {
   edit_agencias,
   ver_agencias,
   crear_agencias_agencias,
+  ver_deuda_agencias_usuario,
 
   // CONTACTO
   contact_whatsapp,
@@ -32,6 +33,8 @@ enum Permission {
   ver_perfil,
   ver_todos_usuarios,
   ver_pagina_usuarios,
+
+
 
 
 
