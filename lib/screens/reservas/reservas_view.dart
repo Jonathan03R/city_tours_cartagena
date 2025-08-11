@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
@@ -7,34 +6,37 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
-import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
-    hide AgenciaConReservas;
+import 'package:citytourscartagena/core/models/reserva_con_agencia.dart' hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
-import 'package:citytourscartagena/core/widgets/agency_header_whatsapp_tag.dart';
+import 'package:citytourscartagena/core/widgets/add_reserva_pro_form.dart';
+import 'package:citytourscartagena/core/widgets/bloqueo_fecha_widget.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
 import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
+import 'package:citytourscartagena/core/widgets/reserva_card_item.dart';
+import 'package:citytourscartagena/core/widgets/reserva_details.dart';
+import 'package:citytourscartagena/core/widgets/reservas_table.dart';
+import 'package:citytourscartagena/core/widgets/whatsapp_contact_button.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:citytourscartagena/core/widgets/whatsapp_contact_button.dart';
-
 import '../../core/controller/reservas_controller.dart';
-import '../../core/widgets/add_reserva_pro_form.dart';
-import '../../core/widgets/bloqueo_fecha_widget.dart';
-import '../../core/widgets/date_filter_buttons.dart';
-import '../../core/widgets/reserva_card_item.dart';
-import '../../core/widgets/reserva_details.dart';
-import '../../core/widgets/reservas_table.dart';
+import '../widgets/reservas_view/agency_header_widget.dart';
+import '../widgets/reservas_view/compact_date_filter_buttons.dart';
+import '../widgets/reservas_view/floating_action_buttons.dart';
+import '../widgets/reservas_view/price_controls_widget.dart';
+import '../widgets/reservas_view/reservas_content_widget.dart';
+import '../widgets/reservas_view/reservas_header_widget.dart';
 
 class ReservasView extends StatefulWidget {
   final TurnoType? turno;
   final AgenciaConReservas? agencia;
   final VoidCallback? onBack;
   final bool isAgencyUser;
+
   const ReservasView({
     super.key,
     this.turno,
@@ -49,13 +51,7 @@ class ReservasView extends StatefulWidget {
 
 class _ReservasViewState extends State<ReservasView> {
   bool _isTableView = true;
-  bool _editandoPrecio = false;
-  final TextEditingController _precioController = TextEditingController();
-  final TextEditingController _precioMananaController = TextEditingController();
-  final TextEditingController _precioTardeController = TextEditingController();
-
   String? _reservaIdNotificada;
-  String? _editingTurno; // 'manana' o 'tarde'
   late AuthController _authController;
   AgenciaConReservas? _currentAgencia;
   StreamSubscription<List<AgenciaConReservas>>? _agenciasSub;
@@ -68,8 +64,7 @@ class _ReservasViewState extends State<ReservasView> {
       setState(() {
         _reservaIdNotificada = reservaId;
       });
-
-      // Cambia el filtro a "todas" si viene desde notificación
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final reservasController = Provider.of<ReservasController>(
           context,
@@ -89,7 +84,7 @@ class _ReservasViewState extends State<ReservasView> {
     super.initState();
     _authController = Provider.of<AuthController>(context, listen: false);
     _currentAgencia = widget.agencia;
-
+    
     final agenciasCtrl = context.read<AgenciasController>();
     _agenciasSub = agenciasCtrl.agenciasConReservasStream.listen((lista) {
       if (widget.agencia != null) {
@@ -117,11 +112,11 @@ class _ReservasViewState extends State<ReservasView> {
   @override
   void dispose() {
     _agenciasSub?.cancel();
-    _precioController.dispose();
-    _precioMananaController.dispose();
-    _precioTardeController.dispose();
-    // Guardar timestamp de última visita al salir de la pantalla
-    // final authController = context.read<AuthController>();
+    _saveLastSeenTimestamp();
+    super.dispose();
+  }
+
+  void _saveLastSeenTimestamp() {
     final userId = _authController.user?.uid;
     if (userId != null) {
       final now = DateTime.now();
@@ -129,7 +124,6 @@ class _ReservasViewState extends State<ReservasView> {
         'lastSeenReservas': Timestamp.fromDate(now),
       });
     }
-    super.dispose();
   }
 
   void _onFilterChanged(
@@ -172,9 +166,9 @@ class _ReservasViewState extends State<ReservasView> {
   }
 
   void _editarAgencia() {
-    // final agencia = widget.agencia!;
     final agencia = _currentAgencia!;
     final parentCtx = context;
+    
     showDialog(
       context: context,
       builder: (_) => CrearAgenciaForm(
@@ -185,45 +179,45 @@ class _ReservasViewState extends State<ReservasView> {
         initialTipoDocumento: agencia.tipoDocumento,
         initialNumeroDocumento: agencia.numeroDocumento,
         initialNombreBeneficiario: agencia.nombreBeneficiario,
+        // Campos de contacto de la rama ContactoAgencia
         initialContactoAgencia: agencia.contactoAgencia,
         initialLinkContactoAgencia: agencia.linkContactoAgencia,
-        onCrear:
-            (
-              nuevoNombre,
-              nuevaImagenFile,
-              nuevoPrecioManana,
-              nuevoPrecioTarde,
-              nuevoTipoDocumento,
-              nuevoNumeroDocumento,
-              nuevoNombreBeneficiario,
-              nuevoContactoAgencia,
-              nuevoLinkContactoAgencia,
-            ) async {
-              final agenciasController = Provider.of<AgenciasController>(
-                parentCtx,
-                listen: false,
-              );
-              await agenciasController.updateAgencia(
-                agencia.id,
-                nuevoNombre,
-                nuevaImagenFile?.path,
-                agencia.imagenUrl,
-                newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
-                newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
-                tipoDocumento: nuevoTipoDocumento,
-                numeroDocumento: nuevoNumeroDocumento,
-                nombreBeneficiario: nuevoNombreBeneficiario,
-                contactoAgencia: nuevoContactoAgencia,
-                linkContactoAgencia: nuevoLinkContactoAgencia,
-              );
-              Navigator.of(parentCtx).pop();
-              ScaffoldMessenger.of(parentCtx).showSnackBar(
-                const SnackBar(
-                  content: Text('Agencia actualizada correctamente'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
+        onCrear: (
+          nuevoNombre,
+          nuevaImagenFile,
+          nuevoPrecioManana,
+          nuevoPrecioTarde,
+          nuevoTipoDocumento,
+          nuevoNumeroDocumento,
+          nuevoNombreBeneficiario,
+          nuevoContactoAgencia,
+          nuevoLinkContactoAgencia,
+        ) async {
+          final agenciasController = Provider.of<AgenciasController>(
+            parentCtx,
+            listen: false,
+          );
+          await agenciasController.updateAgencia(
+            agencia.id,
+            nuevoNombre,
+            nuevaImagenFile?.path,
+            agencia.imagenUrl,
+            newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
+            newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
+            tipoDocumento: nuevoTipoDocumento,
+            numeroDocumento: nuevoNumeroDocumento,
+            nombreBeneficiario: nuevoNombreBeneficiario,
+            contactoAgencia: nuevoContactoAgencia,
+            linkContactoAgencia: nuevoLinkContactoAgencia,
+          );
+          Navigator.of(parentCtx).pop();
+          ScaffoldMessenger.of(parentCtx).showSnackBar(
+            const SnackBar(
+              content: Text('Agencia actualizada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
       ),
     );
   }
@@ -292,444 +286,84 @@ class _ReservasViewState extends State<ReservasView> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TurnoFilterButtons(
-                  selectedTurno: reservasController.turnoFilter,
-                  onTurnoChanged: (nuevoTurno) {
-                    reservasController.updateFilter(
-                      reservasController.selectedFilter,
-                      date: reservasController.customDate,
-                      agenciaId: widget.agencia?.id,
-                      turno: nuevoTurno,
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                EstadoFilterButtons(
-                  selectedEstado: reservasController.estadoFilter,
-                  onEstadoChanged: (nuevoEstado) {
-                    reservasController.updateFilter(
-                      reservasController.selectedFilter,
-                      date: reservasController.customDate,
-                      agenciaId: widget.agencia?.id,
-                      turno: reservasController.turnoFilter,
-                      estado: nuevoEstado,
-                    );
-                  },
-                ),
-              ],
-            ),
-            CompactDateFilterButtons(
-              selectedFilter: reservasController.selectedFilter,
-              customDate: reservasController.customDate,
-              selectedTurno: reservasController.turnoFilter,
+            ReservasHeaderWidget(
+              reservasController: reservasController,
+              agenciaId: widget.agencia?.id,
               onFilterChanged: _onFilterChanged,
             ),
-            // Widget de bloqueo de fecha/turno
-            if (reservasController.selectedFilter == DateFilterType.today ||
-                reservasController.selectedFilter == DateFilterType.custom)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 4,
-                ),
-                child: (() {
-                  // Normaliza la fecha a solo año-mes-día
-                  DateTime selectedDate =
-                      reservasController.selectedFilter == DateFilterType.custom
-                      ? (reservasController.customDate ?? DateTime.now())
-                      : DateTime.now();
-                  DateTime dateOnly = DateTime(
-                    selectedDate.year,
-                    selectedDate.month,
-                    selectedDate.day,
-                  );
-                  return BloqueoFechaWidget(
-                    key: ValueKey(dateOnly.toIso8601String()),
-                    fecha: dateOnly,
-                    turnoActual: reservasController.turnoFilter == null
-                        ? 'ambos'
-                        : reservasController.turnoFilter == TurnoType.manana
-                        ? 'manana'
-                        : reservasController.turnoFilter == TurnoType.tarde
-                        ? 'tarde'
-                        : 'ambos',
-                    puedeEditar: authRole.hasPermission(
-                      Permission.edit_configuracion,
-                    ),
-                  );
-                })(),
+            if (_currentAgencia != null) 
+              AgencyHeaderWidget(
+                agencia: _currentAgencia!,
+                reservasController: reservasController,
               ),
-            if (_currentAgencia != null) _buildAgencyHeader(_currentAgencia!),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: LayoutBuilder(
-                builder: (ctx, constraints) {
-                  final isWide = constraints.maxWidth >= 600;
-                  return isWide
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _getFilterTitle(
-                                  reservasController.selectedFilter,
-                                  reservasController.customDate,
-                                  reservasController.turnoFilter,
-                                ),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                            _buildRightControls(
-                              reservasController.currentReservas,
-                              configuracion,
-                              reservasController
-                                  .turnoFilter, // NUEVO: Pasar turno filtrado
-                              reservasController,
-                            ),
-                          ],
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildRightControls(
-                              reservasController.currentReservas,
-                              configuracion,
-                              reservasController
-                                  .turnoFilter, // NUEVO: Pasar turno filtrado
-                              reservasController,
-                            ),
-                            Text(
-                              _getFilterTitle(
-                                reservasController.selectedFilter,
-                                reservasController.customDate,
-                                reservasController.turnoFilter,
-                              ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        );
-                },
-              ),
+            PriceControlsWidget(
+              currentAgencia: _currentAgencia,
+              configuracion: configuracion,
+              reservasController: reservasController,
             ),
-            StreamBuilder<List<ReservaConAgencia>>(
-              stream: reservasController.filteredReservasStream,
-              builder: (context, snapshot) {
-                if (reservasController.isFetchingPage) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                final currentReservas = snapshot.data ?? [];
-
-                if (currentReservas.isEmpty &&
-                    !reservasController.isFetchingPage) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.table_chart, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No hay reservas para mostrar',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                // Obtener el timestamp de última visita del usuario
-                final authController = context.read<AuthController>();
-                final lastSeen = authController.appUser?.lastSeenReservas;
-                return Column(
-                  children: [
-                    _isTableView
-                        ? ReservasTable(
-                            turno: reservasController.turnoFilter,
-                            reservas: currentReservas,
-                            agenciaId: widget.agencia?.id,
-                            onUpdate: () {
-                              reservasController.updateFilter(
-                                reservasController.selectedFilter,
-                                date: reservasController.customDate,
-                                agenciaId: widget.agencia?.id,
-                                turno: reservasController.turnoFilter,
-                              );
-                            },
-                            currentFilter: reservasController.selectedFilter,
-                            lastSeenReservas: lastSeen,
-                            reservaIdNotificada: _reservaIdNotificada,
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(16),
-                            itemCount: currentReservas.length,
-                            itemBuilder: (ctx, i) {
-                              return ReservaCardItem(
-                                reserva: currentReservas[i],
-                                onTap: () =>
-                                    _showReservaDetails(currentReservas[i]),
-                              );
-                            },
-                          ),
-                    // ...existing code...
-                  ],
-                );
-              },
+            ReservasContentWidget(
+              isTableView: _isTableView,
+              reservasController: reservasController,
+              agenciaId: widget.agencia?.id,
+              reservaIdNotificada: _reservaIdNotificada,
             ),
             const SizedBox(height: 300),
           ],
         ),
       ),
-      // floatingActionButton: widget.agencia == null
-      //     ? Column(
-      //         mainAxisAlignment: MainAxisAlignment.end,
-      //         children: [
-      //           FloatingActionButton.extended(
-      //             onPressed: _showAddReservaProForm,
-      //             backgroundColor: Colors.purple.shade600,
-      //             foregroundColor: Colors.white,
-      //             icon: const Icon(Icons.auto_awesome),
-      //             label: const Text('registro rapido'),
-      //             heroTag: "pro_button",
-      //           ),
-      //           const SizedBox(height: 16),
-      //         ],
-      //       )
-      //     : null,
+      // Floating Action Button unificado - combina ambas ramas
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Botón WhatsApp reutilizable
-          WhatsappContactButton(
-            contacto: _currentAgencia?.contactoAgencia,
-            link: _currentAgencia?.linkContactoAgencia,
-          ),
-          const SizedBox(height: 16),
+          // Botón WhatsApp de la rama ContactoAgencia (solo si hay agencia)
+          if (_currentAgencia != null)
+            WhatsappContactButton(
+              contacto: _currentAgencia?.contactoAgencia,
+              link: _currentAgencia?.linkContactoAgencia,
+            ),
+          if (_currentAgencia != null) const SizedBox(height: 16),
+          
+          // Botones originales de FloatingActionButtonsWidget
           if (authRole.hasPermission(Permission.crear_reserva))
-            FloatingActionButton.extended(
-              onPressed: _showAddReservaProForm,
-              backgroundColor: Colors.purple.shade600,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('registro rapido'),
-              heroTag: "pro_button",
-            ),
-          const SizedBox(height: 16),
-          if (authRole.hasPermission(Permission.crear_agencias_agencias))
-            FloatingActionButton.extended(
-              onPressed: _showAddReservaForm,
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('registro manual'),
-              heroTag: "manual_button",
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAgencyHeader(AgenciaConReservas agencia) {
-    final reservasController = Provider.of<ReservasController>(
-      context,
-      listen: false,
-    );
-    final configuracion = Provider.of<ConfiguracionController>(
-      context,
-      listen: false,
-    ).configuracion;
-    final turno = reservasController.turnoFilter;
-    final hoy = DateTime.now();
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          if (agencia.imagenUrl != null && agencia.imagenUrl!.isNotEmpty)
-            CircleAvatar(
-              radius: 50,
-              backgroundImage: NetworkImage(agencia.imagenUrl!),
-              backgroundColor: Colors.grey.shade200,
-            )
-          else
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.green.shade100,
-              child: Icon(
-                Icons.business,
-                size: 50,
-                color: Colors.green.shade600,
-              ),
-            ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  agencia.nombre,
-                  style: const TextStyle(
-                    fontSize: 20,
+            SizedBox(
+              height: 48.h,
+              child: FloatingActionButton.extended(
+                onPressed: () => _showAddReservaProForm(),
+                backgroundColor: Colors.purple.shade600,
+                foregroundColor: Colors.white,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                icon: Icon(Icons.auto_awesome, size: 24.sp),
+                label: Text(
+                  'Registro rápido',
+                  style: TextStyle(
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.bold,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  '${agencia.totalReservas} reserva${agencia.totalReservas != 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                heroTag: "pro_button",
+              ),
+            ),
+          SizedBox(height: 16.h),
+          if (authRole.hasPermission(Permission.crear_agencias_agencias))
+            SizedBox(
+              height: 48.h,
+              child: FloatingActionButton.extended(
+                onPressed: () => _showAddReservaForm(),
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                icon: Icon(Icons.add, size: 24.sp),
+                label: Text(
+                  'Registro manual',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ],
+                heroTag: "manual_button",
+              ),
             ),
-          ),
-          FutureBuilder<bool>(
-            future: reservasController.shouldShowWhatsAppButton(
-              turno: turno,
-              fecha: hoy,
-            ),
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                // Loader con el mismo look del tag, para evitar “saltos” visuales
-                return Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Verificando...',
-                        style: TextStyle(
-                          color: Colors.green.shade800,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              if (snap.hasData && snap.data == true) {
-                final whatsapp = configuracion?.contact_whatsapp ?? '';
-                return VerifyAvailabilityTag(
-                  telefonoRaw: whatsapp,
-                  message:
-                      'Hola, soy de ${agencia.nombre}. ¿Hay disponibilidad para el turno de hoy?',
-                  tooltip: 'Verificar disponibilidad hoy',
-                );
-              }
-
-              return const SizedBox.shrink();
-            },
-          ),
         ],
-      ),
-    );
-  }
-
-  String _getFilterTitle(
-    DateFilterType selectedFilter,
-    DateTime? customDate,
-    TurnoType? selectedTurno,
-  ) {
-    final meses = [
-      'enero',
-      'febrero',
-      'marzo',
-      'abril',
-      'mayo',
-      'junio',
-      'julio',
-      'agosto',
-      'septiembre',
-      'octubre',
-      'noviembre',
-      'diciembre',
-    ];
-
-    String formatearFecha(DateTime fecha) {
-      return '${fecha.day} de ${meses[fecha.month - 1]} del ${fecha.year}';
-    }
-
-    String dateText;
-    switch (selectedFilter) {
-      case DateFilterType.all:
-        dateText = 'Todas las reservas';
-        break;
-      case DateFilterType.lastWeek:
-        dateText = 'Reservas de la última semana';
-        break;
-      case DateFilterType.today:
-        dateText = formatearFecha(DateTime.now());
-        break;
-      case DateFilterType.yesterday:
-        dateText = formatearFecha(
-          DateTime.now().subtract(const Duration(days: 1)),
-        );
-        break;
-      case DateFilterType.tomorrow:
-        dateText = formatearFecha(DateTime.now().add(const Duration(days: 1)));
-        break;
-      case DateFilterType.custom:
-        dateText = customDate != null
-            ? formatearFecha(customDate)
-            : 'Fecha personalizada';
-        break;
-    }
-
-    String turnoText = '';
-    if (selectedTurno != null) {
-      turnoText = selectedTurno == TurnoType.manana
-          ? ' 🌅 (Mañana)'
-          : ' 🌆 (Tarde)';
-    }
-    return '$dateText$turnoText';
-  }
-
-  void _showReservaDetails(ReservaConAgencia reserva) {
-    final reservasController = Provider.of<ReservasController>(
-      context,
-      listen: false,
-    );
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => ReservaDetails(
-        reserva: reserva,
-        onUpdate: () {
-          reservasController.updateFilter(
-            reservasController.selectedFilter,
-            date: reservasController.customDate,
-            agenciaId: widget.agencia?.id,
-            turno: reservasController.turnoFilter,
-          );
-        },
       ),
     );
   }
@@ -739,8 +373,6 @@ class _ReservasViewState extends State<ReservasView> {
       context,
       listen: false,
     );
-
-    debugPrint('la agencia es ${widget.agencia?.agencia.nombre}');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -759,19 +391,16 @@ class _ReservasViewState extends State<ReservasView> {
     );
   }
 
-  /// Método para mostrar el formulario de agregar reserva manual
-  /// Este formulario permite agregar reservas de forma manual, sin usar el registro rápido
   void _showAddReservaForm() {
     final reservasController = Provider.of<ReservasController>(
       context,
       listen: false,
     );
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => AddReservaForm(
-        agenciaId: widget.agencia?.id, // Puede ser null, el form lo maneja
+        agenciaId: widget.agencia?.id,
         onAdd: () {
           reservasController.updateFilter(
             reservasController.selectedFilter,
@@ -780,793 +409,6 @@ class _ReservasViewState extends State<ReservasView> {
             turno: reservasController.turnoFilter,
           );
         },
-      ),
-    );
-  }
-
-  void _guardarNuevoPrecio(Configuracion? configuracion) async {
-    if (widget.agencia != null) {
-      final agenciasController = Provider.of<AgenciasController>(
-        context,
-        listen: false,
-      );
-      final mText = _precioMananaController.text.trim();
-      final tText = _precioTardeController.text.trim();
-      final double? manana = mText.isEmpty ? null : double.tryParse(mText);
-      final double? tarde = tText.isEmpty ? null : double.tryParse(tText);
-
-      if ((mText.isNotEmpty && (manana == null || manana <= 0)) ||
-          (tText.isNotEmpty && (tarde == null || tarde <= 0))) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Ingresa precios válidos o deja vacío para usar global',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      try {
-        await agenciasController.updateAgencia(
-          widget.agencia!.id,
-          widget.agencia!.nombre,
-          null,
-          widget.agencia!.imagenUrl,
-          newPrecioPorAsientoTurnoManana: manana,
-          newPrecioPorAsientoTurnoTarde: tarde,
-          tipoDocumento: widget.agencia!.tipoDocumento,
-          numeroDocumento: widget.agencia!.numeroDocumento,
-          nombreBeneficiario: widget.agencia!.nombreBeneficiario,
-          contactoAgencia: widget.agencia!.contactoAgencia,
-          linkContactoAgencia: widget.agencia!.linkContactoAgencia,
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Precio de agencia actualizado correctamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        setState(() {
-          final old = _currentAgencia ?? widget.agencia!;
-          final updatedAg = old.agencia.copyWith(
-            precioPorAsientoTurnoManana: manana,
-            precioPorAsientoTurnoTarde: tarde,
-          );
-          _currentAgencia = AgenciaConReservas(
-            agencia: updatedAg,
-            totalReservas: old.totalReservas,
-          );
-          _editandoPrecio = false;
-        });
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error actualizando precio de agencia: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-  }
-
-  void _guardarNuevoPrecioGlobal(
-    String turno,
-    Configuracion? configuracion,
-  ) async {
-    final input = _precioController.text.trim();
-    final nuevoPrecio = double.tryParse(input);
-
-    if (nuevoPrecio == null || nuevoPrecio <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor ingresa un precio válido (p.ej. 55.50)'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    try {
-      final configController = Provider.of<ConfiguracionController>(
-        context,
-        listen: false,
-      );
-
-      if (turno == 'manana') {
-        await configController.actualizarPrecioManana(nuevoPrecio);
-      } else {
-        await configController.actualizarPrecioTarde(nuevoPrecio);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Precio global de $turno actualizado correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      setState(() {
-        _editandoPrecio = false;
-        _editingTurno = null;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error actualizando precio global: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // MÉTODO ARREGLADO: Ahora respeta el filtro de turno
-  Widget _buildRightControls(
-    List<ReservaConAgencia> currentReservas,
-    Configuracion? configuracion,
-    TurnoType? turnoFilter,
-    ReservasController
-    reservasController, // NUEVO: Recibir el controlador completo
-  ) {
-    final authController = context.read<AuthController>();
-    // final isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
-    // final isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
-    // final isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
-    // final isTrabajador = authController.appUser?.roles.contains(Roles.trabajador) ?? false;
-
-    final ac = _currentAgencia ?? widget.agencia;
-    final ag = ac?.agencia;
-
-    final showManana =
-        ag != null && (turnoFilter == null || turnoFilter == TurnoType.manana);
-    final showTarde =
-        ag != null && (turnoFilter == null || turnoFilter == TurnoType.tarde);
-
-    final double? globalPriceManana =
-        configuracion?.precioGeneralAsientoTemprano;
-    final double? globalPriceTarde = configuracion?.precioGeneralAsientoTarde;
-
-    // NUEVO: Determinar si hay selecciones activas
-    final hasSelections =
-        reservasController.isSelectionMode &&
-        reservasController.selectedCount > 0;
-
-    // NUEVO: Determinar qué texto mostrar en el contador
-    String reservasText;
-    if (hasSelections) {
-      reservasText =
-          '${reservasController.selectedCount} seleccionada${reservasController.selectedCount != 1 ? 's' : ''}';
-    } else {
-      reservasText =
-          '${currentReservas.length} reserva${currentReservas.length != 1 ? 's' : ''}';
-    }
-
-    // NUEVO: Determinar qué texto mostrar en el botón
-    String buttonText;
-    if (hasSelections) {
-      buttonText = "Exportar Seleccionadas";
-    } else {
-      buttonText = "Exportar";
-    }
-
-    debugPrint(
-      '🔍 Filtro turno: $turnoFilter, showManana: $showManana, showTarde: $showTarde',
-    );
-    debugPrint(
-      '💰 Precios globales - Mañana: $globalPriceManana, Tarde: $globalPriceTarde',
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Reservas y botón export - ACTUALIZADO
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                reservasText, // NUEVO: Texto dinámico
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: hasSelections
-                      ? Colors.blue.shade700
-                      : Colors.black, // NUEVO: Color dinámico
-                ),
-              ),
-              if (authController.hasPermission(Permission.export_reservas))
-                /// boton para exportar reservas
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    List<ReservaConAgencia> reservasParaExportar;
-
-                    // NUEVA LÓGICA: Decidir qué reservas exportar
-                    if (hasSelections) {
-                      // Si hay selecciones, usar solo las seleccionadas
-                      reservasParaExportar =
-                          reservasController.selectedReservas;
-                      debugPrint(
-                        '📄 Exportando ${reservasParaExportar.length} reservas SELECCIONADAS',
-                      );
-                    } else {
-                      // Si no hay selecciones, usar todas las filtradas (comportamiento original)
-                      reservasParaExportar = await reservasController
-                          .getAllFilteredReservasSinPaginacion();
-                      debugPrint(
-                        '📄 Exportando ${reservasParaExportar.length} reservas FILTRADAS',
-                      );
-                    }
-
-                    if (!mounted) return;
-                    final bool canViewDeuda = authController.hasPermission(
-                      Permission.ver_deuda_reservas,
-                    );
-                    final pdfService = PdfExportService();
-                    await pdfService.exportarReservasConAgencia(
-                      reservasConAgencia:
-                          reservasParaExportar, // NUEVO: Lista dinámica
-                      context: context,
-                      filtroFecha: reservasController.selectedFilter,
-                      fechaPersonalizada: reservasController.customDate,
-                      turnoFiltrado: reservasController.turnoFilter,
-                      agenciaEspecifica: _currentAgencia?.agencia,
-                      canViewDeuda: canViewDeuda,
-                    );
-                  },
-                  icon: Icon(
-                    hasSelections
-                        ? Icons.file_download_outlined
-                        : Icons.file_download, // NUEVO: Ícono dinámico
-                    size: 20,
-                  ),
-                  label: Text(buttonText), // NUEVO: Texto dinámico
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: hasSelections
-                        ? Colors.blue.shade600
-                        : Colors.green.shade600, // NUEVO: Color dinámico
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Resto del código sin cambios...
-          if (ag != null) ...[
-            if (showManana)
-              _buildPriceRow(
-                'Mañana',
-                ag.precioPorAsientoTurnoManana ?? globalPriceManana ?? 0.0,
-                ag.precioPorAsientoTurnoManana == null,
-                Icons.wb_sunny,
-                Colors.orange,
-              ),
-            if (showTarde)
-              _buildPriceRow(
-                'Tarde',
-                ag.precioPorAsientoTurnoTarde ?? globalPriceTarde ?? 0.0,
-                ag.precioPorAsientoTurnoTarde == null,
-                Icons.wb_twilight,
-                Colors.blue,
-              ),
-
-            if (_editandoPrecio) ...[
-              const SizedBox(height: 12),
-              if (showManana) ...[
-                TextField(
-                  controller: _precioMananaController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Precio mañana',
-                    hintText:
-                        'Vacío = usar global (${globalPriceManana?.toStringAsFixed(2) ?? '0.00'})',
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: Icon(
-                      Icons.wb_sunny,
-                      color: Colors.orange.shade600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              if (showTarde) ...[
-                TextField(
-                  controller: _precioTardeController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Precio tarde',
-                    hintText:
-                        'Vacío = usar global (${globalPriceTarde?.toStringAsFixed(2) ?? '0.00'})',
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: Icon(
-                      Icons.wb_twilight,
-                      color: Colors.blue.shade600,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-            if (authController.hasPermission(Permission.edit_agencias))
-              Align(
-                alignment: Alignment.centerRight,
-                child: _editandoPrecio
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: Colors.grey.shade600,
-                            ),
-                            tooltip: 'Cancelar',
-                            onPressed: () {
-                              setState(() {
-                                _editandoPrecio = false;
-                                _precioMananaController.clear();
-                                _precioTardeController.clear();
-                              });
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.check,
-                              color: Colors.green.shade600,
-                            ),
-                            tooltip: 'Guardar',
-                            onPressed: () => _guardarNuevoPrecio(configuracion),
-                          ),
-                        ],
-                      )
-                    : IconButton(
-                        icon: Icon(Icons.edit, color: Colors.grey.shade800),
-                        tooltip: 'Editar precios',
-                        onPressed: () {
-                          setState(() {
-                            _precioMananaController.text =
-                                ag.precioPorAsientoTurnoManana?.toStringAsFixed(
-                                  2,
-                                ) ??
-                                '';
-                            _precioTardeController.text =
-                                ag.precioPorAsientoTurnoTarde?.toStringAsFixed(
-                                  2,
-                                ) ??
-                                '';
-                            _editandoPrecio = true;
-                          });
-                        },
-                      ),
-              ),
-          ] else ...[
-            _buildGlobalPriceSection(
-              configuracion,
-              globalPriceManana,
-              globalPriceTarde,
-              turnoFilter,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPriceRow(
-    String turno,
-    double precio,
-    bool esHeredado,
-    IconData icon,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '$turno: \$${precio.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: esHeredado ? Colors.grey.shade600 : Colors.black87,
-              ),
-            ),
-          ),
-          if (esHeredado)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Global',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // MÉTODO ARREGLADO: Respeta el filtro de turno para precios globales
-  Widget _buildGlobalPriceSection(
-    Configuracion? configuracion,
-    double? globalPriceManana,
-    double? globalPriceTarde,
-    TurnoType? turnoFilter, // NUEVO: Recibir filtro de turno
-  ) {
-    final authController = context.read<AuthController>();
-    // final isColaborador = authController.appUser?.roles.contains(Roles.colaborador) ?? false;
-    // final isAdmin = authController.appUser?.roles.contains(Roles.admin) ?? false;
-    // final isAgencia = authController.appUser?.roles.contains(Roles.agencia) ?? false;
-    // final isTrabajador = authController.appUser?.roles.contains(Roles.trabajador) ?? false;
-    // ARREGLADO: Solo mostrar el precio del turno filtrado, o ambos si no hay filtro
-    final showManana = turnoFilter == null || turnoFilter == TurnoType.manana;
-    final showTarde = turnoFilter == null || turnoFilter == TurnoType.tarde;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Precios Globales:',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-
-        // Precio Mañana Global - Solo si debe mostrarse
-        if (showManana)
-          Row(
-            children: [
-              Icon(Icons.wb_sunny, color: Colors.orange.shade600, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _editandoPrecio && _editingTurno == 'manana'
-                    ? TextField(
-                        controller: _precioController,
-                        keyboardType: TextInputType.number,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 12,
-                          ),
-                          border: OutlineInputBorder(),
-                        ),
-                        onSubmitted: (_) =>
-                            _guardarNuevoPrecioGlobal('manana', configuracion),
-                      )
-                    : Text(
-                        'Mañana: \$${globalPriceManana?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-              ),
-              if (authController.hasPermission(Permission.edit_configuracion))
-                IconButton(
-                  icon: Icon(
-                    _editandoPrecio && _editingTurno == 'manana'
-                        ? Icons.check
-                        : Icons.edit,
-                    color: Colors.grey.shade800,
-                    size: 18,
-                  ),
-                  onPressed: () {
-                    if (_editandoPrecio && _editingTurno == 'manana') {
-                      _guardarNuevoPrecioGlobal('manana', configuracion);
-                    } else {
-                      setState(() {
-                        _precioController.text =
-                            globalPriceManana?.toStringAsFixed(2) ?? '0.00';
-                        _editandoPrecio = true;
-                        _editingTurno = 'manana';
-                      });
-                    }
-                  },
-                ),
-            ],
-          ),
-
-        // Espaciado solo si ambos se muestran
-        if (showManana && showTarde) const SizedBox(height: 8),
-
-        // Precio Tarde Global - Solo si debe mostrarse
-        if (showTarde)
-          Row(
-            children: [
-              Icon(Icons.wb_twilight, color: Colors.blue.shade600, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _editandoPrecio && _editingTurno == 'tarde'
-                    ? TextField(
-                        controller: _precioController,
-                        keyboardType: TextInputType.number,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 12,
-                          ),
-                          border: OutlineInputBorder(),
-                        ),
-                        onSubmitted: (_) =>
-                            _guardarNuevoPrecioGlobal('tarde', configuracion),
-                      )
-                    : Text(
-                        'Tarde: \$${globalPriceTarde?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-              ),
-              if (authController.hasPermission(Permission.edit_configuracion))
-                IconButton(
-                  icon: Icon(
-                    _editandoPrecio && _editingTurno == 'tarde'
-                        ? Icons.check
-                        : Icons.edit,
-                    color: Colors.grey.shade800,
-                    size: 18,
-                  ),
-                  onPressed: () {
-                    if (_editandoPrecio && _editingTurno == 'tarde') {
-                      _guardarNuevoPrecioGlobal('tarde', configuracion);
-                    } else {
-                      setState(() {
-                        _precioController.text =
-                            globalPriceTarde?.toStringAsFixed(2) ?? '0.00';
-                        _editandoPrecio = true;
-                        _editingTurno = 'tarde';
-                      });
-                    }
-                  },
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-}
-
-// CompactDateFilterButtons permanece igual...
-enum MoreFilterOption { yesterday, tomorrow, lastWeek }
-
-class CompactDateFilterButtons extends StatelessWidget {
-  final DateFilterType selectedFilter;
-  final DateTime? customDate;
-  final TurnoType? selectedTurno;
-  final Function(DateFilterType, DateTime?, {TurnoType? turno}) onFilterChanged;
-
-  const CompactDateFilterButtons({
-    super.key,
-    required this.selectedFilter,
-    this.customDate,
-    this.selectedTurno,
-    required this.onFilterChanged,
-  });
-
-  String _getButtonText(DateFilterType filter, DateTime? date) {
-    final meses = [
-      'enero',
-      'febrero',
-      'marzo',
-      'abril',
-      'mayo',
-      'junio',
-      'julio',
-      'agosto',
-      'septiembre',
-      'octubre',
-      'noviembre',
-      'diciembre',
-    ];
-    String formatearFecha(DateTime fecha) {
-      return '${fecha.day} de ${meses[fecha.month - 1]}';
-    }
-
-    switch (filter) {
-      case DateFilterType.all:
-        return 'Todas';
-      case DateFilterType.today:
-        return 'Hoy';
-      case DateFilterType.yesterday:
-        return 'Ayer';
-      case DateFilterType.tomorrow:
-        return 'Mañana';
-      case DateFilterType.lastWeek:
-        return 'Última Semana';
-      case DateFilterType.custom:
-        return date != null ? formatearFecha(date) : 'Fecha Específica';
-    }
-  }
-
-  String _getMoreFilterOptionText(MoreFilterOption option) {
-    switch (option) {
-      case MoreFilterOption.yesterday:
-        return 'Ayer';
-      case MoreFilterOption.tomorrow:
-        return 'Mañana';
-      case MoreFilterOption.lastWeek:
-        return 'Última Semana';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isMoreFiltersSelected =
-        selectedFilter == DateFilterType.yesterday ||
-        selectedFilter == DateFilterType.tomorrow ||
-        selectedFilter == DateFilterType.lastWeek;
-
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildFilterButton(
-            context,
-            DateFilterType.today,
-            _getButtonText(DateFilterType.today, null),
-            selectedFilter == DateFilterType.today,
-            onPressed: () =>
-                onFilterChanged(DateFilterType.today, null, turno: null),
-          ),
-          _buildFilterButton(
-            context,
-            DateFilterType.all,
-            _getButtonText(DateFilterType.all, null),
-            selectedFilter == DateFilterType.all,
-            onPressed: () =>
-                onFilterChanged(DateFilterType.all, null, turno: null),
-          ),
-          _buildFilterButton(
-            context,
-            DateFilterType.custom,
-            customDate != null
-                ? _getButtonText(DateFilterType.custom, customDate)
-                : 'Fecha Específica',
-            selectedFilter == DateFilterType.custom,
-            onPressed: () async {
-              final pickedDate = await showDatePicker(
-                context: context,
-                initialDate: customDate ?? DateTime.now(),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (pickedDate != null) {
-                onFilterChanged(DateFilterType.custom, pickedDate, turno: null);
-              }
-            },
-          ),
-          PopupMenuButton<MoreFilterOption>(
-            onSelected: (MoreFilterOption item) {
-              switch (item) {
-                case MoreFilterOption.yesterday:
-                  onFilterChanged(DateFilterType.yesterday, null, turno: null);
-                  break;
-                case MoreFilterOption.tomorrow:
-                  onFilterChanged(DateFilterType.tomorrow, null, turno: null);
-                  break;
-                case MoreFilterOption.lastWeek:
-                  onFilterChanged(DateFilterType.lastWeek, null, turno: null);
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<MoreFilterOption>>[
-                  PopupMenuItem<MoreFilterOption>(
-                    value: MoreFilterOption.yesterday,
-                    child: Text(
-                      _getMoreFilterOptionText(MoreFilterOption.yesterday),
-                    ),
-                  ),
-                  PopupMenuItem<MoreFilterOption>(
-                    value: MoreFilterOption.tomorrow,
-                    child: Text(
-                      _getMoreFilterOptionText(MoreFilterOption.tomorrow),
-                    ),
-                  ),
-                  PopupMenuItem<MoreFilterOption>(
-                    value: MoreFilterOption.lastWeek,
-                    child: Text(
-                      _getMoreFilterOptionText(MoreFilterOption.lastWeek),
-                    ),
-                  ),
-                ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isMoreFiltersSelected
-                    ? Colors.blue.shade600
-                    : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isMoreFiltersSelected
-                      ? Colors.blue.shade200
-                      : Colors.grey.shade300,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.filter_list,
-                    size: 18,
-                    color: isMoreFiltersSelected ? Colors.white : Colors.blue,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Más filtros',
-                    style: TextStyle(
-                      color: isMoreFiltersSelected ? Colors.white : Colors.blue,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterButton(
-    BuildContext context,
-    DateFilterType filterType,
-    String text,
-    bool isSelected, {
-    VoidCallback? onPressed,
-  }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected
-                ? Colors.blue.shade600
-                : Colors.grey.shade200,
-            foregroundColor: isSelected ? Colors.white : Colors.black87,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            elevation: isSelected ? 4 : 1,
-            minimumSize: const Size(0, 40),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
       ),
     );
   }

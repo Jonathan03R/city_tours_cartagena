@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/models/roles.dart';
 import 'package:citytourscartagena/core/services/permission_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../models/usuarios.dart'; // Importa tu modelo Usuarios
@@ -29,14 +30,18 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
 
       if (user != null) {
-        // SUSCRIBIRSE AL TOPIC SIEMPRE QUE HAYA USUARIO LOGUEADO
-        FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
-        debugPrint('[AuthController] Suscrito a topic nueva_reserva');
+        // SUSCRIBIRSE AL TOPIC SIEMPRE QUE HAYA USUARIO LOGUEADO (solo en móviles)
+        if (!kIsWeb) {
+          FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+          debugPrint('[AuthController] Suscrito a topic nueva_reserva');
+        }
         _subscribeToAppUser();
       } else {
-        // DESUSCRIBIRSE SI EL USUARIO SE DESLOGUEA
-        FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
-        debugPrint('[AuthController] Desuscrito de topic nueva_reserva');
+        // DESUSCRIBIRSE SI EL USUARIO SE DESLOGUEA (solo en móviles)
+        if (!kIsWeb) {
+          FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
+          debugPrint('[AuthController] Desuscrito de topic nueva_reserva');
+        }
       }
     });
 
@@ -159,7 +164,9 @@ class AuthController extends ChangeNotifier {
 
       debugPrint('[AuthController] Login: User is active. Proceeding.');
       user = cred.user; // asegúrate de actualizarlo manualmente
-      await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+      if (!kIsWeb) {
+        await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+      }
       _subscribeToAppUser(overrideUser: user);
     } on FirebaseAuthException {
       rethrow;
@@ -178,7 +185,9 @@ class AuthController extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
 
-    await FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
+    if (!kIsWeb) {
+      await FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
+    }
   }
 
   Future<void> adminCreateUser({
