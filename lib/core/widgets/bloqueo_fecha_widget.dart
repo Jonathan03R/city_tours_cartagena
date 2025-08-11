@@ -44,7 +44,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
           }
           return Card(
             color: estaCerrado ? Colors.red.shade50 : Colors.green.shade50,
-            margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 0),
+            // margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 0),
             child: Padding(
               padding: EdgeInsets.all(12.0.h),
               child: Column(
