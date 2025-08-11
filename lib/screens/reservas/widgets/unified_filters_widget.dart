@@ -19,6 +19,8 @@ class ProfessionalFiltersWidget extends StatefulWidget {
   // Filtros de estado
   final EstadoReserva? selectedEstado;
   final ValueChanged<EstadoReserva?> onEstadoChanged;
+  // Control del acordeón: expandido inicial
+  final bool initiallyExpanded;
 
   const ProfessionalFiltersWidget({
     super.key,
@@ -29,6 +31,7 @@ class ProfessionalFiltersWidget extends StatefulWidget {
     required this.onTurnoChanged,
     this.selectedEstado,
     required this.onEstadoChanged,
+    this.initiallyExpanded = false,
   });
 
   @override
@@ -37,13 +40,14 @@ class ProfessionalFiltersWidget extends StatefulWidget {
 
 class _ProfessionalFiltersWidgetState extends State<ProfessionalFiltersWidget>
     with SingleTickerProviderStateMixin {
-  bool _isExpanded = true;
+  late bool _isExpanded;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
 
   @override
   void initState() {
     super.initState();
+  _isExpanded = widget.initiallyExpanded;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,

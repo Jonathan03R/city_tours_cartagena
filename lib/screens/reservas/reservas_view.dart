@@ -1,35 +1,27 @@
 import 'dart:async';
+
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
-import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
-import 'package:citytourscartagena/core/models/reserva_con_agencia.dart' hide AgenciaConReservas;
-import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_pro_form.dart';
-import 'package:citytourscartagena/core/widgets/bloqueo_fecha_widget.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
-import 'package:citytourscartagena/core/widgets/estado_filter_button.dart';
+import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
-import 'package:citytourscartagena/core/widgets/turno_filter_button.dart';
-import 'package:citytourscartagena/core/widgets/reserva_card_item.dart';
-import 'package:citytourscartagena/core/widgets/reserva_details.dart';
-import 'package:citytourscartagena/core/widgets/reservas_table.dart';
 import 'package:citytourscartagena/core/widgets/whatsapp_contact_button.dart';
+import 'package:citytourscartagena/screens/reservas/widgets/agency_header_widget.dart';
+import 'package:citytourscartagena/screens/reservas/widgets/price_controls_widget.dart';
+import 'package:citytourscartagena/screens/reservas/widgets/reservas_content_widget.dart';
+import 'package:citytourscartagena/screens/reservas/widgets/reservas_header_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/controller/reservas_controller.dart';
-import '../widgets/reservas_view/agency_header_widget.dart';
-import '../widgets/reservas_view/compact_date_filter_buttons.dart';
-import '../widgets/reservas_view/floating_action_buttons.dart';
-import '../widgets/reservas_view/price_controls_widget.dart';
-import '../widgets/reservas_view/reservas_content_widget.dart';
-import '../widgets/reservas_view/reservas_header_widget.dart';
 
 class ReservasView extends StatefulWidget {
   final TurnoType? turno;

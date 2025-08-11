@@ -216,6 +216,8 @@ class _PriceControlsWidgetState extends State<PriceControlsWidget> {
         tipoDocumento: widget.currentAgencia!.tipoDocumento,
         numeroDocumento: widget.currentAgencia!.numeroDocumento,
         nombreBeneficiario: widget.currentAgencia!.nombreBeneficiario,
+        contactoAgencia: widget.currentAgencia!.contactoAgencia,
+        linkContactoAgencia: widget.currentAgencia!.linkContactoAgencia,
       );
 
       _showSuccessSnackBar('Precio de agencia actualizado correctamente');

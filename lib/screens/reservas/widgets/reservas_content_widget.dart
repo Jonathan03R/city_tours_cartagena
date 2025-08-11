@@ -26,7 +26,7 @@ class ReservasContentWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      // padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: LayoutBuilder(
         builder: (ctx, constraints) {
           final isWide = constraints.maxWidth >= 600;
