@@ -46,7 +46,7 @@ class PdfExportService {
       final Uint8List companyLogoBytes = byteData.buffer.asUint8List();
 
       // Solicitar permisos de almacenamiento
-      var status = await Permission.manageExternalStorage.request();
+  var status = await Permission.manageExternalStorage.request();
       if (!status.isGranted) {
         if (context != null && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -58,42 +58,42 @@ class PdfExportService {
         }
         return;
       }
-      // Crear el documento PDF
-      final pdf = pw.Document();
-      // CALCULAR TOTALES SEGÚN LA LÓGICA DE LA TABLA
-      int totalPax = 0;
-      double totalSaldo = 0.0;
-      double totalDeuda = 0.0;
-      final unpaid = reservasConAgencia
-          .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
-          .toList();
-      if (agenciaEspecifica != null) {
-        // LÓGICA PARA AGENCIA ESPECÍFICA: solo reservas no pagadas
-        totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
-        totalSaldo = unpaid.fold<double>(
-          0.0,
-          (sum, ra) => sum + ra.reserva.saldo,
-        );
-        totalDeuda = unpaid.fold<double>(
-          0.0,
-          (sum, ra) => sum + ra.reserva.deuda,
-        );
-      } else {
-        // LÓGICA PARA VISTA GENERAL
-        totalPax = reservasConAgencia.fold<int>(
-          0,
-          (sum, ra) => sum + ra.reserva.pax,
-        );
-        totalSaldo = reservasConAgencia.fold<double>(
-          0.0,
-          (sum, ra) => sum + ra.reserva.saldo,
-        );
-        totalDeuda = unpaid.fold<double>(
-          0.0,
-          (sum, ra) => sum + ra.reserva.deuda,
-        );
-      }
-      Uint8List? agenciaLogoBytes;
+        // Crear el documento PDF
+        final pdf = pw.Document();
+        // CALCULAR TOTALES SEGÚN LA LÓGICA DE LA TABLA
+        int totalPax = 0;
+        double totalSaldo = 0.0;
+        double totalDeuda = 0.0;
+        final unpaid = reservasConAgencia
+            .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
+            .toList();
+        if (agenciaEspecifica != null) {
+          // LÓGICA PARA AGENCIA ESPECÍFICA: solo reservas no pagadas
+          totalPax = unpaid.fold<int>(0, (sum, ra) => sum + ra.reserva.pax);
+          totalSaldo = unpaid.fold<double>(
+            0.0,
+            (sum, ra) => sum + ra.reserva.saldo,
+          );
+          totalDeuda = unpaid.fold<double>(
+            0.0,
+            (sum, ra) => sum + ra.reserva.deuda,
+          );
+        } else {
+          // LÓGICA PARA VISTA GENERAL
+          totalPax = reservasConAgencia.fold<int>(
+            0,
+            (sum, ra) => sum + ra.reserva.pax,
+          );
+          totalSaldo = reservasConAgencia.fold<double>(
+            0.0,
+            (sum, ra) => sum + ra.reserva.saldo,
+          );
+          totalDeuda = unpaid.fold<double>(
+            0.0,
+            (sum, ra) => sum + ra.reserva.deuda,
+          );
+        }
+        Uint8List? agenciaLogoBytes;
       if (agenciaEspecifica?.imagenUrl != null) {
         final resp = await http.get(Uri.parse(agenciaEspecifica!.imagenUrl!));
         if (resp.statusCode == 200) {
@@ -432,9 +432,7 @@ class PdfExportService {
                   ),
                   pw.SizedBox(height: 4),
                 ],
-                if (config != null &&
-                    config.tipoDocumento != null &&
-                    config.numeroDocumento != null) ...[
+                if (config != null && config.numeroDocumento != null) ...[
                   pw.Text(
                     'Debe a',
                     textAlign: pw.TextAlign.left,
@@ -450,7 +448,7 @@ class PdfExportService {
                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                   ),
                   pw.Text(
-                    '${config.tipoDocumento!.name.toUpperCase()} : ${config.numeroDocumento!}',
+                    '${config.tipoDocumento.name.toUpperCase()} : ${config.numeroDocumento}',
                     textAlign: pw.TextAlign.left,
                     style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                   ),
@@ -595,13 +593,17 @@ class PdfExportService {
     headerCells.add(_buildTableHeader('SALDO'));
     columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
 
-    headerCells.add(_buildTableHeader('AGENCIA'));
-    columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
+  headerCells.add(_buildTableHeader('AGENCIA'));
+  columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
+  // Columnas: Ticket y Habitación
+  headerCells.add(_buildTableHeader('TICKET'));
+  columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
+  headerCells.add(_buildTableHeader('HABITACIÓN'));
+  columnWidths[columnIndex++] = const pw.FlexColumnWidth(2);
 
-    if (canViewDeuda) {
-      headerCells.add(_buildTableHeader('DEUDA'));
-      columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
-    }
+  // Columna DEUDA siempre visible
+  headerCells.add(_buildTableHeader('DEUDA'));
+  columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
 
     
 
@@ -657,6 +659,17 @@ class PdfExportService {
       ),
     );
     dataCells.add(_buildTableCell(reserva.nombreAgencia));
+    // Agregar ticket y habitación
+    dataCells.add(
+      _buildTableCell(
+        (reserva.ticket?.isEmpty ?? true) ? 'Sin ticket' : reserva.ticket!,
+      ),
+    );
+    dataCells.add(
+      _buildTableCell(
+        (reserva.habitacion?.isEmpty ?? true) ? 'Sin habitación' : reserva.habitacion!,
+      ),
+    );
 
     // Conditionally add 'DEUDA' cell
     if (canViewDeuda) {

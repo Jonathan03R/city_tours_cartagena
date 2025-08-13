@@ -26,6 +26,10 @@ class ReservaConAgencia {
   double get deuda => reserva.deuda;
   bool get whatsappContactado => reserva.whatsappContactado;
   TurnoType? get turno => reserva.turno;
+  // Campos opcionales de reserva
+  String? get ticket => reserva.ticket;
+  String? get habitacion => reserva.habitacion;
+  String? get estatusReserva => reserva.estatusReserva;
 }
 
 // También puedes definir AgenciaConReservas aquí, ya que es un DTO combinado.

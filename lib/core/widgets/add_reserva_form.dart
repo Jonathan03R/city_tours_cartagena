@@ -51,7 +51,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
   // MERGE: feature/Add-N-habitaciones-ticket añadió estos campos
   final _ticketController = TextEditingController();
   final _habitacionController = TextEditingController();
-  final _estatusReservaController = TextEditingController(text: 'A'); // Ej: A=Activa
 
   // Focus (MERGE: del refactor/user-agencia)
   final _focusNombre = FocusNode();
@@ -107,7 +106,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
     // MERGE KEEP: Campos agregados en feature/Add-N-habitaciones-ticket
     _ticketController.dispose();
     _habitacionController.dispose();
-    _estatusReservaController.dispose();
 
     // MERGE KEEP: FocusNodes del refactor/user-agencia
     _focusNombre.dispose();
@@ -281,7 +279,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
         // MERGE KEEP: campos de feature
         ticket: _ticketController.text.trim(),
         habitacion: _habitacionController.text.trim(),
-        estatusReserva: _estatusReservaController.text.trim(),
+        estatusReserva: 'A',
       );
 
       final reservasController = context.read<ReservasController>();
@@ -564,22 +562,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               child: TextFormField(
                                 controller: _habitacionController,
                                 decoration: const InputDecoration(hintText: 'Ej: 406'),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _LabeledField(
-                              label: 'Estatus',
-                              icon: Icons.flag_circle_outlined,
-                              child: TextFormField(
-                                controller: _estatusReservaController,
-                                maxLength: 2,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                                ],
-                                decoration: const InputDecoration(
-                                  hintText: 'Ej: A (Activa), P (Pendiente), etc.',
-                                  counterText: '',
-                                ),
                               ),
                             ),
                           ],
