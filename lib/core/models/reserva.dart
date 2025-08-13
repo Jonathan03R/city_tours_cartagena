@@ -69,7 +69,12 @@ class Reserva {
     );
   }
 
-  double get deuda => costoAsiento * pax - saldo;
+  double get deuda {
+    if (turno == TurnoType.privado) {
+      return costoAsiento - saldo;
+    }
+    return costoAsiento * pax - saldo;
+  }
 
   //este metodo convierte la reserva a un mapa de datos
   //usado para guardar datos en Firestore
@@ -100,6 +105,8 @@ class Reserva {
         return TurnoType.manana;
       case 'tarde':
         return TurnoType.tarde;
+      case 'privado':
+        return TurnoType.privado;
       default:
         return null; // o puedes lanzar una excepción si es un turno desconocido
     }

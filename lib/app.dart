@@ -1,6 +1,7 @@
 import 'package:citytourscartagena/auth/auth_gate.dart';
 import 'package:citytourscartagena/core/models/usuarios.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/core/widgets/offline_banner.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,10 +16,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // Tamaño de diseño base (iPhone X)
+      /// Inicializa ScreenUtil con el tamaño de diseño base
+      designSize: const Size(490, 1074), // Tamaño de diseño base (iPhone X)
+      /// Permite la adaptación del texto a diferentes tamaños de pantalla
       minTextAdapt: true,
+
+      /// Habilita el modo de pantalla dividida
       splitScreenMode: true,
-      builder: (context, child) {
+  builder: (context, child) { 
         return MultiProvider(
           providers: [
             // Stream de FirebaseAuth
@@ -56,9 +61,28 @@ class MyApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [Locale('es', 'ES')],
-            theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+            theme: ThemeData(
+              dataTableTheme: DataTableThemeData(
+                headingTextStyle: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                dataTextStyle: TextStyle(fontSize: 16.sp),
+                dataRowHeight: 50.h,
+                headingRowHeight: 44.h,
+              ),
+            ),
             home: const AuthGate(),
             debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  const OfflineBanner(), // overlay global
+                ],
+              );
+            },
           ),
         );
       },

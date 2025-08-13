@@ -605,8 +605,6 @@ class PdfExportService {
   headerCells.add(_buildTableHeader('DEUDA'));
   columnWidths[columnIndex++] = const pw.FlexColumnWidth(1.5);
 
-    
-
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
       columnWidths: columnWidths,
@@ -641,9 +639,11 @@ class PdfExportService {
     final List<pw.Widget> dataCells = [];
 
     dataCells.add(_buildTableCell(_getTurnoText(reserva.reserva.turno)));
-    dataCells.add(_buildTableCell(reserva.telefono.isEmpty
-        ? 'Sin teléfono'
-        : reserva.telefono));
+    dataCells.add(
+      _buildTableCell(
+        reserva.telefono.isEmpty ? 'Sin teléfono' : reserva.telefono,
+      ),
+    );
     dataCells.add(
       _buildTableCell(reserva.hotel.isEmpty ? 'Sin hotel' : reserva.hotel),
     );
@@ -826,7 +826,8 @@ class PdfExportService {
   /// Obtiene el texto del turno
   String _getTurnoText(dynamic turno) {
     if (turno == null) return 'Sin turno';
-    return turno.toString().split('.').last.toUpperCase();
+    if (turno is TurnoType) return turno.label;
+    return turno.toString();
   }
 
   /// Obtiene el color según el estado de la reserva

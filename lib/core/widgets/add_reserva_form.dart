@@ -51,6 +51,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   // MERGE: feature/Add-N-habitaciones-ticket añadió estos campos
   final _ticketController = TextEditingController();
   final _habitacionController = TextEditingController();
+  final _estatusReservaController = TextEditingController(text: 'A'); // Ej: A=Activa
+  // NUEVO: Controlador para costo total privado
+  final _costoTotalPrivadoController = TextEditingController();
 
   // Focus (MERGE: del refactor/user-agencia)
   final _focusNombre = FocusNode();
@@ -106,7 +109,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
     // MERGE KEEP: Campos agregados en feature/Add-N-habitaciones-ticket
     _ticketController.dispose();
     _habitacionController.dispose();
-
+    _estatusReservaController.dispose();
+  // NUEVO: Dispose del controlador de costo total privado
+  _costoTotalPrivadoController.dispose();
     // MERGE KEEP: FocusNodes del refactor/user-agencia
     _focusNombre.dispose();
     _focusHotel.dispose();
@@ -167,6 +172,11 @@ class _AddReservaFormState extends State<AddReservaForm> {
   }
 
   double get _costoAsientoActual {
+    // Si el turno es privado, el costo lo ingresa el usuario manualmente
+    if (_selectedTurno == TurnoType.privado) {
+      final v = double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.'));
+      return v ?? 0.0;
+    }
     return _precioAsiento(
       turno: _selectedTurno,
       config: _config,
@@ -174,7 +184,13 @@ class _AddReservaFormState extends State<AddReservaForm> {
     );
   }
 
-  double get _costoTotal => _costoAsientoActual * _pax;
+  double get _costoTotal {
+    if (_selectedTurno == TurnoType.privado) {
+      final v = double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.'));
+      return v ?? 0.0;
+    }
+    return _costoAsientoActual * _pax;
+  }
   double get _diferencia => _costoTotal - _saldo;
 
   EstadoReserva _estadoPor(double costoAsiento, int pax, double saldo) {
@@ -228,12 +244,23 @@ class _AddReservaFormState extends State<AddReservaForm> {
     }
 
     final currentCostoAsiento = _costoAsientoActual;
-    if (currentCostoAsiento <= 0) {
-      await ErrorDialogs.showErrorDialog(
-        context,
-        'Error: precio por asiento no válido, comunícate con el administrador.',
-      );
-      return;
+    if (_selectedTurno == TurnoType.privado) {
+      final v = double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.'));
+      if (v == null || v <= 0) {
+        await ErrorDialogs.showErrorDialog(
+          context,
+          'Ingresa un costo total válido para el servicio privado.',
+        );
+        return;
+      }
+    } else {
+      if (currentCostoAsiento <= 0) {
+        await ErrorDialogs.showErrorDialog(
+          context,
+          'Error: precio por asiento no válido, comunícate con el administrador.',
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
@@ -273,7 +300,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
         fecha: _selectedDate,
         agenciaId: _selectedAgenciaId!,
         estado: estado,
-        costoAsiento: currentCostoAsiento,
+    costoAsiento: _selectedTurno == TurnoType.privado
+      ? double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.')) ?? 0.0
+      : currentCostoAsiento,
         telefono: _telefonoController.text.trim(),
         turno: _selectedTurno,
         // MERGE KEEP: campos de feature
@@ -350,6 +379,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
 
   @override
   Widget build(BuildContext context) {
+  final isPrivado = _selectedTurno == TurnoType.privado;
     // Observa configuración para re-render si cambia el precio
     context.watch<ConfiguracionController>().configuracion;
     final cs = Theme.of(context).colorScheme;
@@ -463,6 +493,24 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 validator: (v) => v == null ? 'Debes seleccionar un turno' : null,
                               ),
                             ),
+                            if (isPrivado) ...[
+                              const SizedBox(height: 12),
+                              _LabeledField(
+                                label: 'Costo total del servicio',
+                                isRequired: true,
+                                icon: Icons.attach_money,
+                                child: TextFormField(
+                                  controller: _costoTotalPrivadoController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(hintText: 'Ej: 40000'),
+                                  validator: (v) {
+                                    final d = double.tryParse((v ?? '').replaceAll(',', '.'));
+                                    if (d == null || d <= 0) return 'Ingresa un valor válido';
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 12),
                             _LabeledField(
                               label: 'Fecha',
@@ -573,17 +621,19 @@ class _AddReservaFormState extends State<AddReservaForm> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _InfoChip(
-                              icon: Icons.monetization_on_outlined,
-                              title: 'Precio por asiento',
-                              value: _currency(_costoAsientoActual),
-                              color: cs.primaryContainer,
-                              textColor: cs.onPrimaryContainer,
-                              warning: _costoAsientoActual <= 0
-                                  ? 'Revisa la configuración de precios'
-                                  : null,
-                            ),
-                            const SizedBox(height: 8),
+                            if (_selectedTurno != TurnoType.privado) ...[
+                              _InfoChip(
+                                icon: Icons.monetization_on_outlined,
+                                title: 'Precio por asiento',
+                                value: _currency(_costoAsientoActual),
+                                color: cs.primaryContainer,
+                                textColor: cs.onPrimaryContainer,
+                                warning: _costoAsientoActual <= 0
+                                    ? 'Revisa la configuración de precios'
+                                    : null,
+                              ),
+                              const SizedBox(height: 8),
+                            ],
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
                               switchInCurve: Curves.easeOut,
@@ -597,13 +647,20 @@ class _AddReservaFormState extends State<AddReservaForm> {
                             const SizedBox(height: 8),
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
-                              child: _TotalesBox(
-                                key: ValueKey(
-                                    'totales-${_pax}-${_saldo.toStringAsFixed(2)}-${_costoAsientoActual.toStringAsFixed(2)}'),
-                                total: _costoTotal,
-                                diferencia: _diferencia,
-                                formatter: _currency,
-                              ),
+                              child: _selectedTurno == TurnoType.privado
+                                  ? _TotalesBox(
+                                      key: ValueKey('totales-privado-${_saldo.toStringAsFixed(2)}-${_costoTotal.toStringAsFixed(2)}'),
+                                      total: _costoTotal,
+                                      diferencia: _diferencia,
+                                      formatter: _currency,
+                                      labelTotal: 'Costo total',
+                                    )
+                                  : _TotalesBox(
+                                      key: ValueKey('totales-${_pax}-${_saldo.toStringAsFixed(2)}-${_costoAsientoActual.toStringAsFixed(2)}'),
+                                      total: _costoTotal,
+                                      diferencia: _diferencia,
+                                      formatter: _currency,
+                                    ),
                             ),
                           ],
                         ),
@@ -927,11 +984,13 @@ class _TotalesBox extends StatelessWidget {
     required this.total,
     required this.diferencia,
     required this.formatter,
+    this.labelTotal,
   });
 
   final double total;
   final double diferencia;
   final String Function(num) formatter;
+  final String? labelTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -954,7 +1013,10 @@ class _TotalesBox extends StatelessWidget {
           Row(children: [
             Icon(Icons.calculate, size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            const Text('Costo total: ', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              labelTotal ?? 'Costo total: ',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             Text(formatter(total), style: const TextStyle(fontWeight: FontWeight.bold)),
           ]),
           const SizedBox(height: 8),

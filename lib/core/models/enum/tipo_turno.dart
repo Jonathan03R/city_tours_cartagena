@@ -7,7 +7,7 @@ extension TurnoTypeLabel on TurnoType {
       case TurnoType.tarde:
         return 'Turno Tarde';
       case TurnoType.privado:
-        return 'Turno Privado';
+        return 'Servicio Privado';
     }
   }
 }
