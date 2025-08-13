@@ -76,6 +76,12 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_saldo'] = TextEditingController(
         text: reserva.saldo.toString(),
       );
+      _controllers['${reserva.id}_ticket'] = TextEditingController(
+        text: reserva.ticket,
+      );
+      _controllers['${reserva.id}_habitacion'] = TextEditingController(
+        text: reserva.habitacion,
+      );
       _controllers['${reserva.id}_observacion'] = TextEditingController(
         text: reserva.observacion,
       );
@@ -118,6 +124,10 @@ class _ReservasTableState extends State<ReservasTable> {
         telefono:
             _controllers['${_editingReservaId}_telefono']?.text ??
             reservaCA.telefono,
+        ticket: _controllers['${_editingReservaId}_ticket']?.text ??
+            reservaCA.ticket,
+        habitacion: _controllers['${_editingReservaId}_habitacion']?.text ??
+            reservaCA.habitacion,
         estado: _estadoValues[_editingReservaId] ?? reservaCA.estado,
         fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha,
         pax:
@@ -750,7 +760,32 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
-      
+
+      // Celda de Ticket
+      DataCell(
+        isEditing && authController.hasPermission(Permission.edit_reserva)
+            ? TextField(
+                controller: _controllers['${r.id}_ticket'],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(8),
+                ),
+              )
+            : Text(r.ticket ?? ''),
+      ),
+      // Celda de N° Habitación
+      DataCell(
+        isEditing && authController.hasPermission(Permission.edit_reserva)
+            ? TextField(
+                controller: _controllers['${r.id}_habitacion'],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(8),
+                ),
+              )
+            : Text(r.habitacion ?? ''),
+      ),
+
       // Celda de Observaciones
       DataCell(
         IconButton(

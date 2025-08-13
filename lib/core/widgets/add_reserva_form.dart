@@ -112,7 +112,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
     _estatusReservaController.dispose();
   // NUEVO: Dispose del controlador de costo total privado
   _costoTotalPrivadoController.dispose();
-
     // MERGE KEEP: FocusNodes del refactor/user-agencia
     _focusNombre.dispose();
     _focusHotel.dispose();
@@ -309,7 +308,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
         // MERGE KEEP: campos de feature
         ticket: _ticketController.text.trim(),
         habitacion: _habitacionController.text.trim(),
-        estatusReserva: _estatusReservaController.text.trim(),
+        estatusReserva: 'A',
       );
 
       final reservasController = context.read<ReservasController>();
@@ -611,22 +610,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               child: TextFormField(
                                 controller: _habitacionController,
                                 decoration: const InputDecoration(hintText: 'Ej: 406'),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _LabeledField(
-                              label: 'Estatus',
-                              icon: Icons.flag_circle_outlined,
-                              child: TextFormField(
-                                controller: _estatusReservaController,
-                                maxLength: 2,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                                ],
-                                decoration: const InputDecoration(
-                                  hintText: 'Ej: A (Activa), P (Pendiente), etc.',
-                                  counterText: '',
-                                ),
                               ),
                             ),
                           ],
