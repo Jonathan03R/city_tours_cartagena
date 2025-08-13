@@ -308,7 +308,7 @@ class _ReservasViewState extends State<ReservasView> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           // Botón WhatsApp de la rama ContactoAgencia (solo si hay agencia)
-          if (_currentAgencia != null)
+          if (_currentAgencia != null && authRole.hasPermission(Permission.contacto_agencia_whatsapp))
             WhatsappContactButton(
               contacto: _currentAgencia?.contactoAgencia,
               link: _currentAgencia?.linkContactoAgencia,

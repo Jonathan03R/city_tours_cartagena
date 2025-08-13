@@ -9,6 +9,7 @@ enum Permission {
   ver_agencias,
   crear_agencias_agencias,
   ver_deuda_agencias_usuario,
+  contacto_agencia_whatsapp,
 
   // CONTACTO
   contact_whatsapp,
