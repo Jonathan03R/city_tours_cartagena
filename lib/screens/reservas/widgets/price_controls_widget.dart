@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
+import 'package:citytourscartagena/core/models/reserva.dart'; // Para EstadoReserva
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart' hide AgenciaConReservas;
 import 'package:citytourscartagena/core/services/pdf_export_service.dart';
 import 'package:citytourscartagena/screens/reservas/widgets/price_section_widget.dart';
@@ -164,21 +165,32 @@ class _PriceControlsWidgetState extends State<PriceControlsWidget> {
     });
   }
 
+  /// Exporta el PDF usando la lista filtrada visible en pantalla,
+  /// para que siempre respete el filtro actual del usuario.
   Future<void> _exportReservas(bool hasSelections) async {
-    List<ReservaConAgencia> reservasParaExportar;
-    
-    if (hasSelections) {
-      reservasParaExportar = widget.reservasController.selectedReservas;
-    } else {
-      reservasParaExportar = await widget.reservasController.getAllFilteredReservasSinPaginacion();
-    }
+    // Si hay selección, exporta tal cual; si no, excluye las pagadas
+    List<ReservaConAgencia> reservasParaExportar = hasSelections
+        ? widget.reservasController.selectedReservas
+        : widget.reservasController.currentReservas
+            .where((ra) => ra.reserva.estado != EstadoReserva.pagada)
+            .toList();
 
     if (!mounted) return;
+
+    if (reservasParaExportar.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay reservas para exportar con los filtros actuales'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     final authController = context.read<AuthController>();
     final bool canViewDeuda = authController.hasPermission(Permission.ver_deuda_reservas);
     final pdfService = PdfExportService();
-    
+
     await pdfService.exportarReservasConAgencia(
       reservasConAgencia: reservasParaExportar,
       context: context,
