@@ -30,6 +30,8 @@ enum Permission {
   crear_agencias,
   crear_reserva,
 
+  crear_reservas_privadas,
+
   /// USUARIOS
   ver_perfil,
   ver_todos_usuarios,

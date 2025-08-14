@@ -401,6 +401,7 @@ class _ReservasViewState extends State<ReservasView> {
             turno: reservasController.turnoFilter,
           );
         },
+        initialTurno: reservasController.turnoFilter,
       ),
     );
   }

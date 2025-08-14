@@ -1,11 +1,13 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
@@ -24,11 +26,13 @@ import 'error_dialogs.dart';
 class AddReservaForm extends StatefulWidget {
   final VoidCallback onAdd;
   final String? agenciaId;
+  final TurnoType? initialTurno;
 
   const AddReservaForm({
     super.key,
     required this.onAdd,
     this.agenciaId,
+    this.initialTurno,
   });
 
   @override
@@ -39,7 +43,6 @@ class _AddReservaFormState extends State<AddReservaForm> {
   // Form
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autovalidateMode = AutovalidateMode.onUserInteraction;
-
   // Controllers
   final _nombreController = TextEditingController();
   final _hotelController = TextEditingController();
@@ -51,7 +54,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   // MERGE: feature/Add-N-habitaciones-ticket añadió estos campos
   final _ticketController = TextEditingController();
   final _habitacionController = TextEditingController();
-  final _estatusReservaController = TextEditingController(text: 'A'); // Ej: A=Activa
+  final _estatusReservaController = TextEditingController(
+    text: 'A',
+  ); // Ej: A=Activa
   // NUEVO: Controlador para costo total privado
   final _costoTotalPrivadoController = TextEditingController();
 
@@ -65,7 +70,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
 
   // State
   DateTime _selectedDate = DateTime.now();
-  TurnoType? _selectedTurno = TurnoType.manana;
+  TurnoType? _selectedTurno;
   Agencia? _selectedAgencia;
   String? _selectedAgenciaId;
 
@@ -81,6 +86,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
   void initState() {
     super.initState();
 
+    _selectedTurno = widget.initialTurno ?? TurnoType.manana;
     // Inicializa agencia si viene prefijada (MERGE: ambas ramas coinciden en intención)
     if (widget.agenciaId != null) {
       _selectedAgenciaId = widget.agenciaId;
@@ -110,8 +116,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
     _ticketController.dispose();
     _habitacionController.dispose();
     _estatusReservaController.dispose();
-  // NUEVO: Dispose del controlador de costo total privado
-  _costoTotalPrivadoController.dispose();
+    // NUEVO: Dispose del controlador de costo total privado
+    _costoTotalPrivadoController.dispose();
     // MERGE KEEP: FocusNodes del refactor/user-agencia
     _focusNombre.dispose();
     _focusHotel.dispose();
@@ -150,7 +156,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
     return _parseMoneda(_saldoController.text);
   }
 
-  Configuracion? get _config => context.read<ConfiguracionController>().configuracion;
+  Configuracion? get _config =>
+      context.read<ConfiguracionController>().configuracion;
 
   double _precioAsiento({
     TurnoType? turno,
@@ -174,7 +181,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   double get _costoAsientoActual {
     // Si el turno es privado, el costo lo ingresa el usuario manualmente
     if (_selectedTurno == TurnoType.privado) {
-      final v = double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.'));
+      final v = double.tryParse(
+        _costoTotalPrivadoController.text.replaceAll(',', '.'),
+      );
       return v ?? 0.0;
     }
     return _precioAsiento(
@@ -186,11 +195,14 @@ class _AddReservaFormState extends State<AddReservaForm> {
 
   double get _costoTotal {
     if (_selectedTurno == TurnoType.privado) {
-      final v = double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.'));
+      final v = double.tryParse(
+        _costoTotalPrivadoController.text.replaceAll(',', '.'),
+      );
       return v ?? 0.0;
     }
     return _costoAsientoActual * _pax;
   }
+
   double get _diferencia => _costoTotal - _saldo;
 
   EstadoReserva _estadoPor(double costoAsiento, int pax, double saldo) {
@@ -199,7 +211,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
     return diff <= 0 ? EstadoReserva.pagada : EstadoReserva.pendiente;
   }
 
-  EstadoReserva get _estadoActual => _estadoPor(_costoAsientoActual, _pax, _saldo);
+  EstadoReserva get _estadoActual =>
+      _estadoPor(_costoAsientoActual, _pax, _saldo);
 
   // Actions -------------------------------------------------------------------
 
@@ -234,18 +247,26 @@ class _AddReservaFormState extends State<AddReservaForm> {
 
     if (_selectedAgenciaId == null || _selectedAgencia == null) {
       setState(() => _agencyError = true);
-      await ErrorDialogs.showErrorDialog(context, 'Debes seleccionar una agencia.');
+      await ErrorDialogs.showErrorDialog(
+        context,
+        'Debes seleccionar una agencia.',
+      );
       return;
     }
 
     if (_selectedTurno == null) {
-      await ErrorDialogs.showErrorDialog(context, 'Por favor, selecciona un turno.');
+      await ErrorDialogs.showErrorDialog(
+        context,
+        'Por favor, selecciona un turno.',
+      );
       return;
     }
 
     final currentCostoAsiento = _costoAsientoActual;
     if (_selectedTurno == TurnoType.privado) {
-      final v = double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.'));
+      final v = double.tryParse(
+        _costoTotalPrivadoController.text.replaceAll(',', '.'),
+      );
       if (v == null || v <= 0) {
         await ErrorDialogs.showErrorDialog(
           context,
@@ -300,9 +321,12 @@ class _AddReservaFormState extends State<AddReservaForm> {
         fecha: _selectedDate,
         agenciaId: _selectedAgenciaId!,
         estado: estado,
-    costoAsiento: _selectedTurno == TurnoType.privado
-      ? double.tryParse(_costoTotalPrivadoController.text.replaceAll(',', '.')) ?? 0.0
-      : currentCostoAsiento,
+        costoAsiento: _selectedTurno == TurnoType.privado
+            ? double.tryParse(
+                    _costoTotalPrivadoController.text.replaceAll(',', '.'),
+                  ) ??
+                  0.0
+            : currentCostoAsiento,
         telefono: _telefonoController.text.trim(),
         turno: _selectedTurno,
         // MERGE KEEP: campos de feature
@@ -379,7 +403,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
 
   @override
   Widget build(BuildContext context) {
-  final isPrivado = _selectedTurno == TurnoType.privado;
+    final isPrivado = _selectedTurno == TurnoType.privado;
+    final authController = context.watch<AuthController>();
     // Observa configuración para re-render si cambia el precio
     context.watch<ConfiguracionController>().configuracion;
     final cs = Theme.of(context).colorScheme;
@@ -396,7 +421,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _Header(onClose: _isLoading ? null : () => Navigator.of(context).pop()),
+            _Header(
+              onClose: _isLoading ? null : () => Navigator.of(context).pop(),
+            ),
             const SizedBox(height: 8),
             Expanded(
               child: Form(
@@ -406,10 +433,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
                   padding: EdgeInsets.only(bottom: bottomInset),
                   child: Column(
                     children: [
-                      _Section(
-                        title: 'Agencia',
-                        child: _buildAgencia(cs),
-                      ),
+                      _Section(title: 'Agencia', child: _buildAgencia(cs)),
                       const SizedBox(height: 12),
                       _Section(
                         title: 'Datos del cliente',
@@ -423,10 +447,15 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 controller: _nombreController,
                                 focusNode: _focusNombre,
                                 textInputAction: TextInputAction.next,
-                                onFieldSubmitted: (_) => _focusHotel.requestFocus(),
-                                decoration: const InputDecoration(hintText: 'Nombre y apellido'),
+                                onFieldSubmitted: (_) =>
+                                    _focusHotel.requestFocus(),
+                                decoration: const InputDecoration(
+                                  hintText: 'Nombre y apellido',
+                                ),
                                 validator: (v) =>
-                                    (v == null || v.trim().isEmpty) ? 'Este campo es requerido' : null,
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Este campo es requerido'
+                                    : null,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -437,8 +466,11 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 controller: _hotelController,
                                 focusNode: _focusHotel,
                                 textInputAction: TextInputAction.next,
-                                onFieldSubmitted: (_) => _focusTelefono.requestFocus(),
-                                decoration: const InputDecoration(hintText: 'Nombre del hotel (opcional)'),
+                                onFieldSubmitted: (_) =>
+                                    _focusTelefono.requestFocus(),
+                                decoration: const InputDecoration(
+                                  hintText: 'Nombre del hotel (opcional)',
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -449,9 +481,12 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 controller: _telefonoController,
                                 focusNode: _focusTelefono,
                                 textInputAction: TextInputAction.next,
-                                onFieldSubmitted: (_) => _focusObs.requestFocus(),
+                                onFieldSubmitted: (_) =>
+                                    _focusObs.requestFocus(),
                                 keyboardType: TextInputType.phone,
-                                decoration: const InputDecoration(hintText: 'Ej: +57 300 123 4567'),
+                                decoration: const InputDecoration(
+                                  hintText: 'Ej: +57 300 123 4567',
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -463,8 +498,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 focusNode: _focusObs,
                                 minLines: 2,
                                 maxLines: 4,
-                                decoration:
-                                    const InputDecoration(hintText: 'Detalles adicionales (opcional)'),
+                                decoration: const InputDecoration(
+                                  hintText: 'Detalles adicionales (opcional)',
+                                ),
                               ),
                             ),
                           ],
@@ -482,6 +518,13 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               child: DropdownButtonFormField<TurnoType>(
                                 value: _selectedTurno,
                                 items: TurnoType.values
+                                    .where(
+                                      (t) =>
+                                          t != TurnoType.privado ||
+                                          authController.hasPermission(
+                                            Permission.crear_reservas_privadas,
+                                          ),
+                                    )
                                     .map(
                                       (t) => DropdownMenuItem(
                                         value: t,
@@ -489,8 +532,12 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: _isLoading ? null : (v) => setState(() => _selectedTurno = v),
-                                validator: (v) => v == null ? 'Debes seleccionar un turno' : null,
+                                onChanged: _isLoading
+                                    ? null
+                                    : (v) => setState(() => _selectedTurno = v),
+                                validator: (v) => v == null
+                                    ? 'Debes seleccionar un turno'
+                                    : null,
                               ),
                             ),
                             if (isPrivado) ...[
@@ -502,10 +549,15 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 child: TextFormField(
                                   controller: _costoTotalPrivadoController,
                                   keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(hintText: 'Ej: 40000'),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Ej: 40000',
+                                  ),
                                   validator: (v) {
-                                    final d = double.tryParse((v ?? '').replaceAll(',', '.'));
-                                    if (d == null || d <= 0) return 'Ingresa un valor válido';
+                                    final d = double.tryParse(
+                                      (v ?? '').replaceAll(',', '.'),
+                                    );
+                                    if (d == null || d <= 0)
+                                      return 'Ingresa un valor válido';
                                     return null;
                                   },
                                 ),
@@ -527,16 +579,23 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                           lastDate: DateTime(2035),
                                         );
                                         if (picked != null) {
-                                          setState(() => _selectedDate = picked);
+                                          setState(
+                                            () => _selectedDate = picked,
+                                          );
                                         }
                                       },
                                 borderRadius: BorderRadius.circular(8),
                                 child: InputDecorator(
                                   decoration: const InputDecoration(),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(DateFormat('dd-MM-yyyy').format(_selectedDate)),
+                                      Text(
+                                        DateFormat(
+                                          'dd-MM-yyyy',
+                                        ).format(_selectedDate),
+                                      ),
                                       const Icon(Icons.expand_more),
                                     ],
                                   ),
@@ -555,13 +614,21 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                       controller: _paxController,
                                       focusNode: _focusPax,
                                       textInputAction: TextInputAction.next,
-                                      onFieldSubmitted: (_) => _focusSaldo.requestFocus(),
+                                      onFieldSubmitted: (_) =>
+                                          _focusSaldo.requestFocus(),
                                       keyboardType: TextInputType.number,
-                                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                      decoration: const InputDecoration(hintText: 'Ej: 2'),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      decoration: const InputDecoration(
+                                        hintText: 'Ej: 2',
+                                      ),
                                       validator: (v) {
-                                        final n = int.tryParse((v ?? '').trim());
-                                        if (n == null || n <= 0) return 'Ingresa un número válido';
+                                        final n = int.tryParse(
+                                          (v ?? '').trim(),
+                                        );
+                                        if (n == null || n <= 0)
+                                          return 'Ingresa un número válido';
                                         return null;
                                       },
                                     ),
@@ -578,14 +645,21 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                       focusNode: _focusSaldo,
                                       textInputAction: TextInputAction.done,
                                       keyboardType:
-                                          const TextInputType.numberWithOptions(decimal: true),
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
                                       inputFormatters: [
-                                        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.\s]')),
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'[0-9,.\s]'),
+                                        ),
                                       ],
-                                      decoration: const InputDecoration(hintText: 'Ej: 150.00'),
+                                      decoration: const InputDecoration(
+                                        hintText: 'Ej: 150.00',
+                                      ),
                                       validator: (v) {
                                         final d = _parseMoneda(v ?? '');
-                                        if (d < 0) return 'No puede ser negativo';
+                                        if (d < 0)
+                                          return 'No puede ser negativo';
                                         return null;
                                       },
                                     ),
@@ -600,7 +674,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               icon: Icons.confirmation_number_outlined,
                               child: TextFormField(
                                 controller: _ticketController,
-                                decoration: const InputDecoration(hintText: 'Ej: ABC-123'),
+                                decoration: const InputDecoration(
+                                  hintText: 'Ej: ABC-123',
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -609,7 +685,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               icon: Icons.meeting_room,
                               child: TextFormField(
                                 controller: _habitacionController,
-                                decoration: const InputDecoration(hintText: 'Ej: 406'),
+                                decoration: const InputDecoration(
+                                  hintText: 'Ej: 406',
+                                ),
                               ),
                             ),
                           ],
@@ -640,7 +718,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               switchOutCurve: Curves.easeIn,
                               child: _EstadoBox(
                                 key: ValueKey(
-                                    '${_estadoActual.name}-${_costoTotal.toStringAsFixed(2)}-${_saldo.toStringAsFixed(2)}'),
+                                  '${_estadoActual.name}-${_costoTotal.toStringAsFixed(2)}-${_saldo.toStringAsFixed(2)}',
+                                ),
                                 estado: _estadoActual,
                               ),
                             ),
@@ -649,14 +728,18 @@ class _AddReservaFormState extends State<AddReservaForm> {
                               duration: const Duration(milliseconds: 200),
                               child: _selectedTurno == TurnoType.privado
                                   ? _TotalesBox(
-                                      key: ValueKey('totales-privado-${_saldo.toStringAsFixed(2)}-${_costoTotal.toStringAsFixed(2)}'),
+                                      key: ValueKey(
+                                        'totales-privado-${_saldo.toStringAsFixed(2)}-${_costoTotal.toStringAsFixed(2)}',
+                                      ),
                                       total: _costoTotal,
                                       diferencia: _diferencia,
                                       formatter: _currency,
                                       labelTotal: 'Costo total',
                                     )
                                   : _TotalesBox(
-                                      key: ValueKey('totales-${_pax}-${_saldo.toStringAsFixed(2)}-${_costoAsientoActual.toStringAsFixed(2)}'),
+                                      key: ValueKey(
+                                        'totales-${_pax}-${_saldo.toStringAsFixed(2)}-${_costoAsientoActual.toStringAsFixed(2)}',
+                                      ),
                                       total: _costoTotal,
                                       diferencia: _diferencia,
                                       formatter: _currency,
@@ -731,7 +814,11 @@ class _AddReservaFormState extends State<AddReservaForm> {
 
   String _currency(num n) {
     final locale = Intl.getCurrentLocale();
-    final fmt = NumberFormat.currency(locale: locale, symbol: r'$', decimalDigits: 2);
+    final fmt = NumberFormat.currency(
+      locale: locale,
+      symbol: r'$',
+      decimalDigits: 2,
+    );
     return fmt.format(n);
   }
 }
@@ -906,20 +993,25 @@ class _InfoChip extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icon, size: 18, color: textColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
+          Row(
+            children: [
+              Icon(icon, size: 18, color: textColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
               ),
-            ),
-            Text(
-              value,
-              style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
-            ),
-          ]),
+              Text(
+                value,
+                style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+              ),
+            ],
+          ),
           if (warning != null) ...[
             const SizedBox(height: 6),
             Row(
@@ -962,7 +1054,9 @@ class _EstadoBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isPagada ? Colors.green.shade200 : Colors.orange.shade200),
+        border: Border.all(
+          color: isPagada ? Colors.green.shade200 : Colors.orange.shade200,
+        ),
       ),
       child: Row(
         children: [
@@ -1010,15 +1104,24 @@ class _TotalesBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(Icons.calculate, size: 18, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              labelTotal ?? 'Costo total: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            Text(formatter(total), style: const TextStyle(fontWeight: FontWeight.bold)),
-          ]),
+          Row(
+            children: [
+              Icon(
+                Icons.calculate,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                labelTotal ?? 'Costo total: ',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                formatter(total),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
