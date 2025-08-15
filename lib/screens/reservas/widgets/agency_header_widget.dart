@@ -376,7 +376,7 @@ class _AgencyHeaderWidgetState extends State<AgencyHeaderWidget>
       ),
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return _buildLoadingButton(isCompact);
+          return const SizedBox.shrink(); // No mostrar nada mientras se espera
         }
         
         if (snap.hasData && snap.data == true) {
@@ -386,53 +386,6 @@ class _AgencyHeaderWidgetState extends State<AgencyHeaderWidget>
         
         return const SizedBox.shrink();
       },
-    );
-  }
-
-  Widget _buildLoadingButton(bool isCompact) {
-    return Container(
-      height: isCompact ? 36.h : 42.h,
-      padding: EdgeInsets.symmetric(horizontal: isCompact ? 12.w : 16.w),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.orange.shade400,
-            Colors.red.shade400,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(isCompact ? 18.r : 21.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withOpacity(0.3),
-            spreadRadius: 0,
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: isCompact ? 16.w : 20.w,
-            height: isCompact ? 16.h : 20.h,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Text(
-            'Verificando...',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isCompact ? 11.sp : 13.sp,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
