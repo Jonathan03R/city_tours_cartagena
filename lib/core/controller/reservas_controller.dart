@@ -370,20 +370,28 @@ class ReservasController extends ChangeNotifier {
     }
 
     // Determinar maxCupos según el turno
-    final maxCupos = reserva.turno == TurnoType.manana
-        ? config.maxCuposTurnoManana
-        : config.maxCuposTurnoTarde;
+    int? maxCupos;
+    if (reserva.turno == TurnoType.manana) {
+      maxCupos = config.maxCuposTurnoManana;
+    } else if (reserva.turno == TurnoType.tarde) {
+      maxCupos = config.maxCuposTurnoTarde;
+    }
+
+    debugPrint('[addReserva] Turno: ${reserva.turno}, maxCupos: $maxCupos');
 
     // Validar que el total de pax actuales más los de esta reserva no supere el límite
-    final actuales = await _firestoreService.getTotalPaxReservados(
-      turno: reserva.turno!,
-      fecha: reserva.fecha,
-    );
-    if (actuales + reserva.pax > maxCupos) {
-      final whatsapp = config.contact_whatsapp ?? '';
-      throw Exception(
-        'No hay cupos disponibles. Contacta al administrador por WhatsApp: $whatsapp'
+    if (maxCupos != null) {
+      final actuales = await _firestoreService.getTotalPaxReservados(
+        turno: reserva.turno!,
+        fecha: reserva.fecha,
       );
+      debugPrint('[addReserva] Pax actuales: $actuales, pax a agregar: ${reserva.pax}, total: ${actuales + reserva.pax}');
+      if (actuales + reserva.pax > maxCupos) {
+        final whatsapp = config.contact_whatsapp ?? '';
+        throw Exception(
+          'No hay cupos disponibles. Contacta al administrador por WhatsApp: $whatsapp'
+        );
+      }
     }
 
     // Si todo está OK, agregar la reserva
@@ -445,21 +453,30 @@ class ReservasController extends ChangeNotifier {
     }
 
     // 2) Revisar límite de cupos globales
-    final config = await ConfiguracionService.getConfiguracion();
-    if (config == null) return CuposEstado.disponible;
-    final maxCupos = turno == TurnoType.manana
-        ? config.maxCuposTurnoManana
-        : config.maxCuposTurnoTarde;
+      final config = await ConfiguracionService.getConfiguracion();
+      if (config == null) return CuposEstado.disponible;
 
-    final limite = await _firestoreService.seAlcanzoLimiteCuposFirestore(
-      turno: turno,
-      fecha: fecha,
-      maxCupos: maxCupos,
-    );
-    if (limite) return CuposEstado.limiteAlcanzado;
+      // Solo aplica límite para mañana o tarde
+      int? maxCupos;
+      if (turno == TurnoType.manana) {
+        maxCupos = config.maxCuposTurnoManana;
+      } else if (turno == TurnoType.tarde) {
+        maxCupos = config.maxCuposTurnoTarde;
+      }
 
-    // 3) Si llegó aquí, aún hay cupos
-    return CuposEstado.disponible;
+      debugPrint('[getEstadoCupos] Turno: $turno, maxCupos: $maxCupos');
+      if (maxCupos != null) {
+        final limite = await _firestoreService.seAlcanzoLimiteCuposFirestore(
+          turno: turno,
+          fecha: fecha,
+          maxCupos: maxCupos,
+        );
+        debugPrint('[getEstadoCupos] ¿Limite alcanzado?: $limite');
+        if (limite) return CuposEstado.limiteAlcanzado;
+      }
+
+      // Para privado o si no hay límite, siempre disponible
+      return CuposEstado.disponible;
   }
 }
 

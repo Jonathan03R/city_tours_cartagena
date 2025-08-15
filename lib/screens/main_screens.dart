@@ -7,11 +7,11 @@ import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
-import 'package:citytourscartagena/core/models/reserva.dart';
-import 'package:citytourscartagena/core/models/reserva_con_agencia.dart'
-    hide AgenciaConReservas;
-import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/debt_summary_by_turno.dart';
+import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.dart';
+import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.dart';
+import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
+import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
@@ -307,292 +307,112 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
         drawer: SizedBox(
-          width: MediaQuery.of(context).size.width * 4 / 5,
-          child: Drawer(
-            child: Consumer<AuthController>(
-              builder: (_, auth, __) {
-                final usuario = auth.appUser?.usuario ?? 'Invitado';
-                final email = auth.user?.email ?? '';
-                return SafeArea(
-                  bottom:
-                      true, // protege de los botones de navegación inferiores
-                  top:
-                      true, // puedes cambiar a true si deseas también protección superior
-                  child: Column(
-                    children: [
-                      Container(
-                        color: const Color(0xFF06142F),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 24,
-                          horizontal: 16,
-                        ),
-                        width: double.infinity,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 35,
-                              backgroundColor: Colors.white,
-                              backgroundImage: const AssetImage(
-                                'assets/images/logo.png',
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              usuario,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              email,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Sección de Agencias (solo visible si NO es colaborador)
-                      if (authRole.hasPermission(Permission.ver_deuda_agencia))
-                        Consumer<AgenciasController>(
-                          builder: (_, agCtrl, __) {
-                            return StreamBuilder<List<AgenciaConReservas>>(
-                              stream: agCtrl.agenciasConReservasStream,
-                              builder: (_, snapshot) {
-                                final count = snapshot.data?.length ?? 0;
-                                return Visibility(
-                                  visible:
-                                      _currentIndex ==
-                                      1, // Esto controla la visibilidad en el drawer
-                                  child: ListTile(
-                                    leading: const Icon(Icons.business),
-                                    title: Text(
-                                      '$count agencia${count != 1 ? 's' : ''}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      // Sección de Reservas (solo visible si NO es colaborador)
-                      if (authRole.hasPermission(Permission.ver_deuda_agencia))
-                        Consumer<ReservasController>(
-                          builder: (_, resCtrl, __) {
-                            return StreamBuilder<List<ReservaConAgencia>>(
-                              stream: resCtrl.getAllReservasConAgenciaStream(),
-                              builder: (_, snap) {
-                                if (!snap.hasData)
-                                  return const SizedBox.shrink();
-                                final all = snap.data!;
-                                final unpaid = all
-                                    .where(
-                                      (ra) =>
-                                          ra.reserva.estado !=
-                                          EstadoReserva.pagada,
-                                    )
-                                    .toList();
-                                final totalDebt = unpaid.fold<double>(
-                                  0.0,
-                                  (sum, ra) => sum + ra.reserva.deuda,
-                                );
-                                final Map<String, double> agencyDebtMap = {};
-                                final Map<String, Agencia> agencyById = {};
-                                for (var ra in unpaid) {
-                                  agencyById[ra.agencia.id] = ra.agencia;
-                                  agencyDebtMap.update(
-                                    ra.agencia.id,
-                                    (prev) => prev + ra.reserva.deuda,
-                                    ifAbsent: () => ra.reserva.deuda,
-                                  );
-                                }
-                                final filteredAgencies = agencyDebtMap.entries
-                                    .where((e) => e.value != 0)
-                                    .map(
-                                      (e) =>
-                                          MapEntry(agencyById[e.key]!, e.value),
-                                    )
-                                    .toList();
-                                filteredAgencies.sort(
-                                  (a, b) => b.value.compareTo(a.value),
-                                );
-                                return Visibility(
-                                  visible:
-                                      _currentIndex ==
-                                      1, // Esto controla la visibilidad en el drawer
-                                  child: ListTile(
-                                    title: Text(
-                                      'Deuda total: \$${Formatters.formatCurrency(totalDebt)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: filteredAgencies.isEmpty
-                                        ? null
-                                        : SizedBox(
-                                            height: 400
-                                                .h, // Altura fija más pequeña
-                                            child: SingleChildScrollView(
-                                              primary:
-                                                  false, // Evita conflictos con PrimaryScrollController
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: filteredAgencies.map((
-                                                  entry,
-                                                ) {
-                                                  final Agencia agencia =
-                                                      entry.key;
-                                                  final double deuda =
-                                                      entry.value;
-                                                  final badgeColor = deuda > 0
-                                                      ? Colors.red
-                                                      : Colors.green;
-                                                  return Container(
-                                                    margin:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 2,
-                                                        ),
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 12,
-                                                          vertical: 8,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: badgeColor.shade50,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            20,
-                                                          ),
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        CircleAvatar(
-                                                          radius: 20,
-                                                          backgroundImage:
-                                                              agencia.imagenUrl !=
-                                                                  null
-                                                              ? NetworkImage(
-                                                                  agencia
-                                                                      .imagenUrl!,
-                                                                )
-                                                              : null,
-                                                          backgroundColor:
-                                                              badgeColor
-                                                                  .shade700,
-                                                          child:
-                                                              agencia.imagenUrl ==
-                                                                  null
-                                                              ? Text(
-                                                                  agencia
-                                                                      .nombre[0]
-                                                                      .toUpperCase(),
-                                                                  style: const TextStyle(
-                                                                    fontSize:
-                                                                        14,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                    color: Colors
-                                                                        .white,
-                                                                  ),
-                                                                )
-                                                              : null,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 6,
-                                                        ),
-                                                        Expanded(
-                                                          child: Text(
-                                                            '${agencia.nombre}: \$${Formatters.formatCurrency(deuda)}',
-                                                            style: TextStyle(
-                                                              color: badgeColor
-                                                                  .shade700,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                              fontSize: 14,
-                                                            ),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            maxLines: 1,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                              ),
-                                            ),
-                                          ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      // Resumen por turno reutilizable (muestra en pestaña Reservas)
+  width: MediaQuery.of(context).size.width * 4 / 5,
+  child: Drawer(
+    elevation: 16,
+    child: Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey.shade50,
+            Colors.grey.shade100,
+            Colors.grey.shade50,
+          ],
+        ),
+      ),
+      child: Consumer<AuthController>(
+        builder: (_, auth, __) {
+          final usuario = auth.appUser?.usuario ?? 'Invitado';
+          final email = auth.user?.email ?? '';
+          final authRole = context.watch<AuthController>();
+          
+          return SafeArea(
+            bottom: true,
+            top: true,
+            child: Column(
+              children: [
+                // Header profesional del drawer
+                DrawerHeaderSection(
+                  usuario: usuario,
+                  email: email,
+                ),
+                
+                // Contenido scrolleable
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        
+                        // Sección de agencias activas
+                        if (authRole.hasPermission(Permission.ver_deuda_agencia))
+                          AgenciesStatsSection(
+                            isVisible: _currentIndex == 1,
+                          ),
+                        
+                        // Sección de resumen de deudas
+                        if (authRole.hasPermission(Permission.ver_deuda_agencia))
+                          DebtOverviewSection(
+                            isVisible: _currentIndex == 1,
+                          ),
+                        
+                        // Resumen por turno para usuarios de agencia
                         Consumer2<ReservasController, AuthController>(
                           builder: (_, resCtrl, auth, __) {
                             final isAgencyUser = auth.appUser?.agenciaId != null &&
                                 (auth.appUser?.roles.contains('agencia') ?? false);
 
                             if (!isAgencyUser) {
-                              // No es usuario de agencia: no mostrar el resumen por turno
                               return const SizedBox.shrink();
                             }
 
                             final String agenciaId = auth.appUser!.agenciaId!;
-                            return Visibility(
-                              visible: _currentIndex == 0, // pestaña Reservas
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                                child: DebtSummaryByTurno(
-                                  stream: resCtrl.getAllReservasConAgenciaStream(),
-                                  agenciaId: agenciaId,
-                                  visible: true,
-                                  title: 'Tu deuda por turno',
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 600),
+                              curve: Curves.easeInOut,
+                              child: AnimatedOpacity(
+                                opacity: _currentIndex == 0 ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 400),
+                                child: Visibility(
+                                  visible: _currentIndex == 0,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                                    child: DebtSummaryByTurno(
+                                      stream: resCtrl.getAllReservasConAgenciaStream(),
+                                      agenciaId: agenciaId,
+                                      visible: true,
+                                      title: 'Tu deuda por turno',
+                                    ),
+                                  ),
                                 ),
                               ),
                             );
                           },
                         ),
-                      const Spacer(),
-                      const Spacer(),
-                      ListTile(
-                        leading: const Icon(
-                          Icons.logout,
-                          color: Color(0xFFF41720),
-                        ),
-                        title: const Text(
-                          'Cerrar sesión',
-                          style: TextStyle(
-                            color: Color(0xFF06142F),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        onTap: () => auth.logout(),
-                      ),
-                      const Spacer(),
-                    ],
+                        
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
-                );
-              },
+                ),
+                
+                // Botón de logout profesional
+                LogoutSection(
+                  onLogout: () => auth.logout(),
+                ),
+                
+                const SizedBox(height: 8),
+              ],
             ),
-          ),
-        ),
+          );
+        },
+      ),
+    ),
+  ),
+),
         body: IndexedStack(index: displayIndex, children: pages),
         bottomNavigationBar: navItems.length >= 2
             ? BottomNavigationBar(

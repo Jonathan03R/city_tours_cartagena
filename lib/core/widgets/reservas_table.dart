@@ -76,6 +76,12 @@ class _ReservasTableState extends State<ReservasTable> {
       _controllers['${reserva.id}_saldo'] = TextEditingController(
         text: reserva.saldo.toString(),
       );
+      _controllers['${reserva.id}_ticket'] = TextEditingController(
+        text: reserva.ticket,
+      );
+      _controllers['${reserva.id}_habitacion'] = TextEditingController(
+        text: reserva.habitacion,
+      );
       _controllers['${reserva.id}_observacion'] = TextEditingController(
         text: reserva.observacion,
       );
@@ -118,6 +124,12 @@ class _ReservasTableState extends State<ReservasTable> {
         telefono:
             _controllers['${_editingReservaId}_telefono']?.text ??
             reservaCA.telefono,
+        ticket:
+            _controllers['${_editingReservaId}_ticket']?.text ??
+            reservaCA.ticket,
+        habitacion:
+            _controllers['${_editingReservaId}_habitacion']?.text ??
+            reservaCA.habitacion,
         estado: _estadoValues[_editingReservaId] ?? reservaCA.estado,
         fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha,
         pax:
@@ -221,10 +233,13 @@ class _ReservasTableState extends State<ReservasTable> {
     final showFechaColumn =
         widget.currentFilter == DateFilterType.all ||
         widget.currentFilter == DateFilterType.lastWeek;
-  // Determinar si mostrar columna Turno según filtro
-  final showTurnoColumn = widget.turno == null;
+    // Determinar si mostrar columna Turno según filtro
+    final showTurnoColumn = widget.turno == null;
   // Construir las columnas dinámicamente
-  final List<DataColumn> columns = [
+  // IMPORTANTE: El orden de columnas debe coincidir con el orden de DataCell en cada fila:
+  // Sel, Acción, [Turno], Número, Hotel, Nombre, [Fecha], Pax, Saldo,
+  // Observaciones, Agencia, Ticket, N° HB, Estatus, [Deuda], [Editar]
+    final List<DataColumn> columns = [
       // Nueva columna de selección
       DataColumn(
         label: _controller.isSelectionMode
@@ -250,19 +265,21 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : const Text('Sel'),
       ),
+
       DataColumn(label: Text('Acción')),
   if (showTurnoColumn) const DataColumn(label: Text('Turno')),
-      const DataColumn(label: Text('Número')),
+  // "Número" hace referencia al teléfono del cliente
+  const DataColumn(label: Text('Número')),
       const DataColumn(label: Text('Hotel')),
       const DataColumn(label: Text('Nombre')),
       if (showFechaColumn) const DataColumn(label: Text('Fecha')),
       const DataColumn(label: Text('Pax')),
       const DataColumn(label: Text('Saldo')),
       const DataColumn(label: Text('Observaciones')),
-  const DataColumn(label: Text('Agencia')),
+      const DataColumn(label: Text('Agencia')),
       const DataColumn(label: Text('Ticket')),
       const DataColumn(label: Text('N° HB')),
-  const DataColumn(label: Text('Estatus')),
+      const DataColumn(label: Text('Estatus')),
       if (authController.hasPermission(Permission.ver_deuda_reservas))
         const DataColumn(label: Text('Deuda')),
       if (authController.hasPermission(Permission.edit_reserva))
@@ -287,7 +304,9 @@ class _ReservasTableState extends State<ReservasTable> {
               DataRow(
                 color: WidgetStateProperty.all(
                   _controller.isSelectionMode && _controller.selectedCount > 0
-                      ? Colors.green.shade100 // Verde si hay selecciones
+                      ? Colors
+                            .green
+                            .shade100 // Verde si hay selecciones
                       : Colors.grey.shade200, // Gris normal
                 ),
                 cells: [
@@ -414,12 +433,12 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
-                  const DataCell(Text('')), // Celda de nombre vacía
-
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
+                  // A partir de aquí, columnas después de "Saldo":
+                  const DataCell(Text('')), // Observaciones
+                  const DataCell(Text('')), // Agencia
+                  const DataCell(Text('')), // Ticket
+                  const DataCell(Text('')), // N° HB
+                  const DataCell(Text('')), // Estatus
                   if (authController.hasPermission(
                     Permission.ver_deuda_reservas,
                   ))
@@ -486,7 +505,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-               SizedBox(width: 16.w),
+              SizedBox(width: 16.w),
               ElevatedButton(
                 onPressed: _controller.canGoNext && !_controller.isFetchingPage
                     ? _controller.nextPage
@@ -509,7 +528,7 @@ class _ReservasTableState extends State<ReservasTable> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text('Elementos por página:'),
-               SizedBox(width: 8.w),
+              SizedBox(width: 8.w),
               DropdownButton<int>(
                 value: _controller.itemsPerPage,
                 items: const [20, 50, 100]
@@ -527,7 +546,6 @@ class _ReservasTableState extends State<ReservasTable> {
             ],
           ),
         ),
-      
       ],
     );
   }
@@ -544,9 +562,7 @@ class _ReservasTableState extends State<ReservasTable> {
     // --- Detectar si la reserva es "nueva" para el usuario ---
     final fechaRegistro = r.fechaRegistro ?? r.fecha;
     final lastSeen = widget.lastSeenReservas;
-    final esNueva = lastSeen != null
-        ? fechaRegistro.isAfter(lastSeen)
-        : false;
+    final esNueva = lastSeen != null ? fechaRegistro.isAfter(lastSeen) : false;
 
     // --- Detectar si la reserva es la notificada ---
     final esNotificada =
@@ -644,8 +660,7 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       ),
       // Resto de celdas existentes...
-      if (widget.turno == null)
-        DataCell(Text(r.turno?.label ?? '')),
+      if (widget.turno == null) DataCell(Text(r.turno?.label ?? '')),
       DataCell(
         isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
@@ -750,8 +765,11 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
-      
-      // Celda de Observaciones
+
+      // A PARTIR DE AQUÍ, RESPETAR EL ORDEN DE LAS COLUMNAS DESPUÉS DE "Saldo":
+      // Observaciones, Agencia, Ticket, N° HB, Estatus, [Deuda], [Editar]
+
+      // Observaciones (botón para ver/editar)
       DataCell(
         IconButton(
           icon: Icon(
@@ -762,15 +780,39 @@ class _ReservasTableState extends State<ReservasTable> {
           onPressed: () => _showObservacionDialog(ra),
         ),
       ),
+
+      // Agencia (texto o dropdown si se está editando y hay permiso)
       DataCell(
         isEditing && authController.hasPermission(Permission.change_agency)
             ? _buildAgenciaDropdown(ra)
             : Text(ra.nombreAgencia),
       ),
-      // Celda de Ticket
-      DataCell(Text(r.ticket ?? '')),  
-      // Celda de N° Habitación
-      DataCell(Text(r.habitacion ?? '')),  
+
+      // Ticket (texto o campo editable)
+      DataCell(
+        isEditing && authController.hasPermission(Permission.edit_reserva)
+            ? TextField(
+                controller: _controllers['${r.id}_ticket'],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(8),
+                ),
+              )
+            : Text(r.ticket ?? ''),
+      ),
+
+      // N° Habitación (texto o campo editable)
+      DataCell(
+        isEditing && authController.hasPermission(Permission.edit_reserva)
+            ? TextField(
+                controller: _controllers['${r.id}_habitacion'],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(8),
+                ),
+              )
+            : Text(r.habitacion ?? ''),
+      ),
       // Celda de Estatus Reserva (A-E)
       // Celda de Estatus Reserva siempre editable si tiene permiso
       DataCell(
@@ -779,12 +821,13 @@ class _ReservasTableState extends State<ReservasTable> {
           value: ['A', 'B', 'C', 'D', 'E'].contains(r.estatusReserva)
               ? r.estatusReserva!
               : 'A',
-          items: ['A', 'B', 'C', 'D', 'E']
-              .map((e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e),
-                  ))
-              .toList(),
+          items: [
+            'A',
+            'B',
+            'C',
+            'D',
+            'E',
+          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (newValue) async {
             if (newValue != null) {
               final updated = ra.reserva.copyWith(estatusReserva: newValue);
@@ -795,7 +838,7 @@ class _ReservasTableState extends State<ReservasTable> {
           isDense: true,
         ),
       ),
-      if (authController.hasPermission(Permission.ver_deuda_reservas))
+  if (authController.hasPermission(Permission.ver_deuda_reservas))
         DataCell(
           GestureDetector(
             onTap: authController.hasPermission(Permission.toggle_paid_status)
@@ -923,7 +966,8 @@ class _ReservasTableState extends State<ReservasTable> {
     if (isSelected) {
       rowColor = Colors.blue.shade100;
     } else if (esNotificada) {
-      rowColor = Colors.orange.shade200; // Color especial para la reserva notificada
+      rowColor =
+          Colors.orange.shade200; // Color especial para la reserva notificada
     } else if (esNueva) {
       rowColor = Colors.yellow.shade100; // Color para nuevas reservas
     } else {

@@ -376,7 +376,7 @@ class _AgencyHeaderWidgetState extends State<AgencyHeaderWidget>
       ),
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return _buildLoadingButton(isCompact);
+          return const SizedBox.shrink(); // No mostrar nada mientras se espera
         }
         
         if (snap.hasData && snap.data == true) {
@@ -389,136 +389,13 @@ class _AgencyHeaderWidgetState extends State<AgencyHeaderWidget>
     );
   }
 
-  Widget _buildLoadingButton(bool isCompact) {
-    return Container(
-      height: isCompact ? 36.h : 42.h,
-      padding: EdgeInsets.symmetric(horizontal: isCompact ? 12.w : 16.w),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.orange.shade400,
-            Colors.red.shade400,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(isCompact ? 18.r : 21.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withOpacity(0.3),
-            spreadRadius: 0,
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: isCompact ? 16.w : 20.w,
-            height: isCompact ? 16.h : 20.h,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Text(
-            'Verificando...',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isCompact ? 11.sp : 13.sp,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActiveWhatsAppButton(String whatsapp, bool isCompact) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_pulseAnimation, _shadowPulse]),
-      builder: (context, child) {
-        // Intensidad dinámica: alpha y blur modulados por _shadowPulse
-        final double alphaPeak = 0.80; // pico de opacidad
-        final double alphaBase = 0.40; // base
-        final double blurBase = 12.0;
-        final double blurPeak = 22.0;
-
-        final double a1 = alphaBase + (alphaPeak - alphaBase) * _shadowPulse.value;
-        final double a2 = (alphaBase - 0.15) + ((alphaPeak - 0.15) - (alphaBase - 0.15)) * _shadowPulse.value;
-        final double blur = blurBase + (blurPeak - blurBase) * _shadowPulse.value;
-
-        return Transform.scale(
-          scale: _pulseAnimation.value,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(isCompact ? 18.r : 21.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withOpacity(a1),
-                  spreadRadius: 0,
-                  blurRadius: blur,
-                  offset: const Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: Colors.red.withOpacity(a2),
-                  spreadRadius: 2,
-                  blurRadius: blur * 0.6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(isCompact ? 18.r : 21.r),
-                onTap: () {
-                  VerifyAvailabilityTag(
-                    telefonoRaw: whatsapp,
-                    message: 'Hola, soy de ${widget.agencia.nombre}. ¿Hay disponibilidad para el turno de hoy?',
-                    tooltip: 'Verificar disponibilidad hoy',
-                  );
-                },
-                child: Container(
-                  height: isCompact ? 36.h : 42.h,
-                  padding: EdgeInsets.symmetric(horizontal: isCompact ? 12.w : 16.w),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.red.shade500,
-                        Colors.red.shade700, // un poco más intenso
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(isCompact ? 18.r : 21.r),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.message,
-                        color: Colors.white,
-                        size: isCompact ? 16.sp : 20.sp,
-                      ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        isCompact ? 'Verificar' : 'Verificar disponibilidad',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isCompact ? 11.sp : 13.sp,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    // Usar el widget que sí ejecuta la acción al hacer click
+    return VerifyAvailabilityTag(
+      telefonoRaw: whatsapp,
+      message: 'Hola, soy de ${widget.agencia.nombre}. ¿Hay disponibilidad para el turno de hoy?',
+      tooltip: 'Verificar disponibilidad hoy',
+      compact: isCompact,
     );
   }
 }

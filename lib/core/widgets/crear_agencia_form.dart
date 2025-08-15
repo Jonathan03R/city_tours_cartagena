@@ -14,6 +14,9 @@ class CrearAgenciaForm extends StatefulWidget {
   final TipoDocumento? initialTipoDocumento;
   final String? initialNumeroDocumento;
   final String? initialNombreBeneficiario;
+  final String? initialContactoAgencia;
+  final String? initialLinkContactoAgencia;
+
   final Function(
     String nombre,
     XFile? imagenFile,
@@ -22,8 +25,9 @@ class CrearAgenciaForm extends StatefulWidget {
     TipoDocumento? tipoDocumento,
     String numeroDocumento,
     String nombreBeneficiario,
-  )
-  onCrear;
+    String? contactoAgencia,
+    String? linkContactoAgencia,
+  ) onCrear;
 
   const CrearAgenciaForm({
     super.key,
@@ -35,6 +39,8 @@ class CrearAgenciaForm extends StatefulWidget {
     this.initialTipoDocumento,
     this.initialNumeroDocumento,
     this.initialNombreBeneficiario,
+    this.initialContactoAgencia,
+    this.initialLinkContactoAgencia,
     required this.onCrear,
   });
 
@@ -47,6 +53,8 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   late TextEditingController _nombreController;
   late TextEditingController _precioMananaController;
   late TextEditingController _precioTardeController;
+  late TextEditingController _contactoAgenciaController;
+  late TextEditingController _linkContactoController;
   // Nuevos controladores
   // Tipo de documento seleccionado
   TipoDocumento? _selectedTipoDocumento;
@@ -89,6 +97,8 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
     _nombreBeneficiarioController = TextEditingController(
       text: widget.initialNombreBeneficiario ?? '',
     );
+    _contactoAgenciaController = TextEditingController(text: widget.initialContactoAgencia ?? '');
+    _linkContactoController = TextEditingController(text: widget.initialLinkContactoAgencia ?? '');
   }
 
   @override
@@ -100,6 +110,8 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
     // No hay controlador de tipo documento
     _numeroDocumentoController.dispose();
     _nombreBeneficiarioController.dispose();
+    _contactoAgenciaController.dispose();
+    _linkContactoController.dispose();
     super.dispose();
   }
 
@@ -136,6 +148,12 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
       final TipoDocumento? tipoDocumento = _selectedTipoDocumento;
       final numeroDocumento = _numeroDocumentoController.text.trim();
       final nombreBeneficiario = _nombreBeneficiarioController.text.trim();
+      final contactoAgencia = _contactoAgenciaController.text.trim().isEmpty
+          ? null
+          : _contactoAgenciaController.text.trim();
+      final linkContactoAgencia = _linkContactoController.text.trim().isEmpty
+          ? null
+          : _linkContactoController.text.trim();
 
       // Si se marcó para limpiar la imagen existente, pasar null para la URL de la imagen
       XFile? finalImageFile = _selectedImage;
@@ -149,6 +167,8 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
           tipoDocumento,
           numeroDocumento,
           nombreBeneficiario,
+          contactoAgencia,
+          linkContactoAgencia,
         );
       } else {
         // Si hay una nueva imagen seleccionada o no se borró la existente
@@ -160,6 +180,8 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
           tipoDocumento,
           numeroDocumento,
           nombreBeneficiario,
+          contactoAgencia,
+          linkContactoAgencia,
         );
       }
 
@@ -172,182 +194,196 @@ class _CrearAgenciaFormState extends State<CrearAgenciaForm> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return AlertDialog(
-    title: Text(
-      widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia',
-    ),
-    content: SingleChildScrollView(
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12), // Espacio extra arriba del primer campo
-            TextFormField(
-              controller: _nombreController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre de la Agencia',
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(
+        widget.initialNombre != null ? 'Editar Agencia' : 'Crear Nueva Agencia',
+      ),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12), // Espacio extra arriba del primer campo
+              TextFormField(
+                controller: _nombreController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de la Agencia',
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.business),
                 ),
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.business),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Por favor ingresa un nombre';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // TextFormField(
-            //   controller: _precioController,
-            //   decoration: const InputDecoration(
-            //     labelText: 'Precio por Asiento (opcional)',
-            //     hintText: 'Ej: 50.000 o 50,000.00',
-            //     border: OutlineInputBorder(),
-            //     prefixIcon: Icon(Icons.attach_money),
-            //   ),
-            //   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            //   // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
-            //   validator: (value) {
-            //     if (value != null && value.isNotEmpty) {
-            //       final parsed = ParserUtils.parseDouble(value);
-            //       if (parsed == null || parsed < 0) {
-            //         return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
-            //       }
-            //     }
-            //     return null;
-            //   },
-            // ),
-            TextFormField(
-              controller: _precioMananaController,
-              decoration: const InputDecoration(
-                labelText: 'Precio Asiento (Mañana)',
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-                hintText: 'Ej: 50.000 o 50,000.00',
-                hintStyle: TextStyle(fontSize: 11),
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.attach_money),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final parsed = ParserUtils.parseDouble(value);
-                  if (parsed == null || parsed < 0) {
-                    return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa un nombre';
                   }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
 
-            TextFormField(
-              controller: _precioTardeController,
-              decoration: const InputDecoration(
-                labelText: 'Precio Asiento (Tarde)',
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+              // TextFormField(
+              //   controller: _precioController,
+              //   decoration: const InputDecoration(
+              //     labelText: 'Precio por Asiento (opcional)',
+              //     hintText: 'Ej: 50.000 o 50,000.00',
+              //     border: OutlineInputBorder(),
+              //     prefixIcon: Icon(Icons.attach_money),
+              //   ),
+              //   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              //   // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+              //   validator: (value) {
+              //     if (value != null && value.isNotEmpty) {
+              //       final parsed = ParserUtils.parseDouble(value);
+              //       if (parsed == null || parsed < 0) {
+              //         return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+              //       }
+              //     }
+              //     return null;
+              //   },
+              // ),
+              TextFormField(
+                controller: _precioMananaController,
+                decoration: const InputDecoration(
+                  labelText: 'Precio Asiento (Mañana)',
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  hintText: 'Ej: 50.000 o 50,000.00',
+                  hintStyle: TextStyle(fontSize: 11),
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
                 ),
-                hintText: 'Ej: 50.000 o 50,000.00',
-                hintStyle: TextStyle(fontSize: 11),
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.attach_money),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final parsed = ParserUtils.parseDouble(value);
-                  if (parsed == null || parsed < 0) {
-                    return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                // No usamos un formatter restrictivo aquí para permitir varios formatos de entrada
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final parsed = ParserUtils.parseDouble(value);
+                    if (parsed == null || parsed < 0) {
+                      return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                    }
                   }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Nuevo: Campo Tipo de Documento
-            // Dropdown para Tipo de Documento
-            DropdownButtonFormField<TipoDocumento?>(
-              value: _selectedTipoDocumento,
-              decoration: const InputDecoration(
-                labelText: 'Tipo de Documento',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.description),
+                  return null;
+                },
               ),
-              items: [
-                // opción nula
-                const DropdownMenuItem<TipoDocumento?>(
-                  value: null,
-                  child: Text('No especificado'),
+              const SizedBox(height: 20),
+
+              TextFormField(
+                controller: _precioTardeController,
+                decoration: const InputDecoration(
+                  labelText: 'Precio Asiento (Tarde)',
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  hintText: 'Ej: 50.000 o 50,000.00',
+                  hintStyle: TextStyle(fontSize: 11),
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
                 ),
-                // todas las demás
-                ...TipoDocumento.values.map((td) {
-                  final label = td.name.toUpperCase();
-                  return DropdownMenuItem<TipoDocumento?>(
-                    value: td,
-                    child: Text(label),
-                  );
-                }),
-              ],
-              onChanged: (td) => setState(() => _selectedTipoDocumento = td),
-              // validator: (td) {
-              //   if (td == null)
-              //     return 'Por favor selecciona un tipo de documento';
-              //   return null;
-              // },
-            ),
-            const SizedBox(height: 12),
-
-            TextFormField(
-              controller: _numeroDocumentoController,
-              decoration: const InputDecoration(
-                labelText: 'Número de Documento',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.document_scanner),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final parsed = ParserUtils.parseDouble(value);
+                    if (parsed == null || parsed < 0) {
+                      return 'Ingresa un precio válido (ej. 50.000 o 50,000.00)';
+                    }
+                  }
+                  return null;
+                },
               ),
-              // validator: (value) {
-              //   if (value == null || value.isEmpty) {
-              //     return 'Por favor ingresa número de documento';
-              //   }
-              //   return null;
-              // },
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
-            TextFormField(
-              controller: _nombreBeneficiarioController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre Beneficiario',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
+              // Nuevo: Campo Tipo de Documento
+              // Dropdown para Tipo de Documento
+              DropdownButtonFormField<TipoDocumento?>(
+                value: _selectedTipoDocumento,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de Documento',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.description),
+                ),
+                items: [
+                  // opción nula
+                  const DropdownMenuItem<TipoDocumento?>(
+                    value: null,
+                    child: Text('No especificado'),
+                  ),
+                  // todas las demás
+                  ...TipoDocumento.values.map((td) {
+                    final label = td.name.toUpperCase();
+                    return DropdownMenuItem<TipoDocumento?>(
+                      value: td,
+                      child: Text(label),
+                    );
+                  }),
+                ],
+                onChanged: (td) => setState(() => _selectedTipoDocumento = td),
+                // validator: (td) {
+                //   if (td == null)
+                //     return 'Por favor selecciona un tipo de documento';
+                //   return null;
+                // },
               ),
-              // validator: (value) {
-              //   if (value == null || value.isEmpty) {
-              //     return 'Por favor ingresa nombre del beneficiario';
-              //   }
-              //   return null;
-              // },
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
-            // Sección de selección y vista previa de imagen
-            Container(
+              TextFormField(
+                controller: _numeroDocumentoController,
+                decoration: const InputDecoration(
+                  labelText: 'Número de Documento',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.document_scanner),
+                ),
+                // validator: (value) {
+                //   if (value == null || value.isEmpty) {
+                //     return 'Por favor ingresa número de documento';
+                //   }
+                //   return null;
+                // },
+              ),
+              const SizedBox(height: 12),
+
+              TextFormField(
+                controller: _nombreBeneficiarioController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre Beneficiario',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _contactoAgenciaController,
+                decoration: const InputDecoration(
+                  labelText: 'Número de WhatsApp',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _linkContactoController,
+                decoration: const InputDecoration(
+                  labelText: 'Link de WhatsApp',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.link),
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 20),
+              
+             // Sección de selección y vista previa de imagen
+             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
@@ -464,33 +500,33 @@ Widget build(BuildContext context) {
         ),
       ),
     ),
-    actions: [
-      TextButton(
-        onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
-      ),
-      ElevatedButton(
-        onPressed: _isSaving ? null : _submitForm,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green.shade600,
-          foregroundColor: Colors.white,
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
         ),
-        child: _isSaving
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _submitForm,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green.shade600,
+            foregroundColor: Colors.white,
+          ),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Text(
+                  widget.initialNombre != null
+                      ? 'Guardar Cambios'
+                      : 'Crear Agencia',
                 ),
-              )
-            : Text(
-                widget.initialNombre != null
-                    ? 'Guardar Cambios'
-                    : 'Crear Agencia',
-              ),
-      ),
-    ],
-  );
-}
+        ),
+      ],
+    );
+  }
 }

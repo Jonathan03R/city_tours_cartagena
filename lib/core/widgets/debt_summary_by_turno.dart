@@ -5,8 +5,6 @@ import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/// Muestra deuda total y por turno (mañana, tarde, privado).
-/// Si [agenciaId] no es null, filtra solo esa agencia.
 class DebtSummaryByTurno extends StatelessWidget {
   const DebtSummaryByTurno({
     super.key,
@@ -49,56 +47,143 @@ class DebtSummaryByTurno extends StatelessWidget {
           } else if (t == TurnoType.tarde) {
             tarde += deuda;
           } else {
-            // cualquier otro turno cuenta como "privado"
             privado += deuda;
           }
         }
 
-        Widget line(IconData icon, String label, double value, Color color) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 4.h),
-            child: Row(
-              children: [
-                Icon(icon, size: 18.sp, color: color),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                    Text(
-                      '\$${Formatters.formatCurrency(value)}',
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+        final turnos = [
+          _TurnoData(
+            icon: Icons.wb_sunny,
+            label: 'Mañana',
+            value: manana,
+            color: Colors.orange.shade600,
+          ),
+          _TurnoData(
+            icon: Icons.wb_twilight,
+            label: 'Tarde',
+            value: tarde,
+            color: Colors.deepOrange.shade600,
+          ),
+          _TurnoData(
+            icon: Icons.lock,
+            label: 'Privado',
+            value: privado,
+            color: Colors.purple.shade600,
+          ),
+        ].where((turno) => turno.value != 0).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title ?? 'Deuda total: \$${Formatters.formatCurrency(total)}',
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              child: Text(
+                title ?? 'Resumen de Deuda',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF06142F),
+                ),
+              ),
             ),
-            SizedBox(height: 6.h),
-            line(Icons.wb_sunny_outlined, 'Mañana', manana, Colors.orange),
-            line(Icons.schedule, 'Tarde', tarde, Colors.deepOrange),
-            line(Icons.lock_outline, 'Privado', privado, Colors.purple),
+            
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.red.shade700,
+                    child: Icon(
+                      Icons.attach_money,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Total: \$${Formatters.formatCurrency(total)}',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            ...turnos.map((turno) => _HorizontalTurnoItem(turno: turno)),
           ],
         );
       },
+    );
+  }
+}
+
+class _TurnoData {
+  final IconData icon;
+  final String label;
+  final double value;
+  final Color color;
+
+  _TurnoData({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+}
+
+class _HorizontalTurnoItem extends StatelessWidget {
+  final _TurnoData turno;
+
+  const _HorizontalTurnoItem({required this.turno});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: turno.color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18.r,
+            backgroundColor: turno.color,
+            child: Icon(
+              turno.icon,
+              color: Colors.white,
+              size: 18.r,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${turno.label}: \$${Formatters.formatCurrency(turno.value)}',
+              style: TextStyle(
+                color: turno.color,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

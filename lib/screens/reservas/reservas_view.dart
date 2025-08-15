@@ -6,16 +6,19 @@ import 'package:citytourscartagena/core/controller/configuracion_controller.dart
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
+import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
+import 'package:citytourscartagena/core/widgets/add_reserva_pro_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
+import 'package:citytourscartagena/core/widgets/whatsapp_contact_button.dart';
 import 'package:citytourscartagena/screens/reservas/widgets/agency_header_widget.dart';
-import 'package:citytourscartagena/screens/reservas/widgets/floating_action_buttons.dart';
 import 'package:citytourscartagena/screens/reservas/widgets/price_controls_widget.dart';
 import 'package:citytourscartagena/screens/reservas/widgets/reservas_content_widget.dart';
 import 'package:citytourscartagena/screens/reservas/widgets/reservas_header_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/controller/reservas_controller.dart';
@@ -168,6 +171,9 @@ class _ReservasViewState extends State<ReservasView> {
         initialTipoDocumento: agencia.tipoDocumento,
         initialNumeroDocumento: agencia.numeroDocumento,
         initialNombreBeneficiario: agencia.nombreBeneficiario,
+        // Campos de contacto de la rama ContactoAgencia
+        initialContactoAgencia: agencia.contactoAgencia,
+        initialLinkContactoAgencia: agencia.linkContactoAgencia,
         onCrear: (
           nuevoNombre,
           nuevaImagenFile,
@@ -176,6 +182,8 @@ class _ReservasViewState extends State<ReservasView> {
           nuevoTipoDocumento,
           nuevoNumeroDocumento,
           nuevoNombreBeneficiario,
+          nuevoContactoAgencia,
+          nuevoLinkContactoAgencia,
         ) async {
           final agenciasController = Provider.of<AgenciasController>(
             parentCtx,
@@ -191,6 +199,8 @@ class _ReservasViewState extends State<ReservasView> {
             tipoDocumento: nuevoTipoDocumento,
             numeroDocumento: nuevoNumeroDocumento,
             nombreBeneficiario: nuevoNombreBeneficiario,
+            contactoAgencia: nuevoContactoAgencia,
+            linkContactoAgencia: nuevoLinkContactoAgencia,
           );
           Navigator.of(parentCtx).pop();
           ScaffoldMessenger.of(parentCtx).showSnackBar(
@@ -293,9 +303,105 @@ class _ReservasViewState extends State<ReservasView> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButtonsWidget(
-        agencia: widget.agencia,
-        reservasController: reservasController,
+      // Floating Action Button unificado - combina ambas ramas
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Botón WhatsApp de la rama ContactoAgencia (solo si hay agencia)
+          if (_currentAgencia != null && authRole.hasPermission(Permission.contacto_agencia_whatsapp))
+            WhatsappContactButton(
+              contacto: _currentAgencia?.contactoAgencia,
+              link: _currentAgencia?.linkContactoAgencia,
+            ),
+          if (_currentAgencia != null) const SizedBox(height: 16),
+          
+          // Botones originales de FloatingActionButtonsWidget
+          if (authRole.hasPermission(Permission.crear_reserva))
+            SizedBox(
+              height: 48.h,
+              child: FloatingActionButton.extended(
+                onPressed: () => _showAddReservaProForm(),
+                backgroundColor: Colors.purple.shade600,
+                foregroundColor: Colors.white,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                icon: Icon(Icons.auto_awesome, size: 24.sp),
+                label: Text(
+                  'Registro rápido',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                heroTag: "pro_button",
+              ),
+            ),
+          SizedBox(height: 16.h),
+          if (authRole.hasPermission(Permission.crear_agencias_agencias))
+            SizedBox(
+              height: 48.h,
+              child: FloatingActionButton.extended(
+                onPressed: () => _showAddReservaForm(),
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                icon: Icon(Icons.add, size: 24.sp),
+                label: Text(
+                  'Registro manual',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                heroTag: "manual_button",
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddReservaProForm() {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AddReservaProForm(
+        agencia: widget.agencia?.agencia,
+        turno: reservasController.turnoFilter,
+        onAdd: () {
+          reservasController.updateFilter(
+            reservasController.selectedFilter,
+            date: reservasController.customDate,
+            agenciaId: widget.agencia?.id,
+            turno: reservasController.turnoFilter,
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddReservaForm() {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AddReservaForm(
+        agenciaId: widget.agencia?.id,
+        onAdd: () {
+          reservasController.updateFilter(
+            reservasController.selectedFilter,
+            date: reservasController.customDate,
+            agenciaId: widget.agencia?.id,
+            turno: reservasController.turnoFilter,
+          );
+        },
+        initialTurno: reservasController.turnoFilter,
       ),
     );
   }
