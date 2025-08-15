@@ -14,6 +14,7 @@ class ReservasContentWidget extends StatelessWidget {
   final ReservasController reservasController;
   final String? agenciaId;
   final String? reservaIdNotificada;
+  final DateTime? lastSeenReservas;
 
   const ReservasContentWidget({
     super.key,
@@ -21,6 +22,7 @@ class ReservasContentWidget extends StatelessWidget {
     required this.reservasController,
     this.agenciaId,
     this.reservaIdNotificada,
+  this.lastSeenReservas,
   });
 
   @override

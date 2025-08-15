@@ -211,6 +211,7 @@ class ReservasController extends ChangeNotifier {
     TurnoType? turno,
     EstadoReserva? estado,
   }) {
+  debugPrint('[ReservasController] updateFilter -> filter: $filter, date: $date, agenciaId: $agenciaId, turno: $turno, estado: $estado');
     if (_selectedFilter == filter &&
         _customDate == date &&
         _agenciaIdFilter == agenciaId &&

@@ -6,7 +6,6 @@ import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/user_service.dart'
     show UserService;
-import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -64,38 +63,9 @@ Future<void> main() async {
   // Suscribirse al topic de nuevas reservas
   // await FirebaseMessaging.instance.subscribeToTopic('pruebas');
 
-  // Mostrar notificaciones cuando la app está en primer plano
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    final notification = message.notification;
-    final android = message.notification?.android;
-
-    if (notification != null && android != null) {
-      flutterLocalNotificationsPlugin.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'canal_reservas',
-            'Reservas',
-            channelDescription: 'Notificaciones de nuevas reservas',
-            icon: android.smallIcon ?? '@mipmap/ic_launcher',
-          ),
-        ),
-      );
-    }
-  });
-
-  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    final reservaId = message.data['reservaId'];
-    if (reservaId != null) {
-      // Navega a la pantalla de reservas y pasa el ID como argumento
-      debugPrint('Notificación abierta, reservaId: $reservaId');
-      navigatorKey.currentState?.pushNamed('/reservas', arguments: reservaId);
-    } else {
-      navigatorKey.currentState?.pushNamed('/reservas');
-    }
-  });
+  // Foreground/opened/initial handlers are centralized in AuthController
+  // to avoid duplicate processing and to ensure handlers run only when
+  // a user is properly authenticated.
 
   // Obtener y guardar token FCM (opcional si usa topics)
   final fcmToken = await FirebaseMessaging.instance.getToken();

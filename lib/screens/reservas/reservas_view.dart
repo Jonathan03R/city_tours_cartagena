@@ -29,12 +29,17 @@ class ReservasView extends StatefulWidget {
   final VoidCallback? onBack;
   final bool isAgencyUser;
 
+  final String? reservaIdNotificada; // nuevo
+  final bool forceShowAll; // nuevo
+
   const ReservasView({
     super.key,
     this.turno,
     this.agencia,
     this.onBack,
     this.isAgencyUser = false,
+    this.reservaIdNotificada,
+    this.forceShowAll = false,
   });
 
   @override
@@ -43,32 +48,48 @@ class ReservasView extends StatefulWidget {
 
 class _ReservasViewState extends State<ReservasView> {
   bool _isTableView = true;
-  String? _reservaIdNotificada;
   late AuthController _authController;
   AgenciaConReservas? _currentAgencia;
   StreamSubscription<List<AgenciaConReservas>>? _agenciasSub;
 
+  String? _currentReservaIdNotificada;
+  DateTime? _lastSeenReservas;
+  bool _handledRouteArgs = false; // evita procesar dos veces
+  // bool _filterInitialized = false; // no longer needed
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final reservaId = ModalRoute.of(context)?.settings.arguments as String?;
-    if (reservaId != null && reservaId != _reservaIdNotificada) {
-      setState(() {
-        _reservaIdNotificada = reservaId;
-      });
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final reservasController = Provider.of<ReservasController>(
-          context,
-          listen: false,
-        );
-        reservasController.updateFilter(
-          DateFilterType.all,
-          agenciaId: widget.agencia?.id,
-          turno: widget.turno,
-        );
-      });
+    if (_handledRouteArgs) return;
+    _handledRouteArgs = true;
+    // Obtener argumentos de navegación
+    final route = ModalRoute.of(context);
+    String? reservaFromArgs;
+    bool forceAll = false;
+    if (route != null && route.settings.arguments != null) {
+      final arguments = route.settings.arguments;
+      if (arguments is Map<String, dynamic>) {
+        reservaFromArgs = arguments['reservaIdNotificada'] as String?;
+        forceAll = arguments['forceShowAll'] as bool? ?? false;
+      } else if (arguments is String) {
+        reservaFromArgs = arguments;
+      }
     }
+    reservaFromArgs ??= widget.reservaIdNotificada;
+    forceAll = forceAll || widget.forceShowAll;
+    // Aplicar filtro y marcar reserva después de que la pantalla se construya completamente
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctrl = Provider.of<ReservasController>(context, listen: false);
+      ctrl.updateFilter(
+        DateFilterType.all, // Cambiado para mostrar todas las reservas
+        agenciaId: widget.agencia?.id,
+        turno: widget.turno,
+      );
+      if (mounted) {
+        setState(() {
+          _currentReservaIdNotificada = reservaFromArgs;
+        });
+      }
+    });
   }
 
   @override
@@ -76,7 +97,7 @@ class _ReservasViewState extends State<ReservasView> {
     super.initState();
     _authController = Provider.of<AuthController>(context, listen: false);
     _currentAgencia = widget.agencia;
-    
+
     final agenciasCtrl = context.read<AgenciasController>();
     _agenciasSub = agenciasCtrl.agenciasConReservasStream.listen((lista) {
       if (widget.agencia != null) {
@@ -91,14 +112,56 @@ class _ReservasViewState extends State<ReservasView> {
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctrl = Provider.of<ReservasController>(context, listen: false);
-      ctrl.updateFilter(
-        DateFilterType.today,
-        agenciaId: widget.agencia?.id,
-        turno: widget.turno,
-      );
-    });
+    _loadLastSeenReservas();
+  }
+
+  Future<void> _loadLastSeenReservas() async {
+    final userId = _authController.user?.uid;
+    if (userId != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(userId)
+            .get();
+        if (doc.exists && mounted) {
+          final data = doc.data();
+          final timestamp = data?['lastSeenReservas'] as Timestamp?;
+          if (timestamp != null && mounted) {
+            setState(() {
+              _lastSeenReservas = timestamp.toDate();
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('[ReservasView] Error loading last seen reservas: $e');
+      }
+    }
+  }
+
+  void _clearNotificatedReserva() {
+    if (_currentReservaIdNotificada != null && mounted) {
+      setState(() {
+        _currentReservaIdNotificada = null;
+      });
+      debugPrint('[v0] Reserva notificada limpiada');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.fixed,
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Resaltado de notificación limpiado'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -123,94 +186,14 @@ class _ReservasViewState extends State<ReservasView> {
     DateTime? date, {
     TurnoType? turno,
   }) {
+    _clearNotificatedReserva();
+
     final ctrl = Provider.of<ReservasController>(context, listen: false);
     ctrl.updateFilter(
       filter,
       date: date,
       agenciaId: widget.agencia?.id,
       turno: turno ?? ctrl.turnoFilter,
-    );
-  }
-
-  void _showTableOnlyView() {
-    final reservasController = Provider.of<ReservasController>(
-      context,
-      listen: false,
-    );
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => TableOnlyViewScreen(
-          turno: reservasController.turnoFilter,
-          selectedFilter: reservasController.selectedFilter,
-          customDate: reservasController.customDate,
-          agenciaId: widget.agencia?.id,
-          onUpdate: () {
-            reservasController.updateFilter(
-              reservasController.selectedFilter,
-              date: reservasController.customDate,
-              agenciaId: widget.agencia?.id,
-              turno: widget.turno,
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _editarAgencia() {
-    final agencia = _currentAgencia!;
-    final parentCtx = context;
-    
-    showDialog(
-      context: context,
-      builder: (_) => CrearAgenciaForm(
-        initialNombre: agencia.nombre,
-        initialImagenUrl: agencia.imagenUrl,
-        initialPrecioPorAsientoTurnoManana: agencia.precioPorAsientoTurnoManana,
-        initialPrecioPorAsientoTurnoTarde: agencia.precioPorAsientoTurnoTarde,
-        initialTipoDocumento: agencia.tipoDocumento,
-        initialNumeroDocumento: agencia.numeroDocumento,
-        initialNombreBeneficiario: agencia.nombreBeneficiario,
-        // Campos de contacto de la rama ContactoAgencia
-        initialContactoAgencia: agencia.contactoAgencia,
-        initialLinkContactoAgencia: agencia.linkContactoAgencia,
-        onCrear: (
-          nuevoNombre,
-          nuevaImagenFile,
-          nuevoPrecioManana,
-          nuevoPrecioTarde,
-          nuevoTipoDocumento,
-          nuevoNumeroDocumento,
-          nuevoNombreBeneficiario,
-          nuevoContactoAgencia,
-          nuevoLinkContactoAgencia,
-        ) async {
-          final agenciasController = Provider.of<AgenciasController>(
-            parentCtx,
-            listen: false,
-          );
-          await agenciasController.updateAgencia(
-            agencia.id,
-            nuevoNombre,
-            nuevaImagenFile?.path,
-            agencia.imagenUrl,
-            newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
-            newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
-            tipoDocumento: nuevoTipoDocumento,
-            numeroDocumento: nuevoNumeroDocumento,
-            nombreBeneficiario: nuevoNombreBeneficiario,
-            contactoAgencia: nuevoContactoAgencia,
-            linkContactoAgencia: nuevoLinkContactoAgencia,
-          );
-          Navigator.of(parentCtx).pop();
-          ScaffoldMessenger.of(parentCtx).showSnackBar(
-            const SnackBar(
-              content: Text('Agencia actualizada correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        },
-      ),
     );
   }
 
@@ -239,6 +222,12 @@ class _ReservasViewState extends State<ReservasView> {
         backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
         actions: [
+          if (_currentReservaIdNotificada != null)
+            IconButton(
+              icon: const Icon(Icons.notifications_off),
+              onPressed: _clearNotificatedReserva,
+              tooltip: 'Limpiar resaltado de notificación',
+            ),
           IconButton(
             icon: Icon(_isTableView ? Icons.view_list : Icons.table_chart),
             onPressed: () {
@@ -278,12 +267,80 @@ class _ReservasViewState extends State<ReservasView> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            if (_currentReservaIdNotificada != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.orange.shade100, Colors.orange.shade50],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade300, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.shade200,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.notification_important,
+                      color: Colors.orange.shade700,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reserva de notificación',
+                            style: TextStyle(
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            'ID: $_currentReservaIdNotificada',
+                            style: TextStyle(
+                              color: Colors.orange.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _clearNotificatedReserva,
+                      icon: const Icon(Icons.clear, size: 16),
+                      label: const Text('Limpiar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             ReservasHeaderWidget(
               reservasController: reservasController,
               agenciaId: widget.agencia?.id,
               onFilterChanged: _onFilterChanged,
             ),
-            if (_currentAgencia != null) 
+            if (_currentAgencia != null)
               AgencyHeaderWidget(
                 agencia: _currentAgencia!,
                 reservasController: reservasController,
@@ -297,25 +354,25 @@ class _ReservasViewState extends State<ReservasView> {
               isTableView: _isTableView,
               reservasController: reservasController,
               agenciaId: widget.agencia?.id,
-              reservaIdNotificada: _reservaIdNotificada,
+              reservaIdNotificada: _currentReservaIdNotificada,
+              lastSeenReservas: _lastSeenReservas,
             ),
             const SizedBox(height: 300),
           ],
         ),
       ),
-      // Floating Action Button unificado - combina ambas ramas
+      // ... existing code for floating action buttons ...
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Botón WhatsApp de la rama ContactoAgencia (solo si hay agencia)
-          if (_currentAgencia != null && authRole.hasPermission(Permission.contacto_agencia_whatsapp))
+          if (_currentAgencia != null &&
+              authRole.hasPermission(Permission.contacto_agencia_whatsapp))
             WhatsappContactButton(
               contacto: _currentAgencia?.contactoAgencia,
               link: _currentAgencia?.linkContactoAgencia,
             ),
           if (_currentAgencia != null) const SizedBox(height: 16),
-          
-          // Botones originales de FloatingActionButtonsWidget
+
           if (authRole.hasPermission(Permission.crear_reserva))
             SizedBox(
               height: 48.h,
@@ -356,6 +413,90 @@ class _ReservasViewState extends State<ReservasView> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  // ... existing code for methods ...
+  void _showTableOnlyView() {
+    final reservasController = Provider.of<ReservasController>(
+      context,
+      listen: false,
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TableOnlyViewScreen(
+          turno: reservasController.turnoFilter,
+          selectedFilter: reservasController.selectedFilter,
+          customDate: reservasController.customDate,
+          agenciaId: widget.agencia?.id,
+          onUpdate: () {
+            reservasController.updateFilter(
+              reservasController.selectedFilter,
+              date: reservasController.customDate,
+              agenciaId: widget.agencia?.id,
+              turno: widget.turno,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _editarAgencia() {
+    final agencia = _currentAgencia!;
+    final parentCtx = context;
+
+    showDialog(
+      context: context,
+      builder: (_) => CrearAgenciaForm(
+        initialNombre: agencia.nombre,
+        initialImagenUrl: agencia.imagenUrl,
+        initialPrecioPorAsientoTurnoManana: agencia.precioPorAsientoTurnoManana,
+        initialPrecioPorAsientoTurnoTarde: agencia.precioPorAsientoTurnoTarde,
+        initialTipoDocumento: agencia.tipoDocumento,
+        initialNumeroDocumento: agencia.numeroDocumento,
+        initialNombreBeneficiario: agencia.nombreBeneficiario,
+        initialContactoAgencia: agencia.contactoAgencia,
+        initialLinkContactoAgencia: agencia.linkContactoAgencia,
+        onCrear:
+            (
+              nuevoNombre,
+              nuevaImagenFile,
+              nuevoPrecioManana,
+              nuevoPrecioTarde,
+              nuevoTipoDocumento,
+              nuevoNumeroDocumento,
+              nuevoNombreBeneficiario,
+              nuevoContactoAgencia,
+              nuevoLinkContactoAgencia,
+            ) async {
+              final agenciasController = Provider.of<AgenciasController>(
+                parentCtx,
+                listen: false,
+              );
+              await agenciasController.updateAgencia(
+                agencia.id,
+                nuevoNombre,
+                nuevaImagenFile?.path,
+                agencia.imagenUrl,
+                newPrecioPorAsientoTurnoManana: nuevoPrecioManana,
+                newPrecioPorAsientoTurnoTarde: nuevoPrecioTarde,
+                tipoDocumento: nuevoTipoDocumento,
+                numeroDocumento: nuevoNumeroDocumento,
+                nombreBeneficiario: nuevoNombreBeneficiario,
+                contactoAgencia: nuevoContactoAgencia,
+                linkContactoAgencia: nuevoLinkContactoAgencia,
+              );
+              Navigator.of(parentCtx).pop();
+              ScaffoldMessenger.of(parentCtx).showSnackBar(
+                const SnackBar(
+                  behavior: SnackBarBehavior.fixed,
+                  content: Text('Agencia actualizada correctamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
       ),
     );
   }
