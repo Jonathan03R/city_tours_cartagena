@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
 import 'package:citytourscartagena/core/services/permission_service.dart';
+import 'package:citytourscartagena/core/utils/notification_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -113,9 +114,7 @@ class AuthController extends ChangeNotifier {
                 return;
               } else {
                 appUser = u;
-                debugPrint(
-                  '[AuthController] Stream: User is active in stream, setting appUser.',
-                );
+                debugPrint('[AuthController] Stream: User is active in stream, setting appUser.');
 
                 // Validar si el usuario tiene el permiso recibir_notificaciones
                 if (!kIsWeb) {
@@ -123,12 +122,10 @@ class AuthController extends ChangeNotifier {
                     u.roles,
                     Permission.recibir_notificaciones,
                   );
-
                   // Depuración: mostrar motivo de suscripción o bloqueo
                   final isAgencyUser = u.agenciaId != null || u.roles.contains(Roles.agencia);
                   final shouldSubscribe = hasPermission && !isAgencyUser;
                   debugPrint('[AuthController][DEBUG] Usuario ${u.usuario} (id=${u.id}) - roles: ${u.roles}, agenciaId: ${u.agenciaId} -> tienePermiso=$hasPermission, esAgencia=$isAgencyUser, suscribir=$shouldSubscribe');
-
                   if (shouldSubscribe) {
                     await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
                     debugPrint('[AuthController] Suscrito al topic "nueva_reserva" para usuario ${u.usuario}');
@@ -137,6 +134,12 @@ class AuthController extends ChangeNotifier {
                     debugPrint('[AuthController] No se suscribe (bloqueado) al topic "nueva_reserva" para usuario ${u.usuario}');
                   }
                 }
+
+                // Procesar notificación pendiente si existe y el usuario está listo
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  debugPrint('[AuthController] Procesando notificación pendiente tras autenticación');
+                  NotificationHandler.processPendingNotificationIfAny();
+                });
               }
 
               isLoading = false;

@@ -16,6 +16,60 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 class NotificationHandler {
+  /// Método para ser llamado desde AuthController o main cuando el usuario esté listo
+  static void processPendingNotificationIfAny({int attempt = 0}) {
+    debugPrint('[NotificationHandler] processPendingNotificationIfAny called (attempt=$attempt)');
+    if (_pendingNotificationData == null) {
+      debugPrint('[NotificationHandler] No hay notificación pendiente en memoria');
+      // Fallback: en el primer intento, intentar leer getInitialMessage nuevamente por si hubo race
+      if (attempt == 0) {
+        FirebaseMessaging.instance.getInitialMessage().then((msg) {
+          if (msg != null) {
+            _pendingNotificationData = msg.data;
+            debugPrint('[NotificationHandler] Fallback getInitialMessage obtuvo datos: ${msg.data}');
+            // reintentar inmediatamente con attempt+1
+            processPendingNotificationIfAny(attempt: attempt + 1);
+          } else {
+            debugPrint('[NotificationHandler] Fallback getInitialMessage sin datos');
+          }
+        });
+      }
+      return;
+    }
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) {
+      if (attempt < 20) {
+        debugPrint('[NotificationHandler] Contexto de navegación no listo. Reintentando...');
+        Future.delayed(const Duration(milliseconds: 100), () {
+          processPendingNotificationIfAny(attempt: attempt + 1);
+        });
+      } else {
+        debugPrint('[NotificationHandler] Contexto no disponible tras reintentos. Abortando.');
+      }
+      return;
+    }
+
+    if (_canDisplayNotification()) {
+      debugPrint('[NotificationHandler] Permisos OK. Procesando navegación de notificación pendiente');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleNotificationNavigation(_pendingNotificationData!);
+        // limpiar sólo después de intentar navegar
+        _pendingNotificationData = null;
+      });
+      return;
+    }
+
+    // Si aún no se pueden mostrar (p. ej., permisos/usuario no listos), reintentar
+    if (attempt < 20) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        processPendingNotificationIfAny(attempt: attempt + 1);
+      });
+    } else {
+      debugPrint('[NotificationHandler] No se pudo procesar la notificación pendiente: permisos/usuario no listos');
+    }
+  }
+  // Variable para guardar datos de notificación en cold start
+  static Map<String, dynamic>? _pendingNotificationData;
   // Reusable check: permisos y rol de agencia
   static bool _canDisplayNotification() {
     final ctx = navigatorKey.currentContext;
@@ -73,6 +127,24 @@ class NotificationHandler {
         }
       },
     );
+
+    // Cold start por notificación local: recuperar payload que lanzó la app
+    try {
+      final details = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+      final didLaunch = details?.didNotificationLaunchApp ?? false;
+      final response = details?.notificationResponse;
+      final launchPayload = response?.payload; // null si no aplica
+      if (didLaunch && launchPayload != null) {
+        debugPrint('[NotificationHandler] App lanzada por notificación local, payload=$launchPayload');
+        try {
+          _pendingNotificationData = jsonDecode(launchPayload) as Map<String, dynamic>;
+        } catch (e) {
+          debugPrint('[NotificationHandler] Error parseando payload de launch: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('[NotificationHandler] Error getNotificationAppLaunchDetails: $e');
+    }
   }
 
   static Future<void> _setupNotificationListeners() async {
@@ -103,24 +175,19 @@ class NotificationHandler {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (!_canDisplayNotification()) {
-        debugPrint('[NotificationHandler] Notificación abierta ignorada');
-        return;
-      }
-      debugPrint('🔔 App abierta desde notificación: ${message.notification?.title}');
-      _handleNotificationNavigation(message.data);
+      // Tap explícito del usuario: no bloquear por permisos aquí
+      debugPrint('🔔 App abierta desde notificación (background): ${message.notification?.title}');
+      _pendingNotificationData = message.data;
+      processPendingNotificationIfAny();
     });
 
     final RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      if (_canDisplayNotification()) {
-        debugPrint('🔔 App iniciada desde notificación: ${initialMessage.notification?.title}');
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _handleNotificationNavigation(initialMessage.data);
-        });
-      } else {
-        debugPrint('[NotificationHandler] Notificación cold-start ignorada');
-      }
+      // Guardar los datos de la notificación para procesarlos después
+      _pendingNotificationData = initialMessage.data;
+      debugPrint('[NotificationHandler] Cold start: guardando datos de notificación -> ${initialMessage.data}');
+    } else {
+      debugPrint('[NotificationHandler] Cold start: sin mensaje inicial');
     }
   }
 
@@ -142,6 +209,7 @@ class NotificationHandler {
   }
 
   static Future<void> _handleNotificationNavigation(Map<String, dynamic> data) async {
+    debugPrint('[NotificationHandler] _handleNotificationNavigation data=$data');
     final reservaIdNotificada = data['reservaId'] as String?;
     final forceShowAll = data['forceShowAll'] as bool? ?? false;
 
@@ -149,6 +217,12 @@ class NotificationHandler {
       final exists = await validateReservaExists(reservaIdNotificada);
       
       if (exists) {
+        if (navigatorKey.currentState == null) {
+          debugPrint('[NotificationHandler] navigatorKey.currentState es null. Reintentando navegación...');
+          // Reintentar brevemente si el navigator aún no está listo
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+        debugPrint('[NotificationHandler] Navegando a /reservas con reservaId=$reservaIdNotificada forceShowAll=$forceShowAll');
         navigatorKey.currentState?.pushNamed(
           '/reservas',
           arguments: {
@@ -158,6 +232,11 @@ class NotificationHandler {
         );
       } else {
         debugPrint('[NotificationHandler] La reserva $reservaIdNotificada no existe');
+        if (navigatorKey.currentState == null) {
+          debugPrint('[NotificationHandler] navigatorKey.currentState es null. Reintentando navegación...');
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+        debugPrint('[NotificationHandler] Navegando a /reservas mostrando todas');
         navigatorKey.currentState?.pushNamed(
           '/reservas',
           arguments: {'forceShowAll': true},
@@ -169,6 +248,15 @@ class NotificationHandler {
           showErrorSnackBar(context, 'La reserva de la notificación ya no existe');
         }
       }
+    } else {
+      debugPrint('[NotificationHandler] data no contiene reservaId. Navegando a /reservas(forceShowAll=$forceShowAll)');
+      if (navigatorKey.currentState == null) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      navigatorKey.currentState?.pushNamed(
+        '/reservas',
+        arguments: {'forceShowAll': forceShowAll},
+      );
     }
   }
 
