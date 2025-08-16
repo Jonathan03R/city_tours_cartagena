@@ -124,22 +124,17 @@ class AuthController extends ChangeNotifier {
                     Permission.recibir_notificaciones,
                   );
 
-                  if (hasPermission) {
-                    // Si el usuario tiene el permiso, suscribirse al topic
-                    await FirebaseMessaging.instance.subscribeToTopic(
-                      'nueva_reserva',
-                    );
-                    debugPrint(
-                      '[AuthController] Usuario con permiso recibir_notificaciones, suscrito al topic nueva_reserva',
-                    );
+                  // Depuración: mostrar motivo de suscripción o bloqueo
+                  final isAgencyUser = u.agenciaId != null || u.roles.contains(Roles.agencia);
+                  final shouldSubscribe = hasPermission && !isAgencyUser;
+                  debugPrint('[AuthController][DEBUG] Usuario ${u.usuario} (id=${u.id}) - roles: ${u.roles}, agenciaId: ${u.agenciaId} -> tienePermiso=$hasPermission, esAgencia=$isAgencyUser, suscribir=$shouldSubscribe');
+
+                  if (shouldSubscribe) {
+                    await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+                    debugPrint('[AuthController] Suscrito al topic "nueva_reserva" para usuario ${u.usuario}');
                   } else {
-                    // Si no tiene el permiso, desuscribirse del topic
-                    await FirebaseMessaging.instance.unsubscribeFromTopic(
-                      'nueva_reserva',
-                    );
-                    debugPrint(
-                      '[AuthController] Usuario sin permiso recibir_notificaciones, desuscrito del topic nueva_reserva',
-                    );
+                    await FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
+                    debugPrint('[AuthController] No se suscribe (bloqueado) al topic "nueva_reserva" para usuario ${u.usuario}');
                   }
                 }
               }

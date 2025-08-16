@@ -7,13 +7,33 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:provider/provider.dart';
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
+import 'package:citytourscartagena/core/models/roles.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 class NotificationHandler {
+  // Reusable check: permisos y rol de agencia
+  static bool _canDisplayNotification() {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return false;
+    final authC = Provider.of<AuthController>(ctx, listen: false);
+    final appUser = authC.appUser;
+    final hasPerm = authC.hasPermission(Permission.recibir_notificaciones);
+    final isAgency = appUser?.agenciaId != null || appUser?.roles.contains(Roles.agencia) == true;
+    debugPrint('[NotificationHandler] Permiso=$hasPerm, esAgencia=$isAgency -> mostrar=${hasPerm && !isAgency}');
+    return hasPerm && !isAgency;
+  }
+
   static Future<void> initialize() async {
     if (!kIsWeb) {
+      // Desactivar presentación automática en foreground
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+        alert: false, badge: false, sound: false,
+      );
       await _setupNotificationChannels();
       await _setupNotificationListeners();
       await _requestPermissions();
@@ -58,8 +78,12 @@ class NotificationHandler {
   static Future<void> _setupNotificationListeners() async {
     // Interceptar notificaciones en primer plano para evitar duplicados
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (!_canDisplayNotification()) {
+        debugPrint('[NotificationHandler] Notificación en primer plano ignorada');
+        return;
+      }
       debugPrint('🔔 Notificación interceptada en primer plano: ${message.notification?.title}');
-      
+
       // Mostrar notificación local personalizada
       if (message.notification != null) {
         flutterLocalNotificationsPlugin.show(
@@ -68,11 +92,9 @@ class NotificationHandler {
           message.notification!.body,
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'canal_reservas',
-              'Reservas',
+              'canal_reservas', 'Reservas',
               channelDescription: 'Notificaciones de nuevas reservas',
-              importance: Importance.max,
-              priority: Priority.high,
+              importance: Importance.max, priority: Priority.high,
             ),
           ),
           payload: jsonEncode(message.data),
@@ -81,16 +103,24 @@ class NotificationHandler {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      if (!_canDisplayNotification()) {
+        debugPrint('[NotificationHandler] Notificación abierta ignorada');
+        return;
+      }
       debugPrint('🔔 App abierta desde notificación: ${message.notification?.title}');
       _handleNotificationNavigation(message.data);
     });
 
     final RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      debugPrint('🔔 App iniciada desde notificación: ${initialMessage.notification?.title}');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleNotificationNavigation(initialMessage.data);
-      });
+      if (_canDisplayNotification()) {
+        debugPrint('🔔 App iniciada desde notificación: ${initialMessage.notification?.title}');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleNotificationNavigation(initialMessage.data);
+        });
+      } else {
+        debugPrint('[NotificationHandler] Notificación cold-start ignorada');
+      }
     }
   }
 
