@@ -16,6 +16,8 @@ class PermissionService {
       // Permission.crear_reserva,
       Permission.crear_agencias_agencias,
       Permission.ver_deuda_reservas,
+      Permission.recibir_notificaciones,
+
       // Permission.manage_observations,
       // Permission.select_reservas,
       // Una agencia solo puede contactar, ver observaciones y seleccionar
@@ -45,6 +47,7 @@ class PermissionService {
       Permission.ver_reservas,
       Permission.contact_whatsapp,
       Permission.ver_pagina_usuarios,
+      Permission.recibir_notificaciones,
       // Define permisos específicos para el rol 'verReservas'
     ],
     Roles.verColaborador: [

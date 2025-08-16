@@ -48,6 +48,8 @@ class ReservasContentWidget extends StatelessWidget {
                   }
                   
                   final currentReservas = snapshot.data ?? [];
+                  // DEBUG: mostrar conteo y filtros actuales
+                  debugPrint('ReservasContentWidget → recibidas ${currentReservas.length} reservas | filtro=${reservasController.selectedFilter} | turno=${reservasController.turnoFilter} | agenciaId=$agenciaId');
                   
                   if (currentReservas.isEmpty && !reservasController.isFetchingPage) {
                     return const Center(

@@ -39,11 +39,9 @@ enum Permission {
 
 
 
+  //recibir_notificaciones
 
-
-  
-
-
+  recibir_notificaciones,
 
   // Añade aquí cualquier otra acción granular que necesites controlar
 }

@@ -211,7 +211,7 @@ class ReservasController extends ChangeNotifier {
     TurnoType? turno,
     EstadoReserva? estado,
   }) {
-  debugPrint('[ReservasController] updateFilter -> filter: $filter, date: $date, agenciaId: $agenciaId, turno: $turno, estado: $estado');
+    debugPrint('[ReservasController] updateFilter -> filter: $filter, date: $date, agenciaId: $agenciaId, turno: $turno, estado: $estado');
     if (_selectedFilter == filter &&
         _customDate == date &&
         _agenciaIdFilter == agenciaId &&
@@ -219,7 +219,8 @@ class ReservasController extends ChangeNotifier {
         _estadoFilter == estado) {
       return;
     }
-
+    /// Mostrar filtros debugging
+    debugPrint('[ReservasController] updateFilter -> filter: $filter, date: $date, agenciaId: $agenciaId, turno: $turno, estado: $estado');
     _selectedFilter = filter;
     _customDate = date;
     _agenciaIdFilter = agenciaId;
@@ -296,6 +297,10 @@ class ReservasController extends ChangeNotifier {
   }
 
   void _updateFilteredReservasStream({bool resetPagination = false}) {
+    // DEBUG: log current filters before querying
+  debugPrint('[ReservasController] _updateFilteredReservasStream -> '
+    'filter=$_selectedFilter, date=$_customDate, agenciaId=$_agenciaIdFilter, '
+    'turno=$_turnoFilter, estado=$_estadoFilter');
     _reservasSubscription?.cancel();
 
     if (resetPagination) {
@@ -311,7 +316,7 @@ class ReservasController extends ChangeNotifier {
 
     _reservasSubscription?.cancel();
 
-    _reservasSubscription = _firestoreService
+  _reservasSubscription = _firestoreService
         .getReservasFiltered(
           turno: _turnoFilter,
           filter: _selectedFilter,
@@ -320,11 +325,15 @@ class ReservasController extends ChangeNotifier {
           estado: _estadoFilter,
         )
         .listen(
-          (snapshot) {
-            final raw = snapshot.docs.map((d) => d.data()).toList();
+    (snapshot) {
+       // DEBUG: number of documents returned by Firestore
+       debugPrint('[ReservasController] Firestore snapshot.docs.length: ${snapshot.docs.length}');
+        final raw = snapshot.docs.map((d) => d.data()).toList();
+       debugPrint('[ReservasController] raw before agency filter: ${raw.length}');
             final valid = raw
-                .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
-                .toList();
+       .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
+       .toList();
+     debugPrint('[ReservasController] after agency filter: ${valid.length}');
             final total = valid.length;
             final start = _currentPageIndex * _itemsPerPage;
             final end = (start + _itemsPerPage).clamp(0, total);
@@ -334,6 +343,8 @@ class ReservasController extends ChangeNotifier {
               final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
               return ReservaConAgencia(reserva: r, agencia: ag);
             }).toList();
+           // DEBUG: loaded on current page
+           debugPrint('[ReservasController] loaded page ${currentPage}: ${_allLoadedReservas.length} items');
             _isFetchingPage = false;
             _isLoading = false;
             _filteredReservasSubject.add(_allLoadedReservas);

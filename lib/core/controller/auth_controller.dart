@@ -36,23 +36,13 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
 
       if (user != null) {
-        // SUSCRIBIRSE AL TOPIC SIEMPRE QUE HAYA USUARIO LOGUEADO (solo en móviles)
-        if (!kIsWeb) {
-          FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
-          debugPrint('[AuthController] Suscrito a topic LOGEADO nueva_reserva');
-
-          // Inicializar listeners FCM solo una vez por sesión de usuario
-          // _initFcmListeners();
-        }
+        // Inicializar listeners FCM solo una vez por sesión de usuario
         _subscribeToAppUser();
       } else {
         // DESUSCRIBIRSE SI EL USUARIO SE DESLOGUEA (solo en móviles)
         if (!kIsWeb) {
           FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
           debugPrint('[AuthController] Desuscrito de topic DESLOGEADO nueva_reserva');
-
-          // cancelar listeners FCM
-          // _cancelFcmListeners();
         }
       }
     });
@@ -89,9 +79,7 @@ class AuthController extends ChangeNotifier {
                 '[AuthController] Stream ha recibido un _appUserSub: $u',
               );
               if (u != null) {
-                debugPrint(
-                  '[AuthController] Stream appUser.activo: ${u.activo}',
-                );
+                debugPrint('[AuthController] Stream appUser.roles: ${u.roles}');
               }
 
               if (u == null) {
@@ -102,7 +90,6 @@ class AuthController extends ChangeNotifier {
                 final soloUsuario = correo.contains('@')
                     ? correo.split('@').first
                     : correo;
-
                 final nuevoUsuario = Usuarios(
                   id: user!.uid,
                   usuario: soloUsuario,
@@ -129,6 +116,32 @@ class AuthController extends ChangeNotifier {
                 debugPrint(
                   '[AuthController] Stream: User is active in stream, setting appUser.',
                 );
+
+                // Validar si el usuario tiene el permiso recibir_notificaciones
+                if (!kIsWeb) {
+                  final hasPermission = _permissionService.hasAnyPermission(
+                    u.roles,
+                    Permission.recibir_notificaciones,
+                  );
+
+                  if (hasPermission) {
+                    // Si el usuario tiene el permiso, suscribirse al topic
+                    await FirebaseMessaging.instance.subscribeToTopic(
+                      'nueva_reserva',
+                    );
+                    debugPrint(
+                      '[AuthController] Usuario con permiso recibir_notificaciones, suscrito al topic nueva_reserva',
+                    );
+                  } else {
+                    // Si no tiene el permiso, desuscribirse del topic
+                    await FirebaseMessaging.instance.unsubscribeFromTopic(
+                      'nueva_reserva',
+                    );
+                    debugPrint(
+                      '[AuthController] Usuario sin permiso recibir_notificaciones, desuscrito del topic nueva_reserva',
+                    );
+                  }
+                }
               }
 
               isLoading = false;
@@ -176,11 +189,11 @@ class AuthController extends ChangeNotifier {
 
       debugPrint('[AuthController] Login: User is active. Proceeding.');
       user = cred.user; // asegúrate de actualizarlo manualmente
-  //     if (!kIsWeb) {
-  //       await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
-  // // Asegurar que los listeners FCM estén activos para el usuario recién logueado
-  //       _initFcmListeners();
-  //     }
+      //     if (!kIsWeb) {
+      //       await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+      // // Asegurar que los listeners FCM estén activos para el usuario recién logueado
+      //       _initFcmListeners();
+      //     }
       _subscribeToAppUser(overrideUser: user);
     } on FirebaseAuthException {
       rethrow;
@@ -194,8 +207,8 @@ class AuthController extends ChangeNotifier {
     await _authService.signOut();
     _fbAuthSub?.cancel();
     _appUserSub?.cancel();
-  // Cancelar listeners cuando el usuario sale
-  // _cancelFcmListeners();
+    // Cancelar listeners cuando el usuario sale
+    // _cancelFcmListeners();
     user = null;
     appUser = null;
     isLoading = false;
@@ -377,7 +390,7 @@ class AuthController extends ChangeNotifier {
   //             textColor: Colors.white,
   //             onPressed: () {
   //               final navState = navigatorKey.currentState;
-  //               if (navState == null) return;
+  //               if navState == null return;
   //               WidgetsBinding.instance.addPostFrameCallback((_) {
   //                 if (navState.canPop()) {
   //                   navState.pushNamed(
