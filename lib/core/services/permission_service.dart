@@ -16,6 +16,7 @@ class PermissionService {
       // Permission.crear_reserva,
       Permission.crear_agencias_agencias,
       Permission.ver_deuda_reservas,
+      Permission.crear_reserva,
 
       // Permission.manage_observations,
       // Permission.select_reservas,

@@ -46,7 +46,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
             color: estaCerrado ? Colors.red.shade50 : Colors.green.shade50,
             // margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 0),
             child: Padding(
-              padding: EdgeInsets.all(12.0.h),
+              padding: EdgeInsets.all(8.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -56,7 +56,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                         estaCerrado ? Icons.lock : Icons.lock_open,
                         color: estaCerrado ? Colors.red : Colors.green,
                       ),
-                      SizedBox(width: 8.w),
+                      SizedBox(width: 4.w),
                       Text(
                         estaCerrado
                             ? 'Cupos bloqueados para este turno'
@@ -64,7 +64,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                         style: TextStyle(
                           color: estaCerrado ? Colors.red : Colors.green,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16.sp,
+                          fontSize: 14.sp,
                         ),
                       ),
                       const Spacer(),
@@ -75,7 +75,7 @@ class _BloqueoFechaWidgetState extends State<BloqueoFechaWidget> {
                                 label: Text(
                                   'Desbloquear',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 12.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

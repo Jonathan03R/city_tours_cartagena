@@ -422,7 +422,7 @@ class _ReservasViewState extends State<ReservasView> {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 icon: Icon(Icons.add, size: 24.sp),
                 label: Text(
-                  'Registro manual',
+                  'Agregar Reserva',
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.bold,

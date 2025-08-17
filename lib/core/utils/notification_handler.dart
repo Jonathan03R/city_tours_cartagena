@@ -211,7 +211,13 @@ class NotificationHandler {
   static Future<void> _handleNotificationNavigation(Map<String, dynamic> data) async {
     debugPrint('[NotificationHandler] _handleNotificationNavigation data=$data');
     final reservaIdNotificada = data['reservaId'] as String?;
-    final forceShowAll = data['forceShowAll'] as bool? ?? false;
+  // Cuando llegamos desde una notificación, queremos mostrar TODAS las reservas por defecto
+  // para que el usuario vea la reserva recién creada aunque no sea del día actual.
+  // Si en el payload viene forceShowAll, lo respetamos, pero por defecto forzamos true.
+  final payloadForce = data['forceShowAll'];
+  final forceShowAll = payloadForce is bool
+    ? (payloadForce || true)
+    : true;
 
     if (reservaIdNotificada != null) {
       final exists = await validateReservaExists(reservaIdNotificada);
@@ -227,7 +233,8 @@ class NotificationHandler {
           '/reservas',
           arguments: {
             'reservaIdNotificada': reservaIdNotificada,
-            'forceShowAll': forceShowAll,
+            // Mostrar todas cuando navegamos desde notificación
+            'forceShowAll': true,
           },
         );
       } else {
@@ -255,7 +262,8 @@ class NotificationHandler {
       }
       navigatorKey.currentState?.pushNamed(
         '/reservas',
-        arguments: {'forceShowAll': forceShowAll},
+        // Sin reservaId, igualmente mostrar todas para el flujo de notificaciones
+        arguments: {'forceShowAll': true},
       );
     }
   }
