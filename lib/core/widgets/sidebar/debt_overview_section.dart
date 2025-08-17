@@ -6,6 +6,8 @@ import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 
 class DebtOverviewSection extends StatelessWidget {
   final bool isVisible;
@@ -176,7 +178,21 @@ class DebtOverviewSection extends StatelessWidget {
                                 final double deuda = entry.value;
                                 final badgeColor = deuda > 0 ? const Color(0xFFD32F2F) : const Color(0xFF388E3C);
                                 
-                                return Container(
+                                return InkWell(
+                                  onTap: () {
+                                    // Navegar a ReservasView con el modelo AgenciaConReservas
+                                    final agenciaCon = Provider.of<AgenciasController>(context, listen: false)
+                                        .agencias
+                                        .firstWhere((ar) => ar.agencia.id == agencia.id);
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => ReservasView(
+                                          agencia: agenciaCon,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
                                   margin: EdgeInsets.only(bottom: 12.h),
                                   padding: EdgeInsets.all(12.r),
                                   decoration: BoxDecoration(
@@ -272,7 +288,8 @@ class DebtOverviewSection extends StatelessWidget {
                                       ),
                                     ],
                                   ),
-                                );
+                                ), // close Container
+                              ); // close InkWell
                               }).toList(),
                             ),
                           ),

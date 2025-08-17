@@ -349,26 +349,42 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    AgenciaSelector(
-                      selectedAgenciaId: _selectedAgenciaId,
-                      onAgenciaSelected: (id) {
-                        setState(() {
-                          _selectedAgenciaId = id;
-                          _agencyError = false;
-                        });
-                      },
-                    ),
-                    if (_agencyError)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, left: 4),
-                        child: Text(
-                          'Debes seleccionar una agencia',
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontSize: 12,
+                    // If the form was given an initial agency, show it read-only; otherwise show selector
+                    if (widget.agencia != null) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.business, size: 18, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Agencia: ${widget.agencia!.nombre} (ID: ${widget.agencia!.id})',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      AgenciaSelector(
+                        selectedAgenciaId: _selectedAgenciaId,
+                        onAgenciaSelected: (id) {
+                          setState(() {
+                            _selectedAgenciaId = id;
+                            _agencyError = false;
+                          });
+                        },
+                      ),
+                      if (_agencyError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, left: 4),
+                          child: Text(
+                            'Debes seleccionar una agencia',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
+                    ],
                     const SizedBox(height: 12),
                     const Text(
                       'Turno *',
