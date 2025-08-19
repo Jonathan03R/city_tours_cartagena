@@ -14,6 +14,7 @@ class ReservasContentWidget extends StatelessWidget {
   final ReservasController reservasController;
   final String? agenciaId;
   final String? reservaIdNotificada;
+  final DateTime? lastSeenReservas;
 
   const ReservasContentWidget({
     super.key,
@@ -21,6 +22,7 @@ class ReservasContentWidget extends StatelessWidget {
     required this.reservasController,
     this.agenciaId,
     this.reservaIdNotificada,
+  this.lastSeenReservas,
   });
 
   @override
@@ -46,6 +48,8 @@ class ReservasContentWidget extends StatelessWidget {
                   }
                   
                   final currentReservas = snapshot.data ?? [];
+                  // DEBUG: mostrar conteo y filtros actuales
+                  debugPrint('ReservasContentWidget → recibidas ${currentReservas.length} reservas | filtro=${reservasController.selectedFilter} | turno=${reservasController.turnoFilter} | agenciaId=$agenciaId');
                   
                   if (currentReservas.isEmpty && !reservasController.isFetchingPage) {
                     return const Center(

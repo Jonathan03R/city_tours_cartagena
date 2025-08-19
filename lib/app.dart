@@ -1,6 +1,5 @@
 import 'package:citytourscartagena/auth/auth_gate.dart';
 import 'package:citytourscartagena/core/models/usuarios.dart';
-import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/core/widgets/offline_banner.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,20 +9,24 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+  debugPrint('📐 Dimensiones del dispositivo: ancho=${size.width}, alto=${size.height}');
     return ScreenUtilInit(
       /// Inicializa ScreenUtil con el tamaño de diseño base
-      designSize: const Size(490, 1074), // Tamaño de diseño base (iPhone X)
+      designSize: const Size(360, 784), // Tamaño de diseño base (iPhone X)
       /// Permite la adaptación del texto a diferentes tamaños de pantalla
       minTextAdapt: true,
 
       /// Habilita el modo de pantalla dividida
       splitScreenMode: true,
-  builder: (context, child) { 
+      builder: (context, child) { 
         return MultiProvider(
           providers: [
             // Stream de FirebaseAuth
@@ -52,7 +55,23 @@ class MyApp extends StatelessWidget {
             title: 'Reservas App',
             navigatorKey: navigatorKey,
             routes: {
-              '/reservas': (context) => ReservasView(),
+              '/reservas': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments;
+                String? reservaIdNotificada;
+                bool forceShowAll = false;
+
+                if (args is Map<String, dynamic>) {
+                  reservaIdNotificada = args['reservaIdNotificada'] as String?;
+                  forceShowAll = args['forceShowAll'] as bool? ?? false;
+                } else if (args is String) {
+                  reservaIdNotificada = args;
+                }
+
+                return ReservasView(
+                  reservaIdNotificada: reservaIdNotificada,
+                  forceShowAll: forceShowAll,
+                );
+              },
               // ...otras rutas
             },
             localizationsDelegates: const [
@@ -72,6 +91,12 @@ class MyApp extends StatelessWidget {
                 dataRowHeight: 50.h,
                 headingRowHeight: 44.h,
               ),
+              snackBarTheme: SnackBarThemeData(
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
             ),
             home: const AuthGate(),
             debugShowCheckedModeBanner: false,

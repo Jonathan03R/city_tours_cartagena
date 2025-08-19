@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
 import 'package:citytourscartagena/core/services/permission_service.dart';
+import 'package:citytourscartagena/core/utils/notification_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -23,24 +24,26 @@ class AuthController extends ChangeNotifier {
   _appUserSub; // Tipo cambiado de AppUser a Usuarios
   final PermissionService _permissionService = PermissionService();
 
+  // FCM listener control
+  static bool _fcmListenersInitialized = false;
+  StreamSubscription<RemoteMessage>? _onMessageSub;
+  StreamSubscription<RemoteMessage>? _onMessageOpenedSub;
+  bool _gotInitialMessage = false;
+
   AuthController(this._authService, this._userService) {
     user = FirebaseAuth.instance.currentUser;
-    _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) {
+    _fbAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) async {
       user = u;
       notifyListeners();
 
       if (user != null) {
-        // SUSCRIBIRSE AL TOPIC SIEMPRE QUE HAYA USUARIO LOGUEADO (solo en móviles)
-        if (!kIsWeb) {
-          FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
-          debugPrint('[AuthController] Suscrito a topic nueva_reserva');
-        }
+        // Inicializar listeners FCM solo una vez por sesión de usuario
         _subscribeToAppUser();
       } else {
         // DESUSCRIBIRSE SI EL USUARIO SE DESLOGUEA (solo en móviles)
         if (!kIsWeb) {
           FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
-          debugPrint('[AuthController] Desuscrito de topic nueva_reserva');
+          debugPrint('[AuthController] Desuscrito de topic DESLOGEADO nueva_reserva');
         }
       }
     });
@@ -77,9 +80,7 @@ class AuthController extends ChangeNotifier {
                 '[AuthController] Stream ha recibido un _appUserSub: $u',
               );
               if (u != null) {
-                debugPrint(
-                  '[AuthController] Stream appUser.activo: ${u.activo}',
-                );
+                debugPrint('[AuthController] Stream appUser.roles: ${u.roles}');
               }
 
               if (u == null) {
@@ -90,7 +91,6 @@ class AuthController extends ChangeNotifier {
                 final soloUsuario = correo.contains('@')
                     ? correo.split('@').first
                     : correo;
-
                 final nuevoUsuario = Usuarios(
                   id: user!.uid,
                   usuario: soloUsuario,
@@ -114,9 +114,32 @@ class AuthController extends ChangeNotifier {
                 return;
               } else {
                 appUser = u;
-                debugPrint(
-                  '[AuthController] Stream: User is active in stream, setting appUser.',
-                );
+                debugPrint('[AuthController] Stream: User is active in stream, setting appUser.');
+
+                // Validar si el usuario tiene el permiso recibir_notificaciones
+                if (!kIsWeb) {
+                  final hasPermission = _permissionService.hasAnyPermission(
+                    u.roles,
+                    Permission.recibir_notificaciones,
+                  );
+                  // Depuración: mostrar motivo de suscripción o bloqueo
+                  final isAgencyUser = u.agenciaId != null || u.roles.contains(Roles.agencia);
+                  final shouldSubscribe = hasPermission && !isAgencyUser;
+                  debugPrint('[AuthController][DEBUG] Usuario ${u.usuario} (id=${u.id}) - roles: ${u.roles}, agenciaId: ${u.agenciaId} -> tienePermiso=$hasPermission, esAgencia=$isAgencyUser, suscribir=$shouldSubscribe');
+                  if (shouldSubscribe) {
+                    await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+                    debugPrint('[AuthController] Suscrito al topic "nueva_reserva" para usuario ${u.usuario}');
+                  } else {
+                    await FirebaseMessaging.instance.unsubscribeFromTopic('nueva_reserva');
+                    debugPrint('[AuthController] No se suscribe (bloqueado) al topic "nueva_reserva" para usuario ${u.usuario}');
+                  }
+                }
+
+                // Procesar notificación pendiente si existe y el usuario está listo
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  debugPrint('[AuthController] Procesando notificación pendiente tras autenticación');
+                  NotificationHandler.processPendingNotificationIfAny();
+                });
               }
 
               isLoading = false;
@@ -164,9 +187,11 @@ class AuthController extends ChangeNotifier {
 
       debugPrint('[AuthController] Login: User is active. Proceeding.');
       user = cred.user; // asegúrate de actualizarlo manualmente
-      if (!kIsWeb) {
-        await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
-      }
+      //     if (!kIsWeb) {
+      //       await FirebaseMessaging.instance.subscribeToTopic('nueva_reserva');
+      // // Asegurar que los listeners FCM estén activos para el usuario recién logueado
+      //       _initFcmListeners();
+      //     }
       _subscribeToAppUser(overrideUser: user);
     } on FirebaseAuthException {
       rethrow;
@@ -180,6 +205,8 @@ class AuthController extends ChangeNotifier {
     await _authService.signOut();
     _fbAuthSub?.cancel();
     _appUserSub?.cancel();
+    // Cancelar listeners cuando el usuario sale
+    // _cancelFcmListeners();
     user = null;
     appUser = null;
     isLoading = false;
@@ -329,10 +356,153 @@ class AuthController extends ChangeNotifier {
     ); // Usando appUser
   }
 
+  // void _initFcmListeners() {
+  //   if (kIsWeb) return; // no para web
+  //   if (_fcmListenersInitialized) return;
+  //   _fcmListenersInitialized = true;
+
+  //   debugPrint('[AuthController] Inicializando listeners FCM');
+
+  //   _onMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  //     debugPrint('[AuthController][onMessage] data=${message.data}');
+  //     final reservaId = message.data['reservaId'] as String?;
+
+  //     // Mostrar SnackBar con accion 'Ver' que fuerza mostrar todas
+  //     final ctx = navigatorKey.currentContext;
+  //     if (ctx != null && reservaId != null) {
+  //       ScaffoldMessenger.of(ctx).showSnackBar(
+  //         SnackBar(
+  //           content: Row(
+  //             children: [
+  //               const Icon(Icons.notification_important, color: Colors.white),
+  //               const SizedBox(width: 8),
+  //               Expanded(
+  //                 child: Text(message.notification?.title ?? 'Nueva reserva'),
+  //               ),
+  //             ],
+  //           ),
+  //           backgroundColor: Colors.blue.shade600,
+  //           duration: const Duration(seconds: 6),
+  //           action: SnackBarAction(
+  //             label: 'Ver',
+  //             textColor: Colors.white,
+  //             onPressed: () {
+  //               final navState = navigatorKey.currentState;
+  //               if navState == null return;
+  //               WidgetsBinding.instance.addPostFrameCallback((_) {
+  //                 if (navState.canPop()) {
+  //                   navState.pushNamed(
+  //                     '/reservas',
+  //                     arguments: {
+  //                       'reservaIdNotificada': reservaId,
+  //                       'forceShowAll': true,
+  //                     },
+  //                   );
+  //                 } else {
+  //                   navState.pushNamed('/', arguments: null);
+  //                   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //                     navState.pushNamed(
+  //                       '/reservas',
+  //                       arguments: {
+  //                         'reservaIdNotificada': reservaId,
+  //                         'forceShowAll': true,
+  //                       },
+  //                     );
+  //                   });
+  //                 }
+  //               });
+  //             },
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   });
+
+  //   _onMessageOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+  //     debugPrint('[AuthController][onMessageOpenedApp] data=${message.data}');
+  //     final reservaId = message.data['reservaId'] as String?;
+  //     if (reservaId != null) {
+  //       final navState = navigatorKey.currentState;
+  //       if (navState == null) return;
+  //       WidgetsBinding.instance.addPostFrameCallback((_) {
+  //         if (navState.canPop()) {
+  //           navState.pushNamed(
+  //             '/reservas',
+  //             arguments: {
+  //               'reservaIdNotificada': reservaId,
+  //               'forceShowAll': true,
+  //             },
+  //           );
+  //         } else {
+  //           navState.pushNamed('/', arguments: null);
+  //           WidgetsBinding.instance.addPostFrameCallback((_) {
+  //             navState.pushNamed(
+  //               '/reservas',
+  //               arguments: {
+  //                 'reservaIdNotificada': reservaId,
+  //                 'forceShowAll': true,
+  //               },
+  //             );
+  //           });
+  //         }
+  //       });
+  //     }
+  //   });
+
+  //   // initial message (cold start)
+  //   FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+  //     if (_gotInitialMessage) return;
+  //     _gotInitialMessage = true;
+  //     if (message != null) {
+  //       debugPrint('[AuthController][getInitialMessage] data=${message.data}');
+  //       final reservaId = message.data['reservaId'] as String?;
+  //       if (reservaId != null) {
+  //         final navState = navigatorKey.currentState;
+  //         if (navState == null) return;
+  //         WidgetsBinding.instance.addPostFrameCallback((_) {
+  //           if (navState.canPop()) {
+  //             navState.pushNamed(
+  //               '/reservas',
+  //               arguments: {
+  //                 'reservaIdNotificada': reservaId,
+  //                 'forceShowAll': true,
+  //               },
+  //             );
+  //           } else {
+  //             navState.pushNamed('/', arguments: null);
+  //             WidgetsBinding.instance.addPostFrameCallback((_) {
+  //               navState.pushNamed(
+  //                 '/reservas',
+  //                 arguments: {
+  //                   'reservaIdNotificada': reservaId,
+  //                   'forceShowAll': true,
+  //                 },
+  //               );
+  //             });
+  //           }
+  //         });
+  //       }
+  //     }
+  //   });
+  // }
+
+  // void _cancelFcmListeners() {
+  //   debugPrint('[AuthController] Cancelando listeners FCM');
+  //   _onMessageSub?.cancel();
+  //   _onMessageSub = null;
+  //   _onMessageOpenedSub?.cancel();
+  //   _onMessageOpenedSub = null;
+  //   _fcmListenersInitialized = false;
+  //   _gotInitialMessage = false;
+  // }
+
   @override
   void dispose() {
+    // _cancelFcmListeners();
     _fbAuthSub?.cancel();
     _appUserSub?.cancel();
     super.dispose();
   }
+
+  // ...existing methods continue unmodified...
 }

@@ -92,6 +92,37 @@ class FirestoreService {
     return query;
   }
 
+  void debugTest() async {
+  final db = FirebaseFirestore.instance;
+  // 1) Todas las reservas de la agencia
+  final snap1 = await db
+      .collection('reservas')
+      .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
+      .get();
+  debugPrint('>>> TEST agencia only → ${snap1.docs.length} docs');
+
+  // 2) Mismo + turno = "manana"
+  final snap2 = await db
+      .collection('reservas')
+      .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
+      .where('turno', isEqualTo: 'manana')
+      .get();
+  debugPrint('>>> TEST agencia+turno → ${snap2.docs.length} docs');
+
+  // 3) Mismo + turno + filtro fecha today
+  final now = DateTime.now();
+  final ini = DateTime(now.year, now.month, now.day);
+  final fin = ini.add(const Duration(days: 1));
+  final snap3 = await db
+      .collection('reservas')
+      .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
+      .where('turno',    isEqualTo: 'manana')
+      .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(ini))
+      .where('fechaReserva', isLessThan:            Timestamp.fromDate(fin))
+      .get();
+  debugPrint('>>> TEST agencia+turno+today → ${snap3.docs.length} docs');
+}
+
   /// Obtiene reservas filtradas por turno, fecha y agencia, sin paginación.
   Stream<QuerySnapshot<Reserva>> getReservasFiltered({
     TurnoType? turno,
@@ -100,6 +131,9 @@ class FirestoreService {
     String? agenciaId,
     EstadoReserva? estado,
   }) async* {
+    debugPrint('ReservasController.getReservasFiltered called with parameters: '
+        'turno=$turno, filter=$filter, customDate=$customDate, '
+        'agenciaId=$agenciaId, estado=$estado');
     // 1) traer TODAS las agencias para saber cuáles están eliminadas
     final todasAgencias = await getAllAgencias();
     final eliminadasIds = todasAgencias
@@ -144,7 +178,10 @@ class FirestoreService {
     query = query.orderBy('fechaReserva', descending: true);
 
     // 7) entregar stream completo al controlador
-    yield* query.snapshots();
+    yield* query.snapshots().map((snapshot) {
+      debugPrint('ReservasController.getReservasFiltered snapshot docs count: ${snapshot.docs.length}');
+      return snapshot;
+    });
   }
 
   /// Obtiene un stream de todas las reservas.

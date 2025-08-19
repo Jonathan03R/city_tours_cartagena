@@ -262,7 +262,7 @@ class _TurnoCard extends StatelessWidget {
       label: _isPrivado ? 'Servicio privado' : 'Turno ${turno.label}',
       child: InkWell(
         onTap: onTap, // Siempre activo
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
@@ -283,37 +283,37 @@ class _TurnoCard extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 16.h),
+            padding: EdgeInsets.fromLTRB(4.w, 4.h, 4.w, 8.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 4),
+                SizedBox(height: 2.h),
                 _TurnoIcon(turno: turno, isPrivado: _isPrivado),
-                const SizedBox(height: 10),
+                SizedBox(height: 6.h),
                 Text(
                   _isPrivado ? 'Privado' : turno.label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 20.sp,
+                    fontSize: 16.sp,
                     color: _isPrivado ? Colors.amber.shade50 : Colors.white,
                     letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 6.h),
                 _AgencyAvatar(),
-                const SizedBox(height: 12),
+                SizedBox(height: 8.h),
                 Text(
                   empresa,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 14.sp,
+                    fontSize: 12.sp,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 8.w),
                 _EstadoBadge(estado: estado), // “… hoy”
               ],
             ),
@@ -385,7 +385,7 @@ class _TurnoIcon extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: const Color(0xFFFFBF00).withOpacity(0.35),
-                  blurRadius: 16.r,
+                  blurRadius: 14.r,
                   spreadRadius: 1,
                   offset: const Offset(0, 6),
                 ),
@@ -406,11 +406,11 @@ class _AgencyAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 74,
-      height: 74,
+      width: 60.w,
+      height: 60.h,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white24, width: 2),
+        border: Border.all(color: Colors.white24, width: 2.w),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8),
         ],
@@ -441,7 +441,7 @@ class _EstadoBadge extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(999),
@@ -453,7 +453,7 @@ class _EstadoBadge extends StatelessWidget {
         style: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontSize: 11.sp,
+          fontSize: 10.sp,
           // letterSpacing: 0.8,
         ),
       ),

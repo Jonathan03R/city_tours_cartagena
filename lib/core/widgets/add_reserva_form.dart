@@ -86,8 +86,12 @@ class _AddReservaFormState extends State<AddReservaForm> {
   void initState() {
     super.initState();
 
-    _selectedTurno = widget.initialTurno ?? TurnoType.manana;
-    // Inicializa agencia si viene prefijada (MERGE: ambas ramas coinciden en intención)
+    // Asignar el turno inicial si se proporciona
+    if (widget.initialTurno != null) {
+      _selectedTurno = widget.initialTurno;
+    }
+
+    // Asignar la agencia inicial si se proporciona
     if (widget.agenciaId != null) {
       _selectedAgenciaId = widget.agenciaId;
       _loadAgenciaAndMaybePrice();
@@ -219,13 +223,21 @@ class _AddReservaFormState extends State<AddReservaForm> {
   Future<void> _loadAgenciaAndMaybePrice() async {
     if (_selectedAgenciaId == null) return;
     setState(() => _isLoadingAgencia = true);
-    final agenciasController = context.read<AgenciasController>();
-    final agencia = agenciasController.getAgenciaById(_selectedAgenciaId!);
-    if (!mounted) return;
-    setState(() {
-      _selectedAgencia = agencia;
-      _isLoadingAgencia = false;
-    });
+    try {
+      final agenciasController = context.read<AgenciasController>();
+      final agencia = agenciasController.getAgenciaById(_selectedAgenciaId!);
+      if (!mounted) return;
+      setState(() {
+        _selectedAgencia = agencia;
+        _isLoadingAgencia = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingAgencia = false;
+        _selectedAgencia = null;
+      });
+      debugPrint('Error al cargar la agencia: $e');
+    }
   }
 
   void _onValuesChanged() {
@@ -245,11 +257,19 @@ class _AddReservaFormState extends State<AddReservaForm> {
       return;
     }
 
-    if (_selectedAgenciaId == null || _selectedAgencia == null) {
-      setState(() => _agencyError = true);
+    // Validación de agencia
+    if (_selectedAgenciaId == null) {
       await ErrorDialogs.showErrorDialog(
         context,
-        'Debes seleccionar una agencia.',
+        'No se encontró un ID de agencia válido.',
+      );
+      return;
+    }
+
+    if (_selectedAgencia == null && widget.agenciaId == null) {
+      await ErrorDialogs.showErrorDialog(
+        context,
+        'No se pudo cargar la información de la agencia. Intenta nuevamente.',
       );
       return;
     }

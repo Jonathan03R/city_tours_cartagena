@@ -232,7 +232,7 @@ class _AgenciasViewState extends State<AgenciasView> {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         CircleAvatar(
-                                          radius: 50.r,
+                                          radius: 40.r,
                                           backgroundColor: Colors.grey.shade200,
                                           child: (agencia.imagenUrl != null &&
                                               agencia.imagenUrl!.isNotEmpty)
