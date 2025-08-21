@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
   debugPrint('📐 Dimensiones del dispositivo: ancho=${size.width}, alto=${size.height}');
     return ScreenUtilInit(
       /// Inicializa ScreenUtil con el tamaño de diseño base
-      designSize: const Size(360, 784), // Tamaño de diseño base (iPhone X)
+      designSize: const Size(490, 1074), // Tamaño de diseño base (iPhone X)
       /// Permite la adaptación del texto a diferentes tamaños de pantalla
       minTextAdapt: true,
 
@@ -58,18 +58,21 @@ class MyApp extends StatelessWidget {
               '/reservas': (context) {
                 final args = ModalRoute.of(context)?.settings.arguments;
                 String? reservaIdNotificada;
-                bool forceShowAll = false;
+                DateTime? customDate;
+                // bool forceShowAll = false;
 
                 if (args is Map<String, dynamic>) {
                   reservaIdNotificada = args['reservaIdNotificada'] as String?;
-                  forceShowAll = args['forceShowAll'] as bool? ?? false;
+                  customDate = args['fechaReserva'] as DateTime?;
+                  // forceShowAll = args['forceShowAll'] as bool? ?? false;
                 } else if (args is String) {
                   reservaIdNotificada = args;
                 }
 
                 return ReservasView(
                   reservaIdNotificada: reservaIdNotificada,
-                  forceShowAll: forceShowAll,
+                  customDate: customDate, 
+                  // forceShowAll: forceShowAll,
                 );
               },
               // ...otras rutas

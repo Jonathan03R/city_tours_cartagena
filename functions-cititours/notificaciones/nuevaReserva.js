@@ -10,7 +10,7 @@ exports.onNuevaReserva = onDocumentCreated("reservas/{reservaId}", async (event)
   const newReserva = event.data.data();
 
   const nombreCliente = newReserva.nombreCliente || "Cliente";
-  const pax = newReserva.pax || 1;
+  const pax = newReserva.pax || 0;
   const turno = newReserva.turno || "turno";
 
   const fechaReserva = newReserva.fechaReserva instanceof Timestamp

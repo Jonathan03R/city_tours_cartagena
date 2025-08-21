@@ -28,9 +28,10 @@ class ReservasView extends StatefulWidget {
   final AgenciaConReservas? agencia;
   final VoidCallback? onBack;
   final bool isAgencyUser;
+  final DateTime? customDate;
 
   final String? reservaIdNotificada; // nuevo
-  final bool forceShowAll; // nuevo
+  // final bool forceShowAll; // nuevo
 
   const ReservasView({
     super.key,
@@ -39,7 +40,8 @@ class ReservasView extends StatefulWidget {
     this.onBack,
     this.isAgencyUser = false,
     this.reservaIdNotificada,
-    this.forceShowAll = false,
+    this.customDate,
+    // this.forceShowAll = false,
   });
 
   @override
@@ -60,7 +62,7 @@ class _ReservasViewState extends State<ReservasView> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_handledRouteArgs) return;
-    _handledRouteArgs = true;
+    _handledRouteArgs = true; 
 
     // Debug: imprimir parámetros recibidos
     debugPrint('ReservasView.didChangeDependencies - agenciaId: ${widget.agencia?.id}, turno: ${widget.turno}');
@@ -68,18 +70,20 @@ class _ReservasViewState extends State<ReservasView> {
     // Obtener argumentos de navegación
     final route = ModalRoute.of(context);
     String? reservaFromArgs;
-    bool forceAll = false;
+    DateTime? customDate;
+    // bool forceAll = false;
     if (route != null && route.settings.arguments != null) {
       final arguments = route.settings.arguments;
       if (arguments is Map<String, dynamic>) {
         reservaFromArgs = arguments['reservaIdNotificada'] as String?;
-        forceAll = arguments['forceShowAll'] as bool? ?? false;
+        customDate = arguments['customDate'] as DateTime?;
+        // forceAll = arguments['forceShowAll'] as bool? ?? false;
       } else if (arguments is String) {
         reservaFromArgs = arguments;
       }
     }
     reservaFromArgs ??= widget.reservaIdNotificada;
-    forceAll = forceAll || widget.forceShowAll;
+    // forceAll = forceAll || widget.forceShowAll;
     // Aplicar filtro y marcar reserva después de que la pantalla se construya completamente
     // un widgetBinding en español es un widget que se utiliza para interactuar con el ciclo de vida de la aplicación
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,8 +93,9 @@ class _ReservasViewState extends State<ReservasView> {
         debugPrint('ReservasView.postFrameCallback - filtrando con agenciaId: ${widget.agencia?.id}, turno: ${widget.turno}');
       // Aplicar filtro de reservas
         ctrl.updateFilter(
-          forceAll ? DateFilterType.all : DateFilterType.today,
+          customDate != null ? DateFilterType.custom : DateFilterType.today,
           agenciaId: widget.agencia?.id,
+          date: customDate, 
           turno: widget.turno,
         );
         if (mounted) {
