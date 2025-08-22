@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
+import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
@@ -14,6 +15,7 @@ import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.da
 import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
+import 'package:citytourscartagena/screens/reportes/vista_reportes.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart';
 import 'package:citytourscartagena/screens/servicios/servicio_view.dart';
@@ -146,6 +148,7 @@ class _MainScreenState extends State<MainScreen> {
                 )),
         if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
         if (canViewUsuarios) const UsuariosScreen(),
+        const ReportesView(), // Nueva página de estadísticas
       ],
     ];
     // Definir los ítems del bottom bar según permisos
@@ -176,6 +179,10 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.people),
             label: 'Colaboradores',
           ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.bar_chart),
+          label: 'Estadisticas',
+        ),
       ],
     ];
     // Asegurar que currentIndex esté dentro de los límites de navItems
@@ -188,6 +195,8 @@ class _MainScreenState extends State<MainScreen> {
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
+        // Provider para reportes
+        ChangeNotifierProvider(create: (_) => ReportesController()),
       ],
       child: Scaffold(
         key: _scaffoldKey,
@@ -416,6 +425,10 @@ class _MainScreenState extends State<MainScreen> {
         body: IndexedStack(index: displayIndex, children: pages),
         bottomNavigationBar: navItems.length >= 2
             ? BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.white,
+                selectedItemColor: const Color(0xFF06142F),
+                unselectedItemColor: Colors.grey,
                 currentIndex: displayIndex,
                 onTap: (index) {
                   setState(() {

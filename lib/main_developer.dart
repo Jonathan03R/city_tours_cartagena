@@ -2,6 +2,7 @@ import 'package:citytourscartagena/app.dart';
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
+import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/services/auth_service.dart';
 import 'package:citytourscartagena/core/services/user_service.dart'
@@ -50,6 +51,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
+        ChangeNotifierProvider(create: (_) => ReportesController()),
       ],
       child: const MyApp(),
     ),
