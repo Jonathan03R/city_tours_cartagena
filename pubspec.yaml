@@ -70,6 +70,7 @@ dependencies:
   phosphor_flutter: ^2.1.0
   connectivity_plus: ^6.1.4
   syncfusion_flutter_charts: ^30.2.6+1
+  month_picker_dialog: ^6.5.0
   # flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
@@ -84,6 +85,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  test: ^1.26.2
 
 flutter_launcher_icons:
   android: true

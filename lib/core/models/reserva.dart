@@ -42,7 +42,13 @@ class Reserva {
     this.habitacion,
     this.estatusReserva,
   });
-
+  
+  double get ganancia {
+    if (turno == TurnoType.privado) {
+      return costoAsiento;
+    }
+    return costoAsiento * pax;
+  }
   //este constructor es para crear una reserva desde un mapa de datos
   //usado para leer datos de Firestore
   factory Reserva.fromFirestore(Map<String, dynamic> data, String id) {

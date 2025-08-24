@@ -1,7 +1,11 @@
+import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
-import 'package:citytourscartagena/screens/reportes/historial_gastos_view.dart';
+import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
 import 'package:citytourscartagena/screens/reportes/historial_metas_view.dart';
+import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
+import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -10,7 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class ReportesView extends StatefulWidget {
-  const ReportesView({Key? key}) : super(key: key);
+  const ReportesView({super.key});
 
   @override
   State<ReportesView> createState() => _ReportesViewState();
@@ -26,11 +30,12 @@ class _ReportesViewState extends State<ReportesView>
   String _selectedPeriod = 'Semana';
   final List<String> _periods = ['Semana', 'Mes', 'Año'];
 
+  late FiltroFlexibleController _filtrosController;
+
   static const Color _primaryNavy = Color(0xFF0A1628);
   static const Color _accentTeal = Color(0xFF14B8A6);
   static const Color _accentAmber = Color(0xFFF59E0B);
   static const Color _surfaceBlue = Color(0xFF1E3A8A);
-  static const Color _lightBlue = Color(0xFF3B82F6);
   static const Color _cardBackground = Color(0xFFF8FAFC);
   static const Color _textPrimary = Color(0xFF1E293B);
   static const Color _textSecondary = Color(0xFF64748B);
@@ -58,12 +63,20 @@ class _ReportesViewState extends State<ReportesView>
 
     _fadeController.forward();
     _slideController.forward();
+    _filtrosController = FiltroFlexibleController();
+    // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
+    _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
+    final now = DateTime.now();
+    for (int i = 0; i < 4; i++) {
+      _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
+    }
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _filtrosController.dispose();
     super.dispose();
   }
 
@@ -110,6 +123,9 @@ class _ReportesViewState extends State<ReportesView>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildComparisonChart(controller, reservas),
+                        const SizedBox(height: 24),
+
                         _buildPeriodSelector(),
                         const SizedBox(height: 24),
                         _buildNavigationCards(),
@@ -129,6 +145,150 @@ class _ReportesViewState extends State<ReportesView>
         );
       },
     );
+  }
+
+  Widget _buildComparisonChart(
+    ReportesController reportesController,
+    List<ReservaConAgencia> reservas,
+  ) {
+    return ChangeNotifierProvider.value(
+      value: _filtrosController,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FiltrosFlexiblesWidget(controller: _filtrosController),
+          const SizedBox(height: 16),
+
+          Consumer<FiltroFlexibleController>(
+            builder: (context, filtrosController, child) {
+              final turno = filtrosController.turnoSeleccionado;
+
+              // 1) Datos Pasajeros
+              final datosPasajeros = _obtenerMetricasPorPeriodo(
+                reportesController,
+                filtrosController,
+                reservas,
+                turno,
+                reportesController.calcularPasajerosEnRango,
+              );
+              final tituloPasajeros = _obtenerTituloGrafico(
+                filtrosController.periodoSeleccionado!,
+              );
+
+              // 2) Datos Ganancias
+              final datosGanancias = _obtenerMetricasPorPeriodo(
+                reportesController,
+                filtrosController,
+                reservas,
+                turno,
+                (list, ini, fin, {turno}) => reportesController
+                    .calcularGananciasEnRango(list, ini, fin, turno: turno)
+                    .round(),
+              );
+              final tituloGanancias =
+                  'Ganancias por ' + tituloPasajeros.split('por ').last;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GraficoComparacion(
+                    datos: datosPasajeros,
+                    titulo: tituloPasajeros,
+                  ),
+                  const SizedBox(height: 32),
+                  GraficoComparacionLinea(
+                    datos: datosGanancias,
+                    titulo: tituloGanancias,
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<ChartCategoryData> _obtenerMetricasPorPeriodo(
+    ReportesController rc,
+    FiltroFlexibleController fc,
+    List<ReservaConAgencia> reservas,
+    TurnoType? turno,
+
+    /// Métrica a aplicar en cada rango: puede ser calcularPasajerosEnRango o calcularGananciasEnRango
+    int Function(
+      List<ReservaConAgencia> reservas,
+      DateTime inicio,
+      DateTime fin, {
+      TurnoType? turno,
+    })
+    metric,
+  ) {
+    final periodo = fc.periodoSeleccionado;
+    final resultado = <ChartCategoryData>[];
+
+    if (periodo == FiltroPeriodo.semana) {
+      final semanas = List<DateTimeRange>.from(fc.semanasSeleccionadas)
+        ..sort((a, b) => a.start.compareTo(b.start));
+      for (var i = 0; i < semanas.length; i++) {
+        final r = semanas[i];
+        final valor = metric(reservas, r.start, r.end, turno: turno);
+        resultado.add(ChartCategoryData('Semana ${i + 1}', valor));
+      }
+    } else if (periodo == FiltroPeriodo.mes) {
+      final meses = List<DateTime>.from(fc.mesesSeleccionados)
+        ..sort((a, b) {
+          if (a.year != b.year) return a.year.compareTo(b.year);
+          return a.month.compareTo(b.month);
+        });
+      for (var m in meses) {
+        final start = DateTime(m.year, m.month, 1);
+        final end = DateTime(m.year, m.month + 1, 0);
+        final valor = metric(reservas, start, end, turno: turno);
+        resultado.add(
+          ChartCategoryData('${_nombreMes(m.month)} ${m.year}', valor),
+        );
+      }
+    } else if (periodo == FiltroPeriodo.anio) {
+      final anios = List<int>.from(fc.aniosSeleccionados)..sort();
+      for (var y in anios) {
+        final start = DateTime(y, 1, 1);
+        final end = DateTime(y, 12, 31);
+        final valor = metric(reservas, start, end, turno: turno);
+        resultado.add(ChartCategoryData(y.toString(), valor));
+      }
+    }
+
+    return resultado;
+  }
+
+  String _nombreMes(int mes) {
+    const meses = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ];
+    return meses[mes - 1];
+  }
+
+  String _obtenerTituloGrafico(FiltroPeriodo periodo) {
+    switch (periodo) {
+      case FiltroPeriodo.semana:
+        return 'Comparación por Semana';
+      case FiltroPeriodo.mes:
+        return 'Comparación por Mes';
+      case FiltroPeriodo.anio:
+        return 'Comparación por Año';
+    }
   }
 
   Widget _buildPeriodSelector() {
@@ -554,7 +714,8 @@ class _ReportesViewState extends State<ReportesView>
             ),
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const HistorialGastosView()),
+                // MaterialPageRoute(builder: (_) => const HistorialGastosView()),
+                MaterialPageRoute(builder: (_) => const GastosScreen()),
               );
             },
             child: _buildGastosSemanal(),

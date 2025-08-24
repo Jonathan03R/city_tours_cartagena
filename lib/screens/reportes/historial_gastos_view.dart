@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 /// Vista Premium para historial y registro de gastos semanales
 /// Diseño sofisticado con métricas en tiempo real en pesos colombianos
 class HistorialGastosView extends StatefulWidget {
-  const HistorialGastosView({Key? key}) : super(key: key);
+  const HistorialGastosView({super.key});
 
   @override
   State<HistorialGastosView> createState() => _HistorialGastosViewState();
