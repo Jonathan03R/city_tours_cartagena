@@ -1,17 +1,17 @@
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
-import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
+import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
 import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
-import 'package:citytourscartagena/screens/reportes/historial_metas_view.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
+import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
 
 class ReportesView extends StatefulWidget {
   const ReportesView({super.key});
@@ -27,8 +27,8 @@ class _ReportesViewState extends State<ReportesView>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  String _selectedPeriod = 'Semana';
-  final List<String> _periods = ['Semana', 'Mes', 'Año'];
+  // String _selectedPeriod = 'Semana';
+  // final List<String> _periods = ['Semana', 'Mes', 'Año'];
 
   late FiltroFlexibleController _filtrosController;
 
@@ -104,14 +104,14 @@ class _ReportesViewState extends State<ReportesView>
               }
 
               final reservas = snapshot.data!;
-              final pasajerosData = controller.calcPasajeros(
-                list: reservas,
-                periodo: _selectedPeriod,
-              );
-              final gananciasData = controller.calcGanancias(
-                list: reservas,
-                periodo: _selectedPeriod,
-              );
+              // final pasajerosData = controller.calcPasajeros(
+              //   list: reservas,
+              //   periodo: _selectedPeriod,
+              // );
+              // final gananciasData = controller.calcGanancias(
+              //   list: reservas,
+              //   periodo: _selectedPeriod,
+              // );
 
               return FadeTransition(
                 opacity: _fadeAnimation,
@@ -123,18 +123,18 @@ class _ReportesViewState extends State<ReportesView>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildComparisonChart(controller, reservas),
+                        _graficosComparativos(controller, reservas),
                         const SizedBox(height: 24),
 
-                        _buildPeriodSelector(),
+                        // _buildPeriodSelector(),
                         const SizedBox(height: 24),
                         _buildNavigationCards(),
                         const SizedBox(height: 32),
-                        _buildMetricsCards(pasajerosData),
+                        // _buildMetricsCards(pasajerosData),
                         const SizedBox(height: 32),
-                        _buildPassengersChart(pasajerosData.data),
+                        _buildWeeklyCharts(controller, reservas),
                         const SizedBox(height: 32),
-                        _buildRevenueChart(gananciasData),
+                        // _buildRevenueChart(gananciasData),
                       ],
                     ),
                   ),
@@ -147,7 +147,7 @@ class _ReportesViewState extends State<ReportesView>
     );
   }
 
-  Widget _buildComparisonChart(
+  Widget _graficosComparativos(
     ReportesController reportesController,
     List<ReservaConAgencia> reservas,
   ) {
@@ -158,47 +158,77 @@ class _ReportesViewState extends State<ReportesView>
         children: [
           FiltrosFlexiblesWidget(controller: _filtrosController),
           const SizedBox(height: 16),
-
           Consumer<FiltroFlexibleController>(
             builder: (context, filtrosController, child) {
               final turno = filtrosController.turnoSeleccionado;
+              final periodo = filtrosController.periodoSeleccionado!;
 
-              // 1) Datos Pasajeros
-              final datosPasajeros = _obtenerMetricasPorPeriodo(
-                reportesController,
-                filtrosController,
-                reservas,
-                turno,
-                reportesController.calcularPasajerosEnRango,
-              );
-              final tituloPasajeros = _obtenerTituloGrafico(
-                filtrosController.periodoSeleccionado!,
-              );
+              // Si selecciona varias semanas
+              final semanas = filtrosController.semanasSeleccionadas;
+              final meses = filtrosController.mesesSeleccionados;
+              final anios = filtrosController.aniosSeleccionados;
 
-              // 2) Datos Ganancias
-              final datosGanancias = _obtenerMetricasPorPeriodo(
-                reportesController,
-                filtrosController,
-                reservas,
-                turno,
-                (list, ini, fin, {turno}) => reportesController
-                    .calcularGananciasEnRango(list, ini, fin, turno: turno)
-                    .round(),
-              );
-              final tituloGanancias =
-                  'Ganancias por ' + tituloPasajeros.split('por ').last;
+              List<ChartCategoryData> datosPasajeros = [];
+              List<ChartCategoryData> datosGanancias = [];
+
+              if (periodo == FiltroPeriodo.semana && semanas.isNotEmpty) {
+                datosPasajeros = reportesController.agruparPasajerosPorRangos(
+                  reservas,
+                  semanas,
+                  turno: turno,
+                );
+                datosGanancias = reportesController.agruparGananciasPorRangos(
+                  reservas,
+                  semanas,
+                  turno: turno,
+                );
+              } else if (periodo == FiltroPeriodo.mes && meses.isNotEmpty) {
+                final rangos = meses.map((m) {
+                  final inicio = DateTime(m.year, m.month, 1);
+                  final fin = DateTime(m.year, m.month + 1, 0);
+                  return DateTimeRange(start: inicio, end: fin);
+                }).toList();
+
+                datosPasajeros = reportesController.agruparPasajerosPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+                datosGanancias = reportesController.agruparGananciasPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+              } else if (periodo == FiltroPeriodo.anio && anios.isNotEmpty) {
+                final rangos = anios.map((y) {
+                  final inicio = DateTime(y, 1, 1);
+                  final fin = DateTime(y, 12, 31);
+                  return DateTimeRange(start: inicio, end: fin);
+                }).toList();
+
+                datosPasajeros = reportesController.agruparPasajerosPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+                datosGanancias = reportesController.agruparGananciasPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+              }
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   GraficoComparacion(
                     datos: datosPasajeros,
-                    titulo: tituloPasajeros,
+                    titulo: "Pasajeros",
                   ),
                   const SizedBox(height: 32),
                   GraficoComparacionLinea(
                     datos: datosGanancias,
-                    titulo: tituloGanancias,
+                    titulo: "Ganancias",
                   ),
                 ],
               );
@@ -207,77 +237,6 @@ class _ReportesViewState extends State<ReportesView>
         ],
       ),
     );
-  }
-
-  List<ChartCategoryData> _obtenerMetricasPorPeriodo(
-    ReportesController rc,
-    FiltroFlexibleController fc,
-    List<ReservaConAgencia> reservas,
-    TurnoType? turno,
-
-    /// Métrica a aplicar en cada rango: puede ser calcularPasajerosEnRango o calcularGananciasEnRango
-    int Function(
-      List<ReservaConAgencia> reservas,
-      DateTime inicio,
-      DateTime fin, {
-      TurnoType? turno,
-    })
-    metric,
-  ) {
-    final periodo = fc.periodoSeleccionado;
-    final resultado = <ChartCategoryData>[];
-
-    if (periodo == FiltroPeriodo.semana) {
-      final semanas = List<DateTimeRange>.from(fc.semanasSeleccionadas)
-        ..sort((a, b) => a.start.compareTo(b.start));
-      for (var i = 0; i < semanas.length; i++) {
-        final r = semanas[i];
-        final valor = metric(reservas, r.start, r.end, turno: turno);
-        resultado.add(ChartCategoryData('Semana ${i + 1}', valor));
-      }
-    } else if (periodo == FiltroPeriodo.mes) {
-      final meses = List<DateTime>.from(fc.mesesSeleccionados)
-        ..sort((a, b) {
-          if (a.year != b.year) return a.year.compareTo(b.year);
-          return a.month.compareTo(b.month);
-        });
-      for (var m in meses) {
-        final start = DateTime(m.year, m.month, 1);
-        final end = DateTime(m.year, m.month + 1, 0);
-        final valor = metric(reservas, start, end, turno: turno);
-        resultado.add(
-          ChartCategoryData('${_nombreMes(m.month)} ${m.year}', valor),
-        );
-      }
-    } else if (periodo == FiltroPeriodo.anio) {
-      final anios = List<int>.from(fc.aniosSeleccionados)..sort();
-      for (var y in anios) {
-        final start = DateTime(y, 1, 1);
-        final end = DateTime(y, 12, 31);
-        final valor = metric(reservas, start, end, turno: turno);
-        resultado.add(ChartCategoryData(y.toString(), valor));
-      }
-    }
-
-    return resultado;
-  }
-
-  String _nombreMes(int mes) {
-    const meses = [
-      'Ene',
-      'Feb',
-      'Mar',
-      'Abr',
-      'May',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dic',
-    ];
-    return meses[mes - 1];
   }
 
   String _obtenerTituloGrafico(FiltroPeriodo periodo) {
@@ -291,70 +250,70 @@ class _ReportesViewState extends State<ReportesView>
     }
   }
 
-  Widget _buildPeriodSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: _cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: _primaryNavy.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: _periods.map((period) {
-          final isSelected = period == _selectedPeriod;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedPeriod = period;
-                });
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? LinearGradient(
-                          colors: [_primaryNavy, _surfaceBlue],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: isSelected ? null : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: _primaryNavy.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  period,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : _textSecondary,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+  // Widget _buildPeriodSelector() {
+  //   return Container(
+  //     padding: const EdgeInsets.all(4),
+  //     decoration: BoxDecoration(
+  //       color: _cardBackground,
+  //       borderRadius: BorderRadius.circular(16),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: _primaryNavy.withOpacity(0.08),
+  //           blurRadius: 20,
+  //           offset: const Offset(0, 4),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Row(
+  //       children: _periods.map((period) {
+  //         final isSelected = period == _selectedPeriod;
+  //         return Expanded(
+  //           child: GestureDetector(
+  //             onTap: () {
+  //               setState(() {
+  //                 _selectedPeriod = period;
+  //               });
+  //             },
+  //             child: AnimatedContainer(
+  //               duration: const Duration(milliseconds: 400),
+  //               curve: Curves.easeOutCubic,
+  //               padding: const EdgeInsets.symmetric(vertical: 12),
+  //               decoration: BoxDecoration(
+  //                 gradient: isSelected
+  //                     ? LinearGradient(
+  //                         colors: [_primaryNavy, _surfaceBlue],
+  //                         begin: Alignment.topLeft,
+  //                         end: Alignment.bottomRight,
+  //                       )
+  //                     : null,
+  //                 color: isSelected ? null : Colors.transparent,
+  //                 borderRadius: BorderRadius.circular(12),
+  //                 boxShadow: isSelected
+  //                     ? [
+  //                         BoxShadow(
+  //                           color: _primaryNavy.withOpacity(0.3),
+  //                           blurRadius: 8,
+  //                           offset: const Offset(0, 2),
+  //                         ),
+  //                       ]
+  //                     : null,
+  //               ),
+  //               child: Text(
+  //                 period,
+  //                 textAlign: TextAlign.center,
+  //                 style: TextStyle(
+  //                   color: isSelected ? Colors.white : _textSecondary,
+  //                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+  //                   fontSize: 14,
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //         );
+  //       }).toList(),
+  //     ),
+  //   );
+  // }
 
   Widget _buildMetricsCards(PasajerosData data) {
     return Row(
@@ -453,178 +412,188 @@ class _ReportesViewState extends State<ReportesView>
     );
   }
 
-  Widget _buildPassengersChart(List<ChartCategoryData> data) {
-    return _buildChartContainer(
-      title: 'Pasajeros por $_selectedPeriod',
-      icon: Icons.people_outline_rounded,
-      child: SfCartesianChart(
-        plotAreaBorderWidth: 0,
-        primaryXAxis: CategoryAxis(
-          majorGridLines: const MajorGridLines(width: 0),
-          axisLine: const AxisLine(width: 0),
-          labelStyle: const TextStyle(
-            color: _textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        primaryYAxis: NumericAxis(
-          majorGridLines: MajorGridLines(
-            width: 1,
-            color: _textSecondary.withOpacity(0.1),
-          ),
-          axisLine: const AxisLine(width: 0),
-          labelStyle: const TextStyle(
-            color: _textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        series: <CartesianSeries<ChartCategoryData, String>>[
-          ColumnSeries<ChartCategoryData, String>(
-            dataSource: data,
-            xValueMapper: (ChartCategoryData data, _) => data.label,
-            yValueMapper: (ChartCategoryData data, _) => data.value,
-            gradient: const LinearGradient(
-              colors: [_accentTeal, Color(0xFF06B6D4)],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-            ),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(8),
-              topRight: Radius.circular(8),
-            ),
-            width: 0.7,
-            spacing: 0.2,
-            dataLabelSettings: const DataLabelSettings(
-              isVisible: true,
-              textStyle: TextStyle(
-                color: _textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-        tooltipBehavior: TooltipBehavior(
-          enable: true,
-          color: _primaryNavy,
-          textStyle: const TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRevenueChart(List<ChartCategoryData> data) {
-    return _buildChartContainer(
-      title: 'Ganancias por $_selectedPeriod',
-      icon: Icons.show_chart_rounded,
-      child: SfCartesianChart(
-        plotAreaBorderWidth: 0,
-        primaryXAxis: CategoryAxis(
-          majorGridLines: const MajorGridLines(width: 0),
-          axisLine: const AxisLine(width: 0),
-          labelStyle: const TextStyle(
-            color: _textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        primaryYAxis: NumericAxis(
-          majorGridLines: MajorGridLines(
-            width: 1,
-            color: _textSecondary.withOpacity(0.1),
-          ),
-          axisLine: const AxisLine(width: 0),
-          labelStyle: const TextStyle(
-            color: _textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        series: <CartesianSeries<ChartCategoryData, String>>[
-          SplineAreaSeries<ChartCategoryData, String>(
-            dataSource: data,
-            xValueMapper: (ChartCategoryData data, _) => data.label,
-            yValueMapper: (ChartCategoryData data, _) => data.value,
-            gradient: LinearGradient(
-              colors: [
-                _accentAmber.withOpacity(0.3),
-                _accentAmber.withOpacity(0.1),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderColor: _accentAmber,
-            borderWidth: 3,
-            splineType: SplineType.cardinal,
-            dataLabelSettings: const DataLabelSettings(
-              isVisible: true,
-              textStyle: TextStyle(
-                color: _textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
-              ),
-            ),
-          ),
-        ],
-        tooltipBehavior: TooltipBehavior(
-          enable: true,
-          color: _primaryNavy,
-          textStyle: const TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChartContainer({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: _cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: _primaryNavy.withOpacity(0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+  Widget _buildWeeklyCharts(
+    ReportesController reportesController,
+    List<ReservaConAgencia> reservas,
+  ) {
+    return ChangeNotifierProvider.value(
+      value: _filtrosController,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _primaryNavy.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: _primaryNavy, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: _textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          // Picker para seleccionar la fecha
+          ElevatedButton(
+            onPressed: () async {
+              final now = DateTime.now();
+              final fechaSeleccionada = await showDatePicker(
+                context: context,
+                initialDate: now,
+                firstDate: DateTime(now.year - 5),
+                lastDate: DateTime(now.year + 5),
+              );
+
+              if (fechaSeleccionada != null) {
+                _filtrosController.seleccionarSemana(fechaSeleccionada);
+              }
+            },
+            child: const Text('Seleccionar Semana'),
           ),
-          const SizedBox(height: 24),
-          SizedBox(height: 280, child: child),
+          const SizedBox(height: 16),
+          Consumer<FiltroFlexibleController>(
+            builder: (context, filtrosController, child) {
+              final semanaSeleccionada = filtrosController.semanaSeleccionada;
+
+              final pasajerosData = reportesController
+                  .calcularPasajerosPorSemana(
+                    list: reservas,
+                    inicio: semanaSeleccionada.start,
+                    fin: semanaSeleccionada.end,
+                  );
+              // Datos de ganancias
+              final gananciasData = reportesController
+                  .calcularGananciasPorSemana(
+                    list: reservas,
+                    inicio: semanaSeleccionada.start,
+                    fin: semanaSeleccionada.end,
+                  );
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GraficoSemanal(
+                    data: pasajerosData,
+                    titulo:
+                        'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                        'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
+                  ),
+                  const SizedBox(height: 32),
+                  GraficoGananciasSemanal(
+                    data: gananciasData,
+                    titulo:
+                        'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                        'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
   }
+
+  /// Graficar los pasajeros por periodo
+
+  // Widget _buildRevenueChart(List<ChartCategoryData> data) {
+  //   return _buildChartContainer(
+  //     title: 'Ganancias por $_selectedPeriod',
+  //     icon: Icons.show_chart_rounded,
+  //     child: SfCartesianChart(
+  //       plotAreaBorderWidth: 0,
+  //       primaryXAxis: CategoryAxis(
+  //         majorGridLines: const MajorGridLines(width: 0),
+  //         axisLine: const AxisLine(width: 0),
+  //         labelStyle: const TextStyle(
+  //           color: _textSecondary,
+  //           fontSize: 12,
+  //           fontWeight: FontWeight.w500,
+  //         ),
+  //       ),
+  //       primaryYAxis: NumericAxis(
+  //         majorGridLines: MajorGridLines(
+  //           width: 1,
+  //           color: _textSecondary.withOpacity(0.1),
+  //         ),
+  //         axisLine: const AxisLine(width: 0),
+  //         labelStyle: const TextStyle(
+  //           color: _textSecondary,
+  //           fontSize: 12,
+  //           fontWeight: FontWeight.w500,
+  //         ),
+  //       ),
+  //       series: <CartesianSeries<ChartCategoryData, String>>[
+  //         SplineAreaSeries<ChartCategoryData, String>(
+  //           dataSource: data,
+  //           xValueMapper: (ChartCategoryData data, _) => data.label,
+  //           yValueMapper: (ChartCategoryData data, _) => data.value,
+  //           gradient: LinearGradient(
+  //             colors: [
+  //               _accentAmber.withOpacity(0.3),
+  //               _accentAmber.withOpacity(0.1),
+  //             ],
+  //             begin: Alignment.topCenter,
+  //             end: Alignment.bottomCenter,
+  //           ),
+  //           borderColor: _accentAmber,
+  //           borderWidth: 3,
+  //           splineType: SplineType.cardinal,
+  //           dataLabelSettings: const DataLabelSettings(
+  //             isVisible: true,
+  //             textStyle: TextStyle(
+  //               color: _textPrimary,
+  //               fontWeight: FontWeight.bold,
+  //               fontSize: 10,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //       tooltipBehavior: TooltipBehavior(
+  //         enable: true,
+  //         color: _primaryNavy,
+  //         textStyle: const TextStyle(color: Colors.white),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // Widget _buildChartContainer({
+  //   required String title,
+  //   required IconData icon,
+  //   required Widget child,
+  // }) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(24),
+  //     decoration: BoxDecoration(
+  //       color: _cardBackground,
+  //       borderRadius: BorderRadius.circular(24),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: _primaryNavy.withOpacity(0.06),
+  //           blurRadius: 24,
+  //           offset: const Offset(0, 8),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             Container(
+  //               padding: const EdgeInsets.all(8),
+  //               decoration: BoxDecoration(
+  //                 color: _primaryNavy.withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //               child: Icon(icon, color: _primaryNavy, size: 20),
+  //             ),
+  //             const SizedBox(width: 12),
+  //             Text(
+  //               title,
+  //               style: const TextStyle(
+  //                 color: _textPrimary,
+  //                 fontSize: 18,
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 24),
+  //         SizedBox(height: 280, child: child),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildLoadingState() {
     return const Center(
@@ -694,9 +663,9 @@ class _ReportesViewState extends State<ReportesView>
               end: Alignment.bottomRight,
             ),
             onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const HistorialMetasView()),
-              );
+              // Navigator.of(context).push(
+              //   MaterialPageRoute(builder: (_) => const HistorialMetasView()),
+              // );
             },
             child: _buildMetaProgress(),
           ),
@@ -808,7 +777,7 @@ class _ReportesViewState extends State<ReportesView>
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
-
+    final FinanzasService _finanzasService = FinanzasService();
     return Consumer<ReportesController>(
       builder: (context, controller, _) {
         return StreamBuilder<List<ReservaConAgencia>>(
@@ -885,11 +854,8 @@ class _ReportesViewState extends State<ReportesView>
                 final metaPasajeros = metaDoc['goal'] ?? 0;
 
                 // Calcula los pasajeros actuales de la semana usando el controlador
-                final pasajerosActuales = controller.calcularPasajerosEnRango(
-                  reservas,
-                  startOfWeek,
-                  endOfWeek,
-                );
+                final pasajerosActuales = _finanzasService
+                    .calcularPasajerosEnRango(reservas, startOfWeek, endOfWeek);
 
                 final progreso = metaPasajeros > 0
                     ? (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0)

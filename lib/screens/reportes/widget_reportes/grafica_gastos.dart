@@ -10,10 +10,10 @@ class GraficaFinanzasSimple extends StatelessWidget {
   final String titulo;
 
   const GraficaFinanzasSimple({
-    Key? key,
+    super.key,
     required this.data,
     required this.titulo,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

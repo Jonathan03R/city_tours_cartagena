@@ -1,7 +1,7 @@
+import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:flutter/material.dart';
 
-enum FiltroPeriodo { semana, mes, anio }
 
 class FiltroFlexibleController extends ChangeNotifier {
   FiltroPeriodo? periodoSeleccionado;
@@ -9,6 +9,48 @@ class FiltroFlexibleController extends ChangeNotifier {
   final List<DateTimeRange> semanasSeleccionadas = [];
   final List<DateTime> mesesSeleccionados = [];
   final List<int> aniosSeleccionados = [];
+
+  ///semanaSeleccionada la inicializamos con la fecha de hoy
+  DateTimeRange semanaSeleccionada = DateTimeRange(
+    start: DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1)),
+    end: DateTime.now()
+        .subtract(Duration(days: DateTime.now().weekday - 1))
+        .add(const Duration(days: 6)),
+  );
+
+
+  DateTimeRange get rangoSeleccionado {
+  switch (periodoSeleccionado) {
+    case FiltroPeriodo.semana:
+      return semanaSeleccionada;
+
+    case FiltroPeriodo.mes:
+      if (mesesSeleccionados.isNotEmpty) {
+        final ultimoMes = mesesSeleccionados.last;
+        final inicio = DateTime(ultimoMes.year, ultimoMes.month, 1);
+        final fin = DateTime(ultimoMes.year, ultimoMes.month + 1, 0);
+        return DateTimeRange(start: inicio, end: fin);
+      }
+      break;
+
+    case FiltroPeriodo.anio:
+      if (aniosSeleccionados.isNotEmpty) {
+        final ultimoAnio = aniosSeleccionados.last;
+        final inicio = DateTime(ultimoAnio, 1, 1);
+        final fin = DateTime(ultimoAnio, 12, 31);
+        return DateTimeRange(start: inicio, end: fin);
+      }
+      break;
+
+    default:
+      break;
+  }
+  
+
+  // fallback → si no hay nada seleccionado, usa la semana actual
+  return semanaSeleccionada;
+}
+
 
   void seleccionarPeriodo(FiltroPeriodo periodo) {
     periodoSeleccionado = periodo;
@@ -23,6 +65,7 @@ class FiltroFlexibleController extends ChangeNotifier {
 
   void agregarSemana(DateTime fecha) {
     // Calcula lunes y domingo de la semana de la fecha seleccionada
+
     final lunes = fecha.subtract(Duration(days: fecha.weekday - 1));
     final domingo = lunes.add(const Duration(days: 6));
     final nuevoRango = DateTimeRange(start: lunes, end: domingo);
@@ -34,6 +77,16 @@ class FiltroFlexibleController extends ChangeNotifier {
       semanasSeleccionadas.add(nuevoRango);
       notifyListeners();
     }
+  }
+
+  ///este es solo para una semana una fecha no un array
+  void seleccionarSemana(DateTime fecha) {
+    // Calcula lunes y domingo de la semana de la fecha seleccionada
+    final lunes = fecha.subtract(Duration(days: fecha.weekday - 1));
+    final domingo = lunes.add(const Duration(days: 6));
+    semanaSeleccionada = DateTimeRange(start: lunes, end: domingo);
+
+    notifyListeners(); // Notifica a los widgets que dependen de este controlador
   }
 
   void eliminarSemana(DateTimeRange rango) {

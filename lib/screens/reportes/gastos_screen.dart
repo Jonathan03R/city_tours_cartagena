@@ -1,5 +1,7 @@
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
+import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafica_gastos.dart';
@@ -7,9 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class GastosScreen extends StatefulWidget {
-  const GastosScreen({Key? key}) : super(key: key);
+  const GastosScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _GastosScreenState createState() => _GastosScreenState();
 }
 
@@ -36,7 +39,7 @@ class _GastosScreenState extends State<GastosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ReportesController>(
+    return Consumer<GastosController>(
       builder: (context, rc, _) {
         return Scaffold(
           appBar: AppBar(title: const Text('Gastos y Finanzas')),

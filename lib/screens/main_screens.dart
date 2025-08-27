@@ -199,6 +199,7 @@ class _MainScreenState extends State<MainScreen> {
         // Provider para reportes
         ChangeNotifierProvider(create: (_) => ReportesController()),
         ChangeNotifierProvider(create: (_) => FiltroFlexibleController()),
+        // ChangeNotifierProvider(create: (_) => GastosController()),
       ],
       child: Scaffold(
         key: _scaffoldKey,
