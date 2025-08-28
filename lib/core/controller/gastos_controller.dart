@@ -5,59 +5,110 @@ import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
 import 'package:citytourscartagena/core/services/finanzas/gastos_service.dart';
 import 'package:citytourscartagena/core/utils/date_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class GastosController extends ChangeNotifier {
   final GastosService _gastosService = GastosService();
   final FinanzasService _finanzasService = FinanzasService();
-  final ReservasController reservasController;
+  final ReservasController reservasController = ReservasController();
   List<Map<String, dynamic>> _gastos = [];
   List<Map<String, dynamic>> get gastos => _gastos;
   bool _cargando = true;
   bool get cargando => _cargando;
-   Stream<List<ReservaConAgencia>> get reservasStream =>
+
+  int _paginaActual = 1;
+  int _totalPaginas = 1;
+  int _limite = 5;
+  int _totalGastos = 0;
+
+  DocumentSnapshot? _ultimoDoc;
+  final List<DocumentSnapshot> _historialDocs = [];
+  List<QueryDocumentSnapshot> gastosActuales = [];
+  final List<List<QueryDocumentSnapshot>> _cachePaginas = [];
+
+  int get paginaActual => _paginaActual;
+  int get totalPaginas => _totalPaginas;
+  int get totalGastos => _totalGastos;
+  int get limite => _limite;
+
+  Stream<List<ReservaConAgencia>> get reservasStream =>
       reservasController.getAllReservasConAgenciaStream();
 
-   GastosController({ReservasController? reservasController})
-      : reservasController = reservasController ?? ReservasController() {
-    _escucharGastosEnTiempoReal();
+  Future<void> inicializar({int limite = 5}) async {
+    _limite = limite;
+    _paginaActual = 1;
+    _ultimoDoc = null;
+    _historialDocs.clear();
+
+    _totalGastos = await _gastosService.obtenerCantidadGastos();
+    _totalPaginas = (_totalGastos / _limite).ceil();
+
+    await cargarPagina();
   }
 
-  void _escucharGastosEnTiempoReal() {
-    _gastosService.obtenerEnTiempoReal(limite: 10).listen((snapshot) {
-      _gastos = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return {'id': doc.id, ...data};
-      }).toList();
-      notifyListeners(); // Notifica a la vista que los datos han cambiado
-    });
-  }
-  Future<void> cargarMasGastos() async {
-    if (_cargando) return; // Evita múltiples llamadas simultáneas
-    _cargando = true;
+  // Future<void> cargarPagina() async {
+  //   final snapshot = await _gastosService.obtenerPagina(
+  //     limite: _limite,
+  //     ultimoDoc: _ultimoDoc,
+  //   );
+
+  //   gastosActuales = snapshot.docs;
+
+  //   if (gastosActuales.isNotEmpty) {
+  //     _ultimoDoc = gastosActuales.last;
+  //   }
+  // }
+
+  Future<void> cargarPagina() async {
+    // Si ya está en cache, la usamos
+    if (_paginaActual <= _cachePaginas.length) {
+      gastosActuales = _cachePaginas[_paginaActual - 1];
+      notifyListeners();
+      return;
+    }
+
+    // Si no está en cache, pedimos a Firestore
+    final snapshot = await _gastosService.obtenerPagina(
+      limite: _limite,
+      ultimoDoc: _ultimoDoc,
+    );
+
+    gastosActuales = snapshot.docs;
+
+    if (gastosActuales.isNotEmpty) {
+      _ultimoDoc = gastosActuales.last;
+    }
+
+    // Guardamos en cache
+    _cachePaginas.add(gastosActuales);
+
     notifyListeners();
+  }
 
-    try {
-      final nuevosGastos = await _gastosService.obtener(
-        limite: 10,
-        ultimoDocumento: _gastos.isNotEmpty
-            ? _gastos.last['documentSnapshot']
-            : null,
-      );
+  Future<void> siguientePagina() async {
+    if (_paginaActual < _totalPaginas) {
+      _paginaActual++;
+      await cargarPagina();
+    }
+  }
 
-      _gastos.addAll(
-        nuevosGastos.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return {'id': doc.id, 'documentSnapshot': doc, ...data};
-        }).toList(),
-      );
-    } catch (e) {
-      debugPrint('Error al cargar más gastos: $e');
-    } finally {
-      _cargando = false;
+  Future<void> paginaAnterior() async {
+    if (_paginaActual > 1) {
+      _paginaActual--;
+      // Ya está en cache, no hace falta pedir a Firestore
+      gastosActuales = _cachePaginas[_paginaActual - 1];
       notifyListeners();
     }
   }
+
+  String get estadoTexto {
+    final desde = ((_paginaActual - 1) * _limite) + 1;
+    final hasta = ((_paginaActual - 1) * _limite) + gastosActuales.length;
+    return "Página $_paginaActual de $_totalPaginas "
+        "($desde–$hasta de $_totalGastos)";
+  }
+
   Future<void> agregarGasto({
     required double monto,
     required String descripcion,
@@ -78,6 +129,7 @@ class GastosController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   Future<void> eliminarGasto(String id) async {
     try {
       _cargando = true;
@@ -90,6 +142,7 @@ class GastosController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   /// Modelo para métricas financieras por periodo.
   /// Agrupa gastos + ganancias + utilidad + margen según el periodo seleccionado.
   /// Usa las mismas reglas de intervalo (semana/mes/año) que _agruparPorPeriodo.
@@ -109,7 +162,12 @@ class GastosController extends ChangeNotifier {
         DateTime pf = pi.add(const Duration(days: 6));
         if (pf.isAfter(fin)) pf = fin;
 
-        final rev = _finanzasService.calcularGananciasEnRango(reservas, pi, pf, turno: turno);
+        final rev = _finanzasService.calcularGananciasEnRango(
+          reservas,
+          pi,
+          pf,
+          turno: turno,
+        );
         final exp = await _gastosService.obtenerSumaDeGastosEntre(pi, pf);
         final util = rev - exp;
         final double margin = rev != 0 ? util / rev * 100 : 0;
@@ -138,7 +196,12 @@ class GastosController extends ChangeNotifier {
         ).subtract(const Duration(days: 1));
         if (pf.isAfter(fin)) pf = fin;
 
-        final rev = _finanzasService.calcularGananciasEnRango(reservas, pi, pf, turno: turno);
+        final rev = _finanzasService.calcularGananciasEnRango(
+          reservas,
+          pi,
+          pf,
+          turno: turno,
+        );
         final exp = await _gastosService.obtenerSumaDeGastosEntre(pi, pf);
         final util = rev - exp;
         final double margin = rev != 0 ? util / rev * 100 : 0;
@@ -163,7 +226,12 @@ class GastosController extends ChangeNotifier {
         if (pi.isBefore(inicio)) pi = inicio;
         if (pf.isAfter(fin)) pf = fin;
 
-        final rev = _finanzasService.calcularGananciasEnRango(reservas, pi, pf, turno: turno);
+        final rev = _finanzasService.calcularGananciasEnRango(
+          reservas,
+          pi,
+          pf,
+          turno: turno,
+        );
         final exp = await _gastosService.obtenerSumaDeGastosEntre(pi, pf);
         final util = rev - exp;
         final double margin = rev != 0 ? util / rev * 100 : 0;
@@ -182,5 +250,34 @@ class GastosController extends ChangeNotifier {
     }
 
     return resultado;
+  }
+
+  Future<Map<String, double>> calcularTotales(
+    List<FinanceCategoryData> datos,
+  ) async {
+    final double totalGastos = datos.fold(
+      0,
+      (suma, item) => suma + item.expenses,
+    );
+    final double totalGanancias = datos.fold(
+      0,
+      (suma, item) => suma + item.revenues,
+    );
+    final double utilidadNeta = datos.fold(
+      0,
+      (suma, item) => suma + item.utility,
+    );
+
+    // Margen global: utilidad total / ingresos totales
+    final double margen = totalGanancias != 0
+        ? (utilidadNeta / totalGanancias) * 100
+        : 0;
+
+    return {
+      "gastos": totalGastos,
+      "ganancias": totalGanancias,
+      "utilidad": utilidadNeta,
+      "margen": margen,
+    };
   }
 }

@@ -3,6 +3,7 @@ import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/screens/reportes/historial_gastos_view.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafica_gastos.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,103 @@ class _GastosScreenState extends State<GastosScreen> {
   void dispose() {
     _filtrosController.dispose();
     super.dispose();
+  }
+
+  void _mostrarModalAgregarGasto(
+    BuildContext context,
+    GastosController gastosController,
+  ) {
+    final TextEditingController montoController = TextEditingController();
+    final TextEditingController descripcionController = TextEditingController();
+    DateTime fechaSeleccionada = DateTime.now(); // Fecha por defecto: hoy
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Agregar Nuevo Gasto'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: montoController,
+                    decoration: const InputDecoration(labelText: 'Monto'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    controller: descripcionController,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('Fecha: '),
+                      TextButton(
+                        onPressed: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: fechaSeleccionada,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                          );
+                          if (picked != null && picked != fechaSeleccionada) {
+                            setState(() {
+                              fechaSeleccionada = picked;
+                            });
+                          }
+                        },
+                        child: Text(
+                          '${fechaSeleccionada.day}/${fechaSeleccionada.month}/${fechaSeleccionada.year}',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final double? monto = double.tryParse(montoController.text);
+                    final String descripcion = descripcionController.text
+                        .trim();
+                    if (monto != null && descripcion.isNotEmpty) {
+                      await gastosController.agregarGasto(
+                        monto: monto,
+                        descripcion: descripcion,
+                        fecha: fechaSeleccionada,
+                      );
+                      Navigator.of(context).pop();
+                      // Opcional: Mostrar un snackbar de confirmación
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Gasto agregado exitosamente'),
+                        ),
+                      );
+                    } else {
+                      // Mostrar error si los campos están vacíos o inválidos
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Por favor, completa todos los campos correctamente',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Agregar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -152,19 +250,110 @@ class _GastosScreenState extends State<GastosScreen> {
                                     child: Text('Error: ${snapFin.error}'),
                                   );
                                 }
+
                                 final finanzas = snapFin.data ?? [];
-                                // 4) Llamar al widget del gráfico financiero
-                                final periodoLabel =
-                                    fc.periodoSeleccionado ==
-                                        FiltroPeriodo.semana
-                                    ? 'Semana'
-                                    : fc.periodoSeleccionado ==
-                                          FiltroPeriodo.mes
-                                    ? 'Mes'
-                                    : 'Año';
-                                return GraficaFinanzasSimple(
-                                  data: finanzas,
-                                  titulo: 'Finanzas por $periodoLabel',
+
+                                if (finanzas.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      'No hay datos para este periodo.',
+                                    ),
+                                  );
+                                }
+
+                                // 🔹 Aquí calculas los totales usando tu método
+                                return FutureBuilder<Map<String, double>>(
+                                  future: rc.calcularTotales(finanzas),
+                                  builder: (context, snapTotales) {
+                                    if (!snapTotales.hasData) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                    final totales = snapTotales.data!;
+
+                                    final periodoLabel =
+                                        fc.periodoSeleccionado ==
+                                            FiltroPeriodo.semana
+                                        ? 'Semana'
+                                        : fc.periodoSeleccionado ==
+                                              FiltroPeriodo.mes
+                                        ? 'Mes'
+                                        : 'Año';
+
+                                    return Column(
+                                      children: [
+                                        // 🔹 Widget para mostrar totales
+                                        Card(
+                                          elevation: 2,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  "Totales $periodoLabel",
+                                                  style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceAround,
+                                                  children: [
+                                                    Column(
+                                                      children: [
+                                                        const Text("Ingresos"),
+                                                        Text(
+                                                          "\$${totales["ganancias"]!.toStringAsFixed(2)}",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Column(
+                                                      children: [
+                                                        const Text("Gastos"),
+                                                        Text(
+                                                          "\$${totales["gastos"]!.toStringAsFixed(2)}",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Column(
+                                                      children: [
+                                                        const Text("Utilidad"),
+                                                        Text(
+                                                          "\$${totales["utilidad"]!.toStringAsFixed(2)}",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Column(
+                                                      children: [
+                                                        const Text("Margen"),
+                                                        Text(
+                                                          "${totales["margen"]!.toStringAsFixed(1)}%",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+
+                                        // 🔹 Tu gráfica de finanzas
+                                        Expanded(
+                                          child: GraficaFinanzasSimple(
+                                            data: finanzas,
+                                            titulo:
+                                                'Finanzas por $periodoLabel',
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 );
                               },
                             );
@@ -172,6 +361,35 @@ class _GastosScreenState extends State<GastosScreen> {
                         );
                       },
                     ),
+                  ),
+
+                  // Botones para agregar gasto y navegar al historial
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          final gastosController =
+                              Provider.of<GastosController>(
+                                context,
+                                listen: false,
+                              );
+                          _mostrarModalAgregarGasto(context, gastosController);
+                        },
+                        child: const Text('Agregar Gasto'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HistorialGastosView(),
+                            ),
+                          );
+                        },
+                        child: const Text('Ver Historial'),
+                      ),
+                    ],
                   ),
                 ],
               ),

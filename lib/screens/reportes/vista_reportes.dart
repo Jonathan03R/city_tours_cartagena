@@ -1,4 +1,5 @@
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
@@ -683,8 +684,12 @@ class _ReportesViewState extends State<ReportesView>
             ),
             onTap: () {
               Navigator.of(context).push(
-                // MaterialPageRoute(builder: (_) => const HistorialGastosView()),
-                MaterialPageRoute(builder: (_) => const GastosScreen()),
+                MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider(
+                    create: (_) => GastosController(),
+                    child: const GastosScreen(),
+                  ),
+                ),
               );
             },
             child: _buildGastosSemanal(),

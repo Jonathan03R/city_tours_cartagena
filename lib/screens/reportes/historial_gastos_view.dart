@@ -1,8 +1,5 @@
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-
-import '../../core/controller/gastos_controller.dart';
 
 class HistorialGastosView extends StatefulWidget {
   const HistorialGastosView({super.key});
@@ -12,95 +9,92 @@ class HistorialGastosView extends StatefulWidget {
 }
 
 class _HistorialGastosViewState extends State<HistorialGastosView> {
-  final ScrollController _scrollController = ScrollController();
+  final GastosController _controller = GastosController();
+  bool _cargando = true;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    _initData();
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+  Future<void> _initData() async {
+    await _controller.inicializar(limite: 5);
+    setState(() => _cargando = false);
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
-      // Cargar más datos cuando se llega al final de la lista
-      Provider.of<GastosController>(context, listen: false).cargarMasGastos();
-    }
+  Future<void> _siguiente() async {
+    await _controller.siguientePagina();
+    setState(() {});
+  }
+
+  Future<void> _anterior() async {
+    await _controller.paginaAnterior();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<GastosController>(context);
+    if (_cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Historial de Gastos'),
+        title: const Text("Historial de Gastos"),
       ),
-      body: controller.cargando && controller.gastos.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: Column(
+        children: [
+          // Estado (Página 1 de N)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              _controller.estadoTexto,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          // Lista de gastos
+          Expanded(
+            child: ListView.builder(
+              itemCount: _controller.gastosActuales.length,
+              itemBuilder: (context, index) {
+                final gasto = _controller.gastosActuales[index].data()
+                    as Map<String, dynamic>;
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: ListTile(
+                    title: Text(gasto['descripcion'] ?? ''),
+                    subtitle: Text(gasto['fecha']?.toDate().toString() ?? ''),
+                    trailing: Text("\$${gasto['monto'] ?? 0}"),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Botones de navegación
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    itemCount: controller.gastos.length + (controller.cargando ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == controller.gastos.length) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final gasto = controller.gastos[index];
-                      final fecha = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(gasto['fecha']));
-
-                      return ListTile(
-                        title: Text(gasto['descripcion']),
-                        subtitle: Text('Monto: \$${gasto['monto']} - Fecha: $fecha'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            final confirm = await _confirmarEliminacion(context);
-                            if (confirm) {
-                              await controller.eliminarGasto(gasto['id']);
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
+                ElevatedButton(
+                  onPressed: _controller.paginaActual > 1 ? _anterior : null,
+                  child: const Text("Anterior"),
                 ),
-                if (!controller.cargando && controller.gastos.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('No hay gastos registrados.'),
-                  ),
+                ElevatedButton(
+                  onPressed: _controller.paginaActual < _controller.totalPaginas
+                      ? _siguiente
+                      : null,
+                  child: const Text("Siguiente"),
+                ),
               ],
             ),
-    );
-  }
-
-  Future<bool> _confirmarEliminacion(BuildContext context) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Confirmar eliminación'),
-            content: const Text('¿Estás seguro de que deseas eliminar este gasto?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Eliminar'),
-              ),
-            ],
           ),
-        ) ??
-        false;
+        ],
+      ),
+    );
   }
 }

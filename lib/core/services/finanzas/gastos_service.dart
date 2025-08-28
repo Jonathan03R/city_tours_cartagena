@@ -22,25 +22,21 @@ class GastosService {
     }
   }
 
-  Stream<QuerySnapshot> obtenerEnTiempoReal({
+  Future<QuerySnapshot> obtenerPagina({
     required int limite,
-    DocumentSnapshot? ultimoDocumento,
-  }) {
-    try {
-      Query query = _firestore
-          .collection('gastos')
-          .where('estado', isNotEqualTo: 'inactivo') // Excluye los inactivos
-          .orderBy('fecha')
-          .limit(limite);
+    DocumentSnapshot? ultimoDoc,
+  }) async {
+    Query query = _firestore
+        .collection('gastos')
+        .where('estado', isEqualTo: 'activo')
+        .orderBy('fecha', descending: true) // último primero
+        .limit(limite);
 
-      if (ultimoDocumento != null) {
-        query = query.startAfterDocument(ultimoDocumento);
-      }
-
-      return query.snapshots(); // Devuelve un Stream en tiempo real
-    } catch (e) {
-      throw Exception('Error al obtener gastos en tiempo real: $e');
+    if (ultimoDoc != null) {
+      query = query.startAfterDocument(ultimoDoc);
     }
+
+    return await query.get();
   }
 
   Future<List<QueryDocumentSnapshot>> obtener({

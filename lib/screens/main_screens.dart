@@ -4,6 +4,7 @@ import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
@@ -199,7 +200,7 @@ class _MainScreenState extends State<MainScreen> {
         // Provider para reportes
         ChangeNotifierProvider(create: (_) => ReportesController()),
         ChangeNotifierProvider(create: (_) => FiltroFlexibleController()),
-        // ChangeNotifierProvider(create: (_) => GastosController()),
+        ChangeNotifierProvider(create: (_) => GastosController()),
       ],
       child: Scaffold(
         key: _scaffoldKey,
