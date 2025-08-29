@@ -92,36 +92,36 @@ class FirestoreService {
     return query;
   }
 
-  void debugTest() async {
-  final db = FirebaseFirestore.instance;
-  // 1) Todas las reservas de la agencia
-  final snap1 = await db
-      .collection('reservas')
-      .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
-      .get();
-  debugPrint('>>> TEST agencia only → ${snap1.docs.length} docs');
+//   void debugTest() async {
+//   final db = FirebaseFirestore.instance;
+//   // 1) Todas las reservas de la agencia
+//   final snap1 = await db
+//       .collection('reservas')
+//       .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
+//       .get();
+//   debugPrint('>>> TEST agencia only → ${snap1.docs.length} docs');
 
-  // 2) Mismo + turno = "manana"
-  final snap2 = await db
-      .collection('reservas')
-      .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
-      .where('turno', isEqualTo: 'manana')
-      .get();
-  debugPrint('>>> TEST agencia+turno → ${snap2.docs.length} docs');
+//   // 2) Mismo + turno = "manana"
+//   final snap2 = await db
+//       .collection('reservas')
+//       .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
+//       .where('turno', isEqualTo: 'manana')
+//       .get();
+//   debugPrint('>>> TEST agencia+turno → ${snap2.docs.length} docs');
 
-  // 3) Mismo + turno + filtro fecha today
-  final now = DateTime.now();
-  final ini = DateTime(now.year, now.month, now.day);
-  final fin = ini.add(const Duration(days: 1));
-  final snap3 = await db
-      .collection('reservas')
-      .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
-      .where('turno',    isEqualTo: 'manana')
-      .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(ini))
-      .where('fechaReserva', isLessThan:            Timestamp.fromDate(fin))
-      .get();
-  debugPrint('>>> TEST agencia+turno+today → ${snap3.docs.length} docs');
-}
+//   // 3) Mismo + turno + filtro fecha today
+//   final now = DateTime.now();
+//   final ini = DateTime(now.year, now.month, now.day);
+//   final fin = ini.add(const Duration(days: 1));
+//   final snap3 = await db
+//       .collection('reservas')
+//       .where('agenciaId', isEqualTo: 'Pmlhy3e4n45FjHIL73Ng')
+//       .where('turno',    isEqualTo: 'manana')
+//       .where('fechaReserva', isGreaterThanOrEqualTo: Timestamp.fromDate(ini))
+//       .where('fechaReserva', isLessThan:            Timestamp.fromDate(fin))
+//       .get();
+//   debugPrint('>>> TEST agencia+turno+today → ${snap3.docs.length} docs');
+// }
 
   /// Obtiene reservas filtradas por turno, fecha y agencia, sin paginación.
   Stream<QuerySnapshot<Reserva>> getReservasFiltered({
@@ -131,9 +131,9 @@ class FirestoreService {
     String? agenciaId,
     EstadoReserva? estado,
   }) async* {
-    debugPrint('ReservasController.getReservasFiltered called with parameters: '
-        'turno=$turno, filter=$filter, customDate=$customDate, '
-        'agenciaId=$agenciaId, estado=$estado');
+    // debugPrint('ReservasController.getReservasFiltered called with parameters: '
+    //     'turno=$turno, filter=$filter, customDate=$customDate, '
+    //     'agenciaId=$agenciaId, estado=$estado');
     // 1) traer TODAS las agencias para saber cuáles están eliminadas
     final todasAgencias = await getAllAgencias();
     final eliminadasIds = todasAgencias
@@ -179,7 +179,6 @@ class FirestoreService {
 
     // 7) entregar stream completo al controlador
     yield* query.snapshots().map((snapshot) {
-      debugPrint('ReservasController.getReservasFiltered snapshot docs count: ${snapshot.docs.length}');
       return snapshot;
     });
   }
@@ -229,9 +228,7 @@ class FirestoreService {
   Future<void> addReserva(Reserva reserva) async {
     try {
       await _db.collection('reservas').add(reserva.toFirestore());
-      debugPrint('✅ Reserva agregada: ${reserva.nombreCliente}');
     } catch (e) {
-      debugPrint('❌ Error agregando reserva: $e');
       throw e;
     }
   }
@@ -246,9 +243,7 @@ class FirestoreService {
           .collection('reservas')
           .doc(id)
           .set(reserva.toFirestore(), SetOptions(merge: true));
-      debugPrint('✅ Reserva actualizada: ${reserva.nombreCliente}');
     } catch (e) {
-      debugPrint('❌ Error actualizando reserva: $e');
       throw e;
     }
   }
@@ -258,9 +253,7 @@ class FirestoreService {
   Future<void> deleteReserva(String id) async {
     try {
       await _db.collection('reservas').doc(id).delete();
-      debugPrint('✅ Reserva eliminada: $id');
     } catch (e) {
-      debugPrint('❌ Error eliminando reserva: $e');
       throw e;
     }
   }
@@ -322,7 +315,7 @@ class FirestoreService {
         '❌ Error actualizando costo por asiento (mañana) de reservas para '
         'agencia $agenciaId: $e',
       );
-      throw e;
+      rethrow;
     }
   }
 
@@ -343,17 +336,17 @@ class FirestoreService {
         batch.update(doc.reference, {'costoAsiento': newCostoAsiento});
       }
       await batch.commit();
-      debugPrint(
-        '✅ Costo por asiento (tarde) actualizado para '
-        '${querySnapshot.docs.length} reservas de la agencia $agenciaId a '
-        '$newCostoAsiento',
-      );
+      // debugPrint(
+      //   '✅ Costo por asiento (tarde) actualizado para '
+      //   '${querySnapshot.docs.length} reservas de la agencia $agenciaId a '
+      //   '$newCostoAsiento',
+      // );
     } catch (e) {
-      debugPrint(
-        '❌ Error actualizando costo por asiento (tarde) de reservas para '
-        'agencia $agenciaId: $e',
-      );
-      throw e;
+      // debugPrint(
+      //   '❌ Error actualizando costo por asiento (tarde) de reservas para '
+      //   'agencia $agenciaId: $e',
+      // );
+      rethrow;
     }
   }
 
@@ -395,13 +388,13 @@ class FirestoreService {
       final newAgencia = agencia.copyWith(
         id: docRef.id,
       ); // Usar copyWith para añadir el ID
-      debugPrint(
-        '✅ Agencia agregada: ${newAgencia.nombre} con ID: ${newAgencia.id}',
-      );
+      // debugPrint(
+      //   '✅ Agencia agregada: ${newAgencia.nombre} con ID: ${newAgencia.id}',
+      // );
       return newAgencia;
     } catch (e) {
-      debugPrint('❌ Error agregando agencia: $e');
-      throw e;
+      // debugPrint('❌ Error agregando agencia: $e');
+      rethrow;
     }
   }
 
@@ -413,10 +406,10 @@ class FirestoreService {
       data['precioPorAsiento'] = FieldValue.delete();
 
       await _db.collection('agencias').doc(id).update(data);
-      debugPrint('✅ Agencia actualizada: ${agencia.nombre}');
+      // debugPrint('✅ Agencia actualizada: ${agencia.nombre}');
     } catch (e) {
-      debugPrint('❌ Error actualizando agencia: $e');
-      throw e;
+      // debugPrint('❌ Error actualizando agencia: $e');
+      rethrow;
     }
   }
 
@@ -435,7 +428,7 @@ class FirestoreService {
       }
     }
     await batch.commit();
-    debugPrint('✅ Migración de campo "eliminada" completada.');
+    // debugPrint('✅ Migración de campo "eliminada" completada.');
   }
 
   /// Inicializa los datos por defecto en Firestore.
@@ -444,7 +437,7 @@ class FirestoreService {
     try {
       await migrateAgenciasEliminadas();
     } catch (e) {
-      debugPrint('❌ Error inicializando datos: $e');
+      // debugPrint('❌ Error inicializando datos: $e');
     }
   }
 
@@ -453,9 +446,9 @@ class FirestoreService {
     required DateTime fecha,
     required int maxCupos,
   }) async {
-    debugPrint(
-      'Verificando límite de cupos para $turno en fecha $fecha con máximo $maxCupos',
-    );
+    // debugPrint(
+    //   'Verificando límite de cupos para $turno en fecha $fecha con máximo $maxCupos',
+    // );
     final fechaInicio = DateTime(fecha.year, fecha.month, fecha.day);
     final fechaFin = fechaInicio.add(const Duration(days: 1));
 
@@ -472,10 +465,11 @@ class FirestoreService {
 
     final totalPax = snapshot.docs.fold<int>(
       0,
+      // ignore: avoid_types_as_parameter_names
       (sum, doc) => sum + (doc.data()['pax'] as int? ?? 0),
     );
 
-    debugPrint('Total de pax reservados: $totalPax');
+    // debugPrint('Total de pax reservados: $totalPax');
 
     return totalPax >= maxCupos;
   }

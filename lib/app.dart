@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-  debugPrint('📐 Dimensiones del dispositivo: ancho=${size.width}, alto=${size.height}');
+  // debugPrint('📐 Dimensiones del dispositivo: ancho=${size.width}, alto=${size.height}');
     return ScreenUtilInit(
       /// Inicializa ScreenUtil con el tamaño de diseño base
       designSize: const Size(490, 1074), // Tamaño de diseño base (iPhone X)

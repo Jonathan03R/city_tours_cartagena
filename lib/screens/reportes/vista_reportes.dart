@@ -1,9 +1,11 @@
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/gastos_controller.dart';
+import 'package:citytourscartagena/core/controller/metas_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
+import 'package:citytourscartagena/screens/metas/metas_screen.dart';
 import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
@@ -483,119 +485,6 @@ class _ReportesViewState extends State<ReportesView>
     );
   }
 
-  /// Graficar los pasajeros por periodo
-
-  // Widget _buildRevenueChart(List<ChartCategoryData> data) {
-  //   return _buildChartContainer(
-  //     title: 'Ganancias por $_selectedPeriod',
-  //     icon: Icons.show_chart_rounded,
-  //     child: SfCartesianChart(
-  //       plotAreaBorderWidth: 0,
-  //       primaryXAxis: CategoryAxis(
-  //         majorGridLines: const MajorGridLines(width: 0),
-  //         axisLine: const AxisLine(width: 0),
-  //         labelStyle: const TextStyle(
-  //           color: _textSecondary,
-  //           fontSize: 12,
-  //           fontWeight: FontWeight.w500,
-  //         ),
-  //       ),
-  //       primaryYAxis: NumericAxis(
-  //         majorGridLines: MajorGridLines(
-  //           width: 1,
-  //           color: _textSecondary.withOpacity(0.1),
-  //         ),
-  //         axisLine: const AxisLine(width: 0),
-  //         labelStyle: const TextStyle(
-  //           color: _textSecondary,
-  //           fontSize: 12,
-  //           fontWeight: FontWeight.w500,
-  //         ),
-  //       ),
-  //       series: <CartesianSeries<ChartCategoryData, String>>[
-  //         SplineAreaSeries<ChartCategoryData, String>(
-  //           dataSource: data,
-  //           xValueMapper: (ChartCategoryData data, _) => data.label,
-  //           yValueMapper: (ChartCategoryData data, _) => data.value,
-  //           gradient: LinearGradient(
-  //             colors: [
-  //               _accentAmber.withOpacity(0.3),
-  //               _accentAmber.withOpacity(0.1),
-  //             ],
-  //             begin: Alignment.topCenter,
-  //             end: Alignment.bottomCenter,
-  //           ),
-  //           borderColor: _accentAmber,
-  //           borderWidth: 3,
-  //           splineType: SplineType.cardinal,
-  //           dataLabelSettings: const DataLabelSettings(
-  //             isVisible: true,
-  //             textStyle: TextStyle(
-  //               color: _textPrimary,
-  //               fontWeight: FontWeight.bold,
-  //               fontSize: 10,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //       tooltipBehavior: TooltipBehavior(
-  //         enable: true,
-  //         color: _primaryNavy,
-  //         textStyle: const TextStyle(color: Colors.white),
-  //       ),
-  //     ),
-  //   );
-  // }
-
-  // Widget _buildChartContainer({
-  //   required String title,
-  //   required IconData icon,
-  //   required Widget child,
-  // }) {
-  //   return Container(
-  //     padding: const EdgeInsets.all(24),
-  //     decoration: BoxDecoration(
-  //       color: _cardBackground,
-  //       borderRadius: BorderRadius.circular(24),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: _primaryNavy.withOpacity(0.06),
-  //           blurRadius: 24,
-  //           offset: const Offset(0, 8),
-  //         ),
-  //       ],
-  //     ),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Row(
-  //           children: [
-  //             Container(
-  //               padding: const EdgeInsets.all(8),
-  //               decoration: BoxDecoration(
-  //                 color: _primaryNavy.withOpacity(0.1),
-  //                 borderRadius: BorderRadius.circular(8),
-  //               ),
-  //               child: Icon(icon, color: _primaryNavy, size: 20),
-  //             ),
-  //             const SizedBox(width: 12),
-  //             Text(
-  //               title,
-  //               style: const TextStyle(
-  //                 color: _textPrimary,
-  //                 fontSize: 18,
-  //                 fontWeight: FontWeight.w600,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         const SizedBox(height: 24),
-  //         SizedBox(height: 280, child: child),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   Widget _buildLoadingState() {
     return const Center(
       child: Column(
@@ -664,9 +553,14 @@ class _ReportesViewState extends State<ReportesView>
               end: Alignment.bottomRight,
             ),
             onTap: () {
-              // Navigator.of(context).push(
-              //   MaterialPageRoute(builder: (_) => const HistorialMetasView()),
-              // );
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider(
+                    create: (_) => MetasController(),
+                    child: const MetasScreen(),
+                  ),
+                ),
+              );
             },
             child: _buildMetaProgress(),
           ),
