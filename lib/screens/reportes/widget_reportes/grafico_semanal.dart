@@ -1,13 +1,15 @@
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
+import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/widgets/moder_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
-class GraficoSemanal extends StatelessWidget {
-
+class ModernGraficoSemanal extends StatelessWidget {
   final List<ChartCategoryData> data;
   final String titulo;
 
-  const GraficoSemanal({
+  const ModernGraficoSemanal({
     super.key,
     required this.data,
     required this.titulo,
@@ -16,152 +18,347 @@ class GraficoSemanal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return const Center(child: Text('No hay datos para mostrar.'));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 300,
-          child: SfCartesianChart(
-            primaryXAxis: CategoryAxis(
-              labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+      return ModernCard(
+        child: Container(
+          height: 300.h,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.calendar_view_week_outlined,
+                size: 48.sp,
+                color: AppColors.textLight,
               ),
-              majorGridLines: const MajorGridLines(width: 0),
-            ),
-            primaryYAxis: NumericAxis(
-              labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              majorGridLines: MajorGridLines(
-                width: 1,
-                color: Colors.grey.withOpacity(0.3),
-              ),
-            ),
-            series: <CartesianSeries>[
-              ColumnSeries<ChartCategoryData, String>(
-                dataSource: data,
-                xValueMapper: (ChartCategoryData data, _) => data.label,
-                yValueMapper: (ChartCategoryData data, _) => data.value,
-                color: Colors.blueAccent,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
-                dataLabelSettings: const DataLabelSettings(
-                  isVisible: true,
-                  textStyle: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
+              SizedBox(height: 16.h),
+              Text(
+                'No hay datos para mostrar',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
-            tooltipBehavior: TooltipBehavior(enable: true),
           ),
         ),
-      ],
+      );
+    }
+
+    return ModernCard(
+      hasGradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header con estadísticas
+          Row(
+            children: [
+              Container(
+                width: 4.w,
+                height: 24.h,
+                decoration: BoxDecoration(
+                  color: AppColors.accentBlue,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'Análisis semanal de rendimiento',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: AppColors.accentBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.trending_up,
+                      size: 14.sp,
+                      color: AppColors.accentBlue,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      '${data.length}S',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accentBlue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 24.h),
+          
+          Container(
+            height: 300.h,
+            child: SfCartesianChart(
+              backgroundColor: Colors.transparent,
+              plotAreaBackgroundColor: Colors.transparent,
+              primaryXAxis: CategoryAxis(
+                labelStyle: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+                majorGridLines: MajorGridLines(width: 0),
+                axisLine: AxisLine(color: Colors.transparent),
+                majorTickLines: MajorTickLines(color: Colors.transparent),
+              ),
+              primaryYAxis: NumericAxis(
+                labelStyle: TextStyle(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+                majorGridLines: MajorGridLines(
+                  width: 1.w,
+                  color: AppColors.textLight.withOpacity(0.2),
+                  dashArray: [5, 5],
+                ),
+                axisLine: AxisLine(color: Colors.transparent),
+                majorTickLines: MajorTickLines(color: Colors.transparent),
+              ),
+              series: <CartesianSeries>[
+                ColumnSeries<ChartCategoryData, String>(
+                  dataSource: data,
+                  xValueMapper: (ChartCategoryData data, _) => data.label,
+                  yValueMapper: (ChartCategoryData data, _) => data.value,
+                  gradient: LinearGradient(
+                    colors: [AppColors.accentBlue, AppColors.lightBlue],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8.r),
+                    topRight: Radius.circular(8.r),
+                  ),
+                  dataLabelSettings: DataLabelSettings(
+                    isVisible: true,
+                    textStyle: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+              tooltipBehavior: TooltipBehavior(
+                enable: true,
+                color: AppColors.primaryNightBlue,
+                textStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.sp,
+                ),
+                // borderRadius: 8.r,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-
-class GraficoGananciasSemanal extends StatelessWidget {
+class ModernGraficoGananciasSemanal extends StatelessWidget {
   final List<ChartCategoryData> data;
   final String titulo;
   final Color accentColor;
 
-  const GraficoGananciasSemanal({
+  const ModernGraficoGananciasSemanal({
     super.key,
     required this.data,
     required this.titulo,
-    this.accentColor = const Color(0xFFF59E0B), // Amber por defecto
+    this.accentColor = AppColors.warning,
   });
 
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return const Center(child: Text('No hay datos para mostrar.'));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 300,
-          child: SfCartesianChart(
-            plotAreaBorderWidth: 0,
-            primaryXAxis: CategoryAxis(
-              majorGridLines: const MajorGridLines(width: 0),
-              axisLine: const AxisLine(width: 0),
-              labelStyle: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+      return ModernCard(
+        child: Container(
+          height: 300.h,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.show_chart_outlined,
+                size: 48.sp,
+                color: AppColors.textLight,
               ),
-            ),
-            primaryYAxis: NumericAxis(
-              majorGridLines: MajorGridLines(
-                width: 1,
-                color: accentColor.withOpacity(0.1),
-              ),
-              axisLine: const AxisLine(width: 0),
-              labelStyle: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            series: <CartesianSeries<ChartCategoryData, String>>[
-              SplineAreaSeries<ChartCategoryData, String>(
-                dataSource: data,
-                xValueMapper: (ChartCategoryData data, _) => data.label,
-                yValueMapper: (ChartCategoryData data, _) => data.value,
-                gradient: LinearGradient(
-                  colors: [
-                    accentColor.withOpacity(0.3),
-                    accentColor.withOpacity(0.1),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderColor: accentColor,
-                borderWidth: 3,
-                splineType: SplineType.cardinal,
-                dataLabelSettings: const DataLabelSettings(
-                  isVisible: true,
-                  textStyle: TextStyle(
-                    color: Color(0xFF1E293B),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                  ),
+              SizedBox(height: 16.h),
+              Text(
+                'No hay datos para mostrar',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
-            tooltipBehavior: TooltipBehavior(
-              enable: true,
-              color: const Color(0xFF0A1628),
-              textStyle: const TextStyle(color: Colors.white),
-            ),
           ),
         ),
-      ],
+      );
+    }
+
+    return ModernCard(
+      hasGradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header elegante
+          Row(
+            children: [
+              Container(
+                width: 4.w,
+                height: 24.h,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'Evolución de ganancias semanales',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.trending_up,
+                  size: 20.sp,
+                  color: accentColor,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 24.h),
+          
+          Container(
+            height: 300.h,
+            child: SfCartesianChart(
+              backgroundColor: Colors.transparent,
+              plotAreaBorderWidth: 0,
+              primaryXAxis: CategoryAxis(
+                majorGridLines: MajorGridLines(width: 0),
+                axisLine: AxisLine(width: 0),
+                labelStyle: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+                majorTickLines: MajorTickLines(color: Colors.transparent),
+              ),
+              primaryYAxis: NumericAxis(
+                majorGridLines: MajorGridLines(
+                  width: 1.w,
+                  color: accentColor.withOpacity(0.1),
+                  dashArray: [5, 5],
+                ),
+                axisLine: AxisLine(width: 0),
+                labelStyle: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+                majorTickLines: MajorTickLines(color: Colors.transparent),
+              ),
+              series: <CartesianSeries<ChartCategoryData, String>>[
+                SplineAreaSeries<ChartCategoryData, String>(
+                  dataSource: data,
+                  xValueMapper: (ChartCategoryData data, _) => data.label,
+                  yValueMapper: (ChartCategoryData data, _) => data.value,
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withOpacity(0.4),
+                      accentColor.withOpacity(0.1),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderColor: accentColor,
+                  borderWidth: 3.w,
+                  splineType: SplineType.cardinal,
+                  markerSettings: MarkerSettings(
+                    isVisible: true,
+                    color: accentColor,
+                    borderColor: Colors.white,
+                    borderWidth: 3.w,
+                    height: 10.h,
+                    width: 10.w,
+                  ),
+                  dataLabelSettings: DataLabelSettings(
+                    isVisible: true,
+                    textStyle: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ),
+              ],
+              tooltipBehavior: TooltipBehavior(
+                enable: true,
+                color: AppColors.primaryNightBlue,
+                textStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.sp,
+                ),
+                // borderRadius: 8.r,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-

@@ -114,6 +114,9 @@ class _MainScreenState extends State<MainScreen> {
     final canViewUsuarios = authController.hasPermission(
       Permission.ver_pagina_usuarios,
     );
+    final canViewReportes = authController.hasPermission(
+      Permission.ver_pagina_reportes,
+    );
 
     /// Si no tiene permisos, redirigir a la pantalla de configuración
     final authRole = context.read<AuthController>();
@@ -150,7 +153,7 @@ class _MainScreenState extends State<MainScreen> {
                 )),
         if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
         if (canViewUsuarios) const UsuariosScreen(),
-        const ReportesView(), // Nueva página de estadísticas
+        if (canViewReportes) const ReportesView(), // Nueva página de estadísticas
       ],
     ];
     // Definir los ítems del bottom bar según permisos
@@ -181,10 +184,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.people),
             label: 'Colaboradores',
           ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Estadisticas',
-        ),
+        if (canViewReportes)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Estadisticas',
+          ),
       ],
     ];
     // Asegurar que currentIndex esté dentro de los límites de navItems

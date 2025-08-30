@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
+import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/screens/metas/metas_screen.dart';
 import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
@@ -30,43 +31,34 @@ class _ReportesViewState extends State<ReportesView>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // String _selectedPeriod = 'Semana';
-  // final List<String> _periods = ['Semana', 'Mes', 'Año'];
-
   late FiltroFlexibleController _filtrosController;
-
-  static const Color _primaryNavy = Color(0xFF0A1628);
-  static const Color _accentTeal = Color(0xFF14B8A6);
-  static const Color _accentAmber = Color(0xFFF59E0B);
-  static const Color _surfaceBlue = Color(0xFF1E3A8A);
-  static const Color _cardBackground = Color(0xFFF8FAFC);
-  static const Color _textPrimary = Color(0xFF1E293B);
-  static const Color _textSecondary = Color(0xFF64748B);
 
   @override
   void initState() {
     super.initState();
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
-        );
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOutQuart));
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5), 
+      end: Offset.zero
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
 
     _fadeController.forward();
     _slideController.forward();
     _filtrosController = FiltroFlexibleController();
+    
     // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
     final now = DateTime.now();
@@ -88,11 +80,12 @@ class _ReportesViewState extends State<ReportesView>
     return Consumer<ReportesController>(
       builder: (context, controller, child) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.backgroundGray, AppColors.backgroundWhite],
+              stops: [0.0, 1.0],
             ),
           ),
           child: StreamBuilder<List<ReservaConAgencia>>(
@@ -107,39 +100,85 @@ class _ReportesViewState extends State<ReportesView>
               }
 
               final reservas = snapshot.data!;
-              // final pasajerosData = controller.calcPasajeros(
-              //   list: reservas,
-              //   periodo: _selectedPeriod,
-              // );
-              // final gananciasData = controller.calcGanancias(
-              //   list: reservas,
-              //   periodo: _selectedPeriod,
-              // );
 
               return FadeTransition(
                 opacity: _fadeAnimation,
                 child: SlideTransition(
                   position: _slideAnimation,
-                  child: SingleChildScrollView(
+                  child: CustomScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _graficosComparativos(controller, reservas),
-                        const SizedBox(height: 24),
-
-                        // _buildPeriodSelector(),
-                        const SizedBox(height: 24),
-                        _buildNavigationCards(),
-                        const SizedBox(height: 32),
-                        // _buildMetricsCards(pasajerosData),
-                        const SizedBox(height: 32),
-                        _buildWeeklyCharts(controller, reservas),
-                        const SizedBox(height: 32),
-                        // _buildRevenueChart(gananciasData),
-                      ],
-                    ),
+                    slivers: [
+                      SliverAppBar(
+                        expandedHeight: 120.h,
+                        floating: false,
+                        pinned: true,
+                        elevation: 0,
+                        backgroundColor: Colors.transparent,
+                        flexibleSpace: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.primaryNightBlue,
+                                AppColors.secondaryNightBlue,
+                                AppColors.accentBlue,
+                              ],
+                              stops: [0.0, 0.6, 1.0],
+                            ),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(32.r),
+                              bottomRight: Radius.circular(32.r),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primaryNightBlue.withOpacity(0.3),
+                                blurRadius: 20.r,
+                                offset: Offset(0, 8.h),
+                              ),
+                            ],
+                          ),
+                          child: FlexibleSpaceBar(
+                            title: ShaderMask(
+                              shaderCallback: (bounds) => LinearGradient(
+                                colors: [Colors.white, Colors.white.withOpacity(0.9)],
+                              ).createShader(bounds),
+                              child: Text(
+                                'Dashboard Financiero',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: AppColors.primaryNightBlue.withOpacity(0.5),
+                                      blurRadius: 8.0,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            centerTitle: true,
+                          ),
+                        ),
+                      ),
+                      
+                      SliverPadding(
+                        padding: EdgeInsets.all(20.w),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildNavigationCards(),
+                            SizedBox(height: 32.h),
+                            _graficosComparativos(controller, reservas),
+                            SizedBox(height: 32.h),
+                            _buildWeeklyCharts(controller, reservas),
+                            SizedBox(height: 100.h), // Bottom padding
+                          ]),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -159,14 +198,56 @@ class _ReportesViewState extends State<ReportesView>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FiltrosFlexiblesWidget(controller: _filtrosController),
-          const SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.08),
+                  blurRadius: 20.r,
+                  offset: Offset(0, 4.h),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10.r),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.accentBlue, AppColors.lightBlue],
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Icon(
+                    Icons.analytics_rounded,
+                    color: Colors.white,
+                    size: 20.sp,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Text(
+                  'Análisis Comparativo',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          ModernFiltrosFlexiblesWidget(controller: _filtrosController),
+          SizedBox(height: 20.h),
           Consumer<FiltroFlexibleController>(
             builder: (context, filtrosController, child) {
+              // ... existing logic ...
               final turno = filtrosController.turnoSeleccionado;
               final periodo = filtrosController.periodoSeleccionado!;
 
-              // Si selecciona varias semanas
               final semanas = filtrosController.semanasSeleccionadas;
               final meses = filtrosController.mesesSeleccionados;
               final anios = filtrosController.aniosSeleccionados;
@@ -224,191 +305,18 @@ class _ReportesViewState extends State<ReportesView>
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GraficoComparacion(
+                  ModernGraficoComparacion(
                     datos: datosPasajeros,
                     titulo: "Pasajeros",
                   ),
-                  const SizedBox(height: 32),
-                  GraficoComparacionLinea(
+                  SizedBox(height: 32.h),
+                  ModernGraficoComparacionLinea(
                     datos: datosGanancias,
                     titulo: "Ganancias",
                   ),
                 ],
               );
             },
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _obtenerTituloGrafico(FiltroPeriodo periodo) {
-    switch (periodo) {
-      case FiltroPeriodo.semana:
-        return 'Comparación por Semana';
-      case FiltroPeriodo.mes:
-        return 'Comparación por Mes';
-      case FiltroPeriodo.anio:
-        return 'Comparación por Año';
-    }
-  }
-
-  // Widget _buildPeriodSelector() {
-  //   return Container(
-  //     padding: const EdgeInsets.all(4),
-  //     decoration: BoxDecoration(
-  //       color: _cardBackground,
-  //       borderRadius: BorderRadius.circular(16),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: _primaryNavy.withOpacity(0.08),
-  //           blurRadius: 20,
-  //           offset: const Offset(0, 4),
-  //         ),
-  //       ],
-  //     ),
-  //     child: Row(
-  //       children: _periods.map((period) {
-  //         final isSelected = period == _selectedPeriod;
-  //         return Expanded(
-  //           child: GestureDetector(
-  //             onTap: () {
-  //               setState(() {
-  //                 _selectedPeriod = period;
-  //               });
-  //             },
-  //             child: AnimatedContainer(
-  //               duration: const Duration(milliseconds: 400),
-  //               curve: Curves.easeOutCubic,
-  //               padding: const EdgeInsets.symmetric(vertical: 12),
-  //               decoration: BoxDecoration(
-  //                 gradient: isSelected
-  //                     ? LinearGradient(
-  //                         colors: [_primaryNavy, _surfaceBlue],
-  //                         begin: Alignment.topLeft,
-  //                         end: Alignment.bottomRight,
-  //                       )
-  //                     : null,
-  //                 color: isSelected ? null : Colors.transparent,
-  //                 borderRadius: BorderRadius.circular(12),
-  //                 boxShadow: isSelected
-  //                     ? [
-  //                         BoxShadow(
-  //                           color: _primaryNavy.withOpacity(0.3),
-  //                           blurRadius: 8,
-  //                           offset: const Offset(0, 2),
-  //                         ),
-  //                       ]
-  //                     : null,
-  //               ),
-  //               child: Text(
-  //                 period,
-  //                 textAlign: TextAlign.center,
-  //                 style: TextStyle(
-  //                   color: isSelected ? Colors.white : _textSecondary,
-  //                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-  //                   fontSize: 14,
-  //                 ),
-  //               ),
-  //             ),
-  //           ),
-  //         );
-  //       }).toList(),
-  //     ),
-  //   );
-  // }
-
-  Widget _buildMetricsCards(PasajerosData data) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Total Pasajeros',
-            value: data.totalPas.toString(),
-            icon: Icons.people_rounded,
-            gradient: const LinearGradient(
-              colors: [_accentTeal, Color(0xFF06B6D4)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Ganancias Totales',
-            value: '\$${_formatCurrency(data.totalRev)}',
-            icon: Icons.trending_up_rounded,
-            gradient: const LinearGradient(
-              colors: [_accentAmber, Color(0xFFEAB308)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Gradient gradient,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: _primaryNavy.withOpacity(0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradient.colors.first.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              color: _textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: _textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ],
       ),
@@ -424,56 +332,150 @@ class _ReportesViewState extends State<ReportesView>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Picker para seleccionar la fecha
-          ElevatedButton(
-            onPressed: () async {
-              final now = DateTime.now();
-              final fechaSeleccionada = await showDatePicker(
-                context: context,
-                initialDate: now,
-                firstDate: DateTime(now.year - 5),
-                lastDate: DateTime(now.year + 5),
-              );
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.08),
+                  blurRadius: 20.r,
+                  offset: Offset(0, 4.h),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10.r),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.success, Color(0xFF34D399)],
+                        ),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Icon(
+                        Icons.calendar_view_week_rounded,
+                        color: Colors.white,
+                        size: 20.sp,
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Text(
+                      'Análisis Semanal',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.accentBlue, AppColors.lightBlue],
+                    ),
+                    borderRadius: BorderRadius.circular(10.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentBlue.withOpacity(0.3),
+                        blurRadius: 8.r,
+                        offset: Offset(0, 4.h),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10.r),
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final fechaSeleccionada = await showDatePicker(
+                          context: context,
+                          initialDate: now,
+                          firstDate: DateTime(now.year - 5),
+                          lastDate: DateTime(now.year + 5),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: ColorScheme.light(
+                                  primary: AppColors.primaryNightBlue,
+                                  onPrimary: Colors.white,
+                                  surface: AppColors.backgroundWhite,
+                                  onSurface: AppColors.textPrimary,
+                                ),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
 
-              if (fechaSeleccionada != null) {
-                _filtrosController.seleccionarSemana(fechaSeleccionada);
-              }
-            },
-            child: const Text('Seleccionar Semana'),
+                        if (fechaSeleccionada != null) {
+                          _filtrosController.seleccionarSemana(fechaSeleccionada);
+                        }
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.date_range_rounded,
+                              color: Colors.white,
+                              size: 16.sp,
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              'Seleccionar',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 20.h),
           Consumer<FiltroFlexibleController>(
             builder: (context, filtrosController, child) {
               final semanaSeleccionada = filtrosController.semanaSeleccionada;
 
-              final pasajerosData = reportesController
-                  .calcularPasajerosPorSemana(
-                    list: reservas,
-                    inicio: semanaSeleccionada.start,
-                    fin: semanaSeleccionada.end,
-                  );
-              // Datos de ganancias
-              final gananciasData = reportesController
-                  .calcularGananciasPorSemana(
-                    list: reservas,
-                    inicio: semanaSeleccionada.start,
-                    fin: semanaSeleccionada.end,
-                  );
+              final pasajerosData = reportesController.calcularPasajerosPorSemana(
+                list: reservas,
+                inicio: semanaSeleccionada.start,
+                fin: semanaSeleccionada.end,
+              );
+              
+              final gananciasData = reportesController.calcularGananciasPorSemana(
+                list: reservas,
+                inicio: semanaSeleccionada.start,
+                fin: semanaSeleccionada.end,
+              );
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GraficoSemanal(
+                  ModernGraficoSemanal(
                     data: pasajerosData,
-                    titulo:
-                        'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                    titulo: 'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
                         'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
                   ),
-                  const SizedBox(height: 32),
-                  GraficoGananciasSemanal(
+                  SizedBox(height: 32.h),
+                  ModernGraficoGananciasSemanal(
                     data: gananciasData,
-                    titulo:
-                        'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                    titulo: 'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
                         'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
                   ),
                 ],
@@ -486,17 +488,52 @@ class _ReportesViewState extends State<ReportesView>
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(_primaryNavy),
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Cargando datos financieros...',
-            style: TextStyle(color: _textSecondary, fontSize: 16),
+          Container(
+            padding: EdgeInsets.all(32.r),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.1),
+                  blurRadius: 32.r,
+                  offset: Offset(0, 8.h),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 48.w,
+                  height: 48.h,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+                    strokeWidth: 4.w,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Text(
+                  'Cargando datos financieros...',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Esto puede tomar unos segundos',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -509,30 +546,55 @@ class _ReportesViewState extends State<ReportesView>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(40.r),
             decoration: BoxDecoration(
-              color: _textSecondary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.08),
+                  blurRadius: 32.r,
+                  offset: Offset(0, 8.h),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.analytics_outlined,
-              size: 64,
-              color: _textSecondary,
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(24.r),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.textSecondary.withOpacity(0.1), AppColors.textSecondary.withOpacity(0.05)],
+                    ),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Icon(
+                    Icons.analytics_outlined,
+                    size: 64.sp,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                SizedBox(height: 32.h),
+                Text(
+                  'No hay datos disponibles',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  'Los reportes aparecerán cuando tengas reservas registradas en el sistema',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No hay datos disponibles',
-            style: TextStyle(
-              color: _textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Los reportes aparecerán cuando tengas reservas',
-            style: TextStyle(color: _textSecondary, fontSize: 14),
           ),
         ],
       ),
@@ -544,10 +606,10 @@ class _ReportesViewState extends State<ReportesView>
       children: [
         Expanded(
           child: _buildNavigationCard(
-            title: 'Meta Semanal',
+            title: 'Metas Actuales',
             subtitle: 'Progreso de esta semana',
             icon: Icons.flag_rounded,
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -565,14 +627,14 @@ class _ReportesViewState extends State<ReportesView>
             child: _buildMetaProgress(),
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16.w),
         Expanded(
           child: _buildNavigationCard(
-            title: 'Gastos Semanal',
+            title: 'Gastos Actuales',
             subtitle: 'En pesos colombianos',
             icon: Icons.receipt_long_rounded,
-            gradient: const LinearGradient(
-              colors: [Color(0xFFEF4444), Color(0xFFF87171)],
+            gradient: LinearGradient(
+              colors: [AppColors.error, Color(0xFFF87171)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -581,7 +643,7 @@ class _ReportesViewState extends State<ReportesView>
                 MaterialPageRoute(
                   builder: (_) => ChangeNotifierProvider(
                     create: (_) => GastosController(),
-                    child: const GastosScreen(),
+                    child: const ModernGastosScreen(),
                   ),
                 ),
               );
@@ -601,72 +663,87 @@ class _ReportesViewState extends State<ReportesView>
     required VoidCallback onTap,
     required Widget child,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 200.h, // Altura igual para ambos cards
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-        decoration: BoxDecoration(
-          color: _cardBackground,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryNightBlue.withOpacity(0.1),
+            blurRadius: 20.r,
+            offset: Offset(0, 8.h),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: _primaryNavy.withOpacity(0.08),
-              blurRadius: 20.r,
-              offset: Offset(0, 6.h),
+          onTap: onTap,
+          child: Container(
+            height: 200.h,
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(20.r),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: EdgeInsets.all(12.r),
-                  decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: gradient.colors.first.withOpacity(0.3),
-                        blurRadius: 8.r,
-                        offset: Offset(0, 4.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12.r),
+                      decoration: BoxDecoration(
+                        gradient: gradient,
+                        borderRadius: BorderRadius.circular(12.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: gradient.colors.first.withOpacity(0.3),
+                            blurRadius: 8.r,
+                            offset: Offset(0, 4.h),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Icon(icon, color: Colors.white, size: 24.sp),
+                    ),
+                    Container(
+                      padding: EdgeInsets.all(8.r),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: AppColors.textSecondary,
+                        size: 16.sp,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20.h),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: Icon(icon, color: Colors.white, size: 24.sp),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: _textSecondary,
-                  size: 16.sp,
+                SizedBox(height: 4.h),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
+                SizedBox(height: 16.h),
+                Expanded(child: child),
               ],
             ),
-            SizedBox(height: 16.h),
-            Text(
-              title,
-              style: TextStyle(
-                color: _textPrimary,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            // SizedBox(height: 4.h),
-            // Text(
-            //   subtitle,
-            //   style: TextStyle(
-            //     color: _textSecondary,
-            //     fontSize: 12.sp,
-            //     fontWeight: FontWeight.w500,
-            //   ),
-            // ),
-            SizedBox(height: 16.h),
-            Expanded(child: child),
-          ],
+          ),
         ),
       ),
     );
@@ -677,6 +754,7 @@ class _ReportesViewState extends State<ReportesView>
     final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
     final FinanzasService _finanzasService = FinanzasService();
+    
     return Consumer<ReportesController>(
       builder: (context, controller, _) {
         return StreamBuilder<List<ReservaConAgencia>>(
@@ -710,39 +788,23 @@ class _ReportesViewState extends State<ReportesView>
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  print(
-                    'DEBUG: No se encontró meta semanal para startOfWeek: ${startOfWeek.toIso8601String()}',
-                  );
-                  print(
-                    'DEBUG: Documentos encontrados: ${snapshot.data?.docs.length ?? 0}',
-                  );
-                  FirebaseFirestore.instance.collection('metas').get().then((
-                    allMetas,
-                  ) {
-                    for (var doc in allMetas.docs) {
-                      final start = (doc['startOfWeek'] as Timestamp).toDate();
-                      print(
-                        'DEBUG: Meta en Firestore - startOfWeek: ${start.toIso8601String()}',
-                      );
-                    }
-                  });
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Sin meta definida',
                         style: TextStyle(
-                          color: _textSecondary,
-                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 12.h),
                       Container(
-                        height: 6,
+                        height: 8.h,
                         decoration: BoxDecoration(
-                          color: _textSecondary.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(3),
+                          color: AppColors.textSecondary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4.r),
                         ),
                       ),
                     ],
@@ -752,7 +814,6 @@ class _ReportesViewState extends State<ReportesView>
                 final metaDoc = snapshot.data!.docs.first;
                 final metaPasajeros = metaDoc['goal'] ?? 0;
 
-                // Calcula los pasajeros actuales de la semana usando el controlador
                 final pasajerosActuales = _finanzasService
                     .calcularPasajerosEnRango(reservas, startOfWeek, endOfWeek);
 
@@ -768,52 +829,52 @@ class _ReportesViewState extends State<ReportesView>
                       children: [
                         Text(
                           '$pasajerosActuales',
-                          style: const TextStyle(
-                            color: _textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         Text(
                           '/ $metaPasajeros',
-                          style: const TextStyle(
-                            color: _textSecondary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 12.h),
                     Stack(
                       children: [
                         Container(
-                          height: 6,
+                          height: 8.h,
                           decoration: BoxDecoration(
-                            color: _textSecondary.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(3),
+                            color: AppColors.textSecondary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4.r),
                           ),
                         ),
                         FractionallySizedBox(
                           widthFactor: progreso,
                           child: Container(
-                            height: 6,
+                            height: 8.h,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
                               ),
-                              borderRadius: BorderRadius.circular(3),
+                              borderRadius: BorderRadius.circular(4.r),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 8.h),
                     Text(
                       '${(progreso * 100).toInt()}% completado',
-                      style: const TextStyle(
-                        color: _textSecondary,
-                        fontSize: 12,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -846,14 +907,14 @@ class _ReportesViewState extends State<ReportesView>
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Column(
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Cargando...',
                 style: TextStyle(
-                  color: _textSecondary,
-                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -875,61 +936,55 @@ class _ReportesViewState extends State<ReportesView>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              formatter.format(totalGastos),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 8.h),
             Row(
               children: [
-                Text(
-                  formatter.format(totalGastos),
-                  style: const TextStyle(
-                    color: _textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  width: 8.w,
+                  height: 8.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 8.w),
                 Text(
                   '${snapshot.data!.docs.length} transacciones',
-                  style: const TextStyle(
-                    color: _textSecondary,
-                    fontSize: 12,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                  ),
+            SizedBox(height: 8.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6.r),
+              ),
+              child: Text(
+                'Tiempo real',
+                style: TextStyle(
+                  color: AppColors.success,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Actualizado en tiempo real',
-                  style: TextStyle(
-                    color: _textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         );
       },
     );
-  }
-
-  String _formatCurrency(double amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)}K';
-    }
-    return amount.toStringAsFixed(0);
   }
 }

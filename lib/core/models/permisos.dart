@@ -44,4 +44,6 @@ enum Permission {
   recibir_notificaciones,
 
   // Añade aquí cualquier otra acción granular que necesites controlar
+
+  ver_pagina_reportes,
 }

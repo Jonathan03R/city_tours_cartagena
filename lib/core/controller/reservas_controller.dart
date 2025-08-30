@@ -297,10 +297,6 @@ class ReservasController extends ChangeNotifier {
   }
 
   void _updateFilteredReservasStream({bool resetPagination = false}) {
-    // DEBUG: log current filters before querying
-  debugPrint('[ReservasController] _updateFilteredReservasStream -> '
-    'filter=$_selectedFilter, date=$_customDate, agenciaId=$_agenciaIdFilter, '
-    'turno=$_turnoFilter, estado=$_estadoFilter');
     _reservasSubscription?.cancel();
 
     if (resetPagination) {
@@ -326,14 +322,10 @@ class ReservasController extends ChangeNotifier {
         )
         .listen(
     (snapshot) {
-       // DEBUG: number of documents returned by Firestore
-       debugPrint('[ReservasController] Firestore snapshot.docs.length: ${snapshot.docs.length}');
         final raw = snapshot.docs.map((d) => d.data()).toList();
-       debugPrint('[ReservasController] raw before agency filter: ${raw.length}');
             final valid = raw
        .where((r) => _allAgencias.any((a) => a.id == r.agenciaId))
        .toList();
-     debugPrint('[ReservasController] after agency filter: ${valid.length}');
             final total = valid.length;
             final start = _currentPageIndex * _itemsPerPage;
             final end = (start + _itemsPerPage).clamp(0, total);
@@ -343,15 +335,13 @@ class ReservasController extends ChangeNotifier {
               final ag = _allAgencias.firstWhere((a) => a.id == r.agenciaId);
               return ReservaConAgencia(reserva: r, agencia: ag);
             }).toList();
-           // DEBUG: loaded on current page
-           debugPrint('[ReservasController] loaded page ${currentPage}: ${_allLoadedReservas.length} items');
             _isFetchingPage = false;
             _isLoading = false;
             _filteredReservasSubject.add(_allLoadedReservas);
             notifyListeners();
           },
           onError: (e) {
-            debugPrint('Error en ReservasController stream: $e');
+            // debugPrint('Error en ReservasController stream: $e');
             _isFetchingPage = false;
             _isLoading = false;
             _filteredReservasSubject.addError(e);
@@ -389,7 +379,7 @@ class ReservasController extends ChangeNotifier {
       maxCupos = config.maxCuposTurnoTarde;
     }
 
-    debugPrint('[addReserva] Turno: ${reserva.turno}, maxCupos: $maxCupos');
+    // debugPrint('[addReserva] Turno: ${reserva.turno}, maxCupos: $maxCupos');
 
     // Validar que el total de pax actuales más los de esta reserva no supere el límite
     if (maxCupos != null) {
@@ -397,7 +387,7 @@ class ReservasController extends ChangeNotifier {
         turno: reserva.turno!,
         fecha: reserva.fecha,
       );
-      debugPrint('[addReserva] Pax actuales: $actuales, pax a agregar: ${reserva.pax}, total: ${actuales + reserva.pax}');
+      // debugPrint('[addReserva] Pax actuales: $actuales, pax a agregar: ${reserva.pax}, total: ${actuales + reserva.pax}');
       if (actuales + reserva.pax > maxCupos) {
         final whatsapp = config.contact_whatsapp ?? '';
         throw Exception(
@@ -418,9 +408,9 @@ class ReservasController extends ChangeNotifier {
     await _firestoreService.deleteReserva(id);
   }
 
-  static void printDebugInfo() {
-    debugPrint('ReservasController debug info: (implementar si es necesario)');
-  }
+  // static void printDebugInfo() {
+  //   debugPrint('ReservasController debug info: (implementar si es necesario)');
+  // }
 
   @override
   void dispose() {

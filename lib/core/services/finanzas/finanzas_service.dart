@@ -12,7 +12,6 @@ class FinanzasService {
     DateTime fin, {
     TurnoType? turno,
   }) {
-    debugPrint('DEBUG: Turno recibido: ${turno?.toString() ?? "Todos"}');
     double totalGanancias = 0.0;
 
     for (var ra in reservas) {
@@ -26,21 +25,13 @@ class FinanzasService {
           !fechaNorm.isBefore(inicio) && !fechaNorm.isAfter(fin);
       final turnoCoincide = turno == null || ra.reserva.turno == turno;
 
-      debugPrint(
-        'DEBUG: Reserva ${ra.reserva.id} – Fecha: $fechaOrig (norm: $fechaNorm) '
-        '- Incluida: $dentroRango - Turno: ${ra.reserva.turno} - Coincide: $turnoCoincide',
-      );
-
       if (dentroRango && turnoCoincide) {
         final ganancia = ra.reserva.ganancia;
         totalGanancias += ganancia;
-        debugPrint(
-          'DEBUG: --> Ganancia: $ganancia (Acumulado: $totalGanancias)',
-        );
+        
       }
     }
 
-    debugPrint('DEBUG: Total ganancias en rango: $totalGanancias');
     return totalGanancias;
   }
 
@@ -50,11 +41,7 @@ class FinanzasService {
     DateTime fin, {
     TurnoType? turno,
   }) {
-    debugPrint('DEBUG: --- calcularPasajerosEnRango ---');
-    debugPrint(
-      'DEBUG: Rango recibido: inicio=${inicio.toIso8601String()} fin=${fin.toIso8601String()}',
-    );
-    debugPrint('DEBUG: Turno recibido: ${turno?.toString() ?? "Todos"}');
+    
     int totalPasajeros = 0;
     for (var reserva in reservas) {
       final fechaReservaOriginal = reserva.reserva.fecha;
@@ -68,17 +55,12 @@ class FinanzasService {
       final incluida =
           !fechaReserva.isBefore(inicioDia) && !fechaReserva.isAfter(finDia);
       final turnoCoincide = turno == null || reserva.reserva.turno == turno;
-      debugPrint(
-        'DEBUG: Reserva ${reserva.reserva.id} - Fecha: $fechaReservaOriginal (normalizada: $fechaReserva) - Incluida: $incluida - Turno: ${reserva.reserva.turno} - Coincide turno: $turnoCoincide',
-      );
+     
       if (incluida && turnoCoincide) {
         totalPasajeros += reserva.reserva.pax;
-        debugPrint(
-          'DEBUG: --> Suma pax: ${reserva.reserva.pax} (Total acumulado: $totalPasajeros)',
-        );
+        
       }
     }
-    debugPrint('DEBUG: Total pasajeros en rango: $totalPasajeros');
     return totalPasajeros;
   }
 
