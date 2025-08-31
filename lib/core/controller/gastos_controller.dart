@@ -51,18 +51,19 @@ class GastosController extends ChangeNotifier {
     final now = DateTime.now();
     final primerDiaSemana = now.subtract(Duration(days: now.weekday % 7));
     final ultimoDiaSemana = primerDiaSemana.add(const Duration(days: 6));
-    return await _gastosService.obtenerSumaDeGastosEntre(primerDiaSemana, ultimoDiaSemana);
+    return await _gastosService.obtenerSumaDeGastosEntre(
+      primerDiaSemana,
+      ultimoDiaSemana,
+    );
   }
-
-  Future<void> cargarPagina() async {
-    // Si ya está en cache, la usamos
+Future<void> cargarPagina() async {
+  try {
     if (_paginaActual <= _cachePaginas.length) {
       gastosActuales = _cachePaginas[_paginaActual - 1];
       notifyListeners();
       return;
     }
 
-    // Si no está en cache, pedimos a Firestore
     final snapshot = await _gastosService.obtenerPagina(
       limite: _limite,
       ultimoDoc: _ultimoDoc,
@@ -74,11 +75,12 @@ class GastosController extends ChangeNotifier {
       _ultimoDoc = gastosActuales.last;
     }
 
-    // Guardamos en cache
     _cachePaginas.add(gastosActuales);
-
     notifyListeners();
+  } catch (e) {
+    debugPrint('Error al cargar la página: $e');
   }
+}
 
   Future<void> siguientePagina() async {
     if (_paginaActual < _totalPaginas) {
@@ -124,18 +126,26 @@ class GastosController extends ChangeNotifier {
     }
   }
 
-  Future<void> eliminarGasto(String id) async {
-    try {
-      _cargando = true;
-      notifyListeners();
-      await _gastosService.eliminar(id);
-    } catch (e) {
-      debugPrint('Error al eliminar gasto: $e');
-    } finally {
-      _cargando = false;
-      notifyListeners();
-    }
+ Future<void> eliminarGasto(String id) async {
+  try {
+    _cargando = true;
+    notifyListeners();
+    await _gastosService.eliminar(id);
+    // Actualiza totales después de borrar
+    _totalGastos = await _gastosService.obtenerCantidadGastos();
+    _totalPaginas = (_totalGastos / _limite).ceil();
+    // Limpia la caché y recarga los datos desde Firestore
+    _cachePaginas.clear();
+    _ultimoDoc = null;
+    await cargarPagina();
+  } catch (e) {
+    // Manejo de errores
+    debugPrint('Error al eliminar gasto en el controlador: $e');
+  } finally {
+    _cargando = false;
+    notifyListeners();
   }
+}
 
   /// Modelo para métricas financieras por periodo.
   /// Agrupa gastos + ganancias + utilidad + margen según el periodo seleccionado.

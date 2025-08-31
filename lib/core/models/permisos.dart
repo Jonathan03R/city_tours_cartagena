@@ -46,4 +46,13 @@ enum Permission {
   // Añade aquí cualquier otra acción granular que necesites controlar
 
   ver_pagina_reportes,
+  ver_cards_metas,
+  ver_cards_gastos,
+
+  ver_graficos_pasajeros,
+  ver_graficos_gastos,
+
+
+  ver_graficos_pasajeros_semanal,
+  ver_graficos_gastos_semanal,
 }

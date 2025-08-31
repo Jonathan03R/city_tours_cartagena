@@ -18,8 +18,6 @@ import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reportes/vista_reportes.dart';
-import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
-import 'package:citytourscartagena/screens/reservas/turno_selector.dart';
 import 'package:citytourscartagena/screens/servicios/servicio_view.dart';
 import 'package:citytourscartagena/screens/usuarios/tabar.dart';
 import 'package:flutter/material.dart';
@@ -114,9 +112,9 @@ class _MainScreenState extends State<MainScreen> {
     final canViewUsuarios = authController.hasPermission(
       Permission.ver_pagina_usuarios,
     );
-    final canViewReportes = authController.hasPermission(
-      Permission.ver_pagina_reportes,
-    );
+    // final canViewReportes = authController.hasPermission(
+    //   Permission.ver_pagina_reportes,
+    // );
 
     /// Si no tiene permisos, redirigir a la pantalla de configuración
     final authRole = context.read<AuthController>();
@@ -139,21 +137,10 @@ class _MainScreenState extends State<MainScreen> {
         const UsuariosScreen(), // Pestaña de colaboradores
       ] else ...[
         if (canViewReservas)
-          (_turnoSeleccionado == null
-              ? TurnoSelectorWidget(
-                  onTurnoSelected: (turno) => setState(() {
-                    _turnoSeleccionado = turno as TurnoType?;
-                  }),
-                )
-              : ReservasView(
-                  turno: _turnoSeleccionado,
-                  onBack: () => setState(() {
-                    _turnoSeleccionado = null;
-                  }),
-                )),
+          const ReportesView(),
         if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
         if (canViewUsuarios) const UsuariosScreen(),
-        if (canViewReportes) const ReportesView(), // Nueva página de estadísticas
+        // if (canViewReportes) const ReportesView(), // Nueva página de estadísticas
       ],
     ];
     // Definir los ítems del bottom bar según permisos
@@ -171,7 +158,7 @@ class _MainScreenState extends State<MainScreen> {
       ] else ...[
         if (canViewReservas)
           const BottomNavigationBarItem(
-            icon: Icon(Icons.event),
+            icon: Icon(Icons.home),
             label: 'Reservas',
           ),
         if (canViewAgencias)
@@ -184,11 +171,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.people),
             label: 'Colaboradores',
           ),
-        if (canViewReportes)
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Estadisticas',
-          ),
+        // if (canViewReportes)
+        //   const BottomNavigationBarItem(
+        //     icon: Icon(Icons.bar_chart),
+        //     label: 'Estadisticas',
+        //   ),
       ],
     ];
     // Asegurar que currentIndex esté dentro de los límites de navItems

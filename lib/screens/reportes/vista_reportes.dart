@@ -1,9 +1,11 @@
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/metas_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
@@ -12,6 +14,9 @@ import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
+import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
+import 'package:citytourscartagena/screens/reservas/turno_selector.dart'
+    show SelectorTurnos, TurnoSelectorWidget;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -75,6 +80,8 @@ class _ReportesViewState extends State<ReportesView>
 
   @override
   Widget build(BuildContext context) {
+    final authRole = context.watch<AuthController>();
+
     return Consumer<ReportesController>(
       builder: (context, controller, child) {
         return Container(
@@ -106,79 +113,106 @@ class _ReportesViewState extends State<ReportesView>
                   child: CustomScrollView(
                     physics: const BouncingScrollPhysics(),
                     slivers: [
-                      SliverAppBar(
-                        expandedHeight: 120.h,
-                        floating: false,
-                        pinned: true,
-                        elevation: 0,
-                        backgroundColor: Colors.transparent,
-                        flexibleSpace: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppColors.primaryNightBlue,
-                                AppColors.secondaryNightBlue,
-                                AppColors.accentBlue,
-                              ],
-                              stops: [0.0, 0.6, 1.0],
-                            ),
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(32.r),
-                              bottomRight: Radius.circular(32.r),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryNightBlue.withOpacity(
-                                  0.3,
-                                ),
-                                blurRadius: 20.r,
-                                offset: Offset(0, 8.h),
-                              ),
-                            ],
-                          ),
-                          child: FlexibleSpaceBar(
-                            title: ShaderMask(
-                              shaderCallback: (bounds) => LinearGradient(
-                                colors: [
-                                  Colors.white,
-                                  Colors.white.withOpacity(0.9),
-                                ],
-                              ).createShader(bounds),
-                              child: Text(
-                                'Dashboard Financiero',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: AppColors.primaryNightBlue
-                                          .withOpacity(0.5),
-                                      blurRadius: 8.0,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            centerTitle: true,
-                          ),
-                        ),
-                      ),
-
+                      // SliverAppBar(
+                      //   expandedHeight: 120.h,
+                      //   floating: false,
+                      //   pinned: true,
+                      //   elevation: 0,
+                      //   backgroundColor: Colors.transparent,
+                      //   flexibleSpace: Container(
+                      //     decoration: BoxDecoration(
+                      //       gradient: LinearGradient(
+                      //         begin: Alignment.topLeft,
+                      //         end: Alignment.bottomRight,
+                      //         colors: [
+                      //           AppColors.primaryNightBlue,
+                      //           AppColors.secondaryNightBlue,
+                      //           AppColors.accentBlue,
+                      //         ],
+                      //         stops: [0.0, 0.6, 1.0],
+                      //       ),
+                      //       borderRadius: BorderRadius.only(
+                      //         bottomLeft: Radius.circular(32.r),
+                      //         bottomRight: Radius.circular(32.r),
+                      //       ),
+                      //       boxShadow: [
+                      //         BoxShadow(
+                      //           color: AppColors.primaryNightBlue.withOpacity(
+                      //             0.3,
+                      //           ),
+                      //           blurRadius: 20.r,
+                      //           offset: Offset(0, 8.h),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //     child: FlexibleSpaceBar(
+                      //       title: ShaderMask(
+                      //         shaderCallback: (bounds) => LinearGradient(
+                      //           colors: [
+                      //             Colors.white,
+                      //             Colors.white.withOpacity(0.9),
+                      //           ],
+                      //         ).createShader(bounds),
+                      //         child: Text(
+                      //           'Dashboard Financiero',
+                      //           style: TextStyle(
+                      //             color: Colors.white,
+                      //             fontSize: 20.sp,
+                      //             fontWeight: FontWeight.w700,
+                      //             letterSpacing: 0.5,
+                      //             shadows: [
+                      //               Shadow(
+                      //                 color: AppColors.primaryNightBlue
+                      //                     .withOpacity(0.5),
+                      //                 blurRadius: 8.0,
+                      //                 offset: Offset(0, 2),
+                      //               ),
+                      //             ],
+                      //           ),
+                      //         ),
+                      //       ),
+                      //       centerTitle: true,
+                      //     ),
+                      //   ),
+                      // ),
                       SliverPadding(
                         padding: EdgeInsets.all(20.w),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
+                            // if (authRole.hasPermission(Permission.ver_cards_navegacion))
                             _buildNavigationCards(),
-                            SizedBox(height: 32.h),
-                            _graficosComparativos(controller, reservas),
-                            SizedBox(height: 32.h),
-                            _buildWeeklyCharts(controller, reservas),
-                            SizedBox(height: 100.h), // Bottom padding
+                            TurnoSelectorWidget(
+                              onTurnoSelected: (turno) {
+                                // Aquí puedes manejar la lógica cuando se selecciona un turno
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ReservasView(
+                                      turno: turno,
+                                      onBack: () => Navigator.of(context).pop(),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            SizedBox(height: 24.h),
+                            if (authRole.hasPermission(
+                                  Permission.ver_graficos_pasajeros,
+                                ) ||
+                                authRole.hasPermission(
+                                  Permission.ver_graficos_gastos,
+                                )) ...[
+                              _graficosComparativos(controller, reservas),
+                              SizedBox(height: 24.h),
+                            ],
+                            if (authRole.hasPermission(
+                                  Permission.ver_graficos_pasajeros_semanal,
+                                ) ||
+                                authRole.hasPermission(
+                                  Permission.ver_graficos_gastos_semanal,
+                                )) ...[
+                              _buildWeeklyCharts(controller, reservas),
+                              SizedBox(height: 100.h), // Bottom padding
+                            ],
                           ]),
                         ),
                       ),
@@ -193,66 +227,83 @@ class _ReportesViewState extends State<ReportesView>
     );
   }
 
+  Widget _titulos({
+    required String title,
+    required IconData icon,
+    required LinearGradient gradient,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundWhite,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryNightBlue.withOpacity(0.08),
+            blurRadius: 20.r,
+            offset: Offset(0, 4.h),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20.sp),
+          ),
+          SizedBox(width: 12.w),
+          Text(
+            title,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _graficosComparativos(
     ReportesController reportesController,
     List<ReservaConAgencia> reservas,
   ) {
+    final authRole = context.watch<AuthController>();
     return ChangeNotifierProvider.value(
       value: _filtrosController,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: AppColors.backgroundWhite,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryNightBlue.withOpacity(0.08),
-                  blurRadius: 20.r,
-                  offset: Offset(0, 4.h),
+          // if (authRole.hasPermission(Permission.ver_graficos_pasajeros) ||
+          //     authRole.hasPermission(Permission.ver_graficos_gastos))
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _titulos(
+                title: 'Análisis Comparativo',
+                icon: Icons.analytics_rounded,
+                gradient: LinearGradient(
+                  colors: [AppColors.accentBlue, AppColors.lightBlue],
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(10.r),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.accentBlue, AppColors.lightBlue],
-                    ),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.analytics_rounded,
-                    color: Colors.white,
-                    size: 20.sp,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Text(
-                  'Análisis Comparativo',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              SizedBox(height: 16.h),
+              ModernFiltrosFlexiblesWidget(controller: _filtrosController),
+              SizedBox(height: 20.h),
+            ],
           ),
-          SizedBox(height: 16.h),
-          ModernFiltrosFlexiblesWidget(controller: _filtrosController),
-          SizedBox(height: 20.h),
+
           Consumer<FiltroFlexibleController>(
             builder: (context, filtrosController, child) {
               // ... existing logic ...
               final turno = filtrosController.turnoSeleccionado;
               final periodo = filtrosController.periodoSeleccionado!;
 
-               final semanas = filtrosController.semanasSeleccionadasSorted;
+              final semanas = filtrosController.semanasSeleccionadasSorted;
               final meses = filtrosController.mesesSeleccionadosSorted;
               final anios = filtrosController.aniosSeleccionadosSorted;
 
@@ -309,15 +360,20 @@ class _ReportesViewState extends State<ReportesView>
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ModernGraficoComparacion(
-                    datos: datosPasajeros,
-                    titulo: "Pasajeros",
-                  ),
-                  SizedBox(height: 32.h),
-                  ModernGraficoComparacionLinea(
-                    datos: datosGanancias,
-                    titulo: "Ganancias",
-                  ),
+                  if (authRole.hasPermission(
+                    Permission.ver_graficos_pasajeros,
+                  )) ...[
+                    ModernGraficoComparacion(
+                      datos: datosPasajeros,
+                      titulo: "Pasajeros",
+                    ),
+                    SizedBox(height: 32.h),
+                  ],
+                  if (authRole.hasPermission(Permission.ver_graficos_gastos))
+                    ModernGraficoComparacionLinea(
+                      datos: datosGanancias,
+                      titulo: "Ganancias",
+                    ),
                 ],
               );
             },
@@ -331,6 +387,7 @@ class _ReportesViewState extends State<ReportesView>
     ReportesController reportesController,
     List<ReservaConAgencia> reservas,
   ) {
+    final authRole = context.watch<AuthController>();
     return ChangeNotifierProvider.value(
       value: _filtrosController,
       child: Column(
@@ -480,27 +537,46 @@ class _ReportesViewState extends State<ReportesView>
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Turno: ${filtrosController.turnoSeleccionado?.label ?? 'Todos'}',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
+                  SizedBox(height: 5.h),
+
+                  _titulos(
+                    title:
+                        'Filtros: ${filtrosController.turnoSeleccionado?.label ?? 'Todos'}',
+                    icon: Icons.analytics_rounded,
+                    gradient: LinearGradient(
+                      colors: [AppColors.accentBlue, AppColors.lightBlue],
                     ),
                   ),
-                  ModernGraficoSemanal(
-                    data: pasajerosData,
-                    titulo:
-                        'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
-                        'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
-                  ),
-                  SizedBox(height: 32.h),
-                  ModernGraficoGananciasSemanal(
-                    data: gananciasData,
-                    titulo:
-                        'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
-                        'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
-                  ),
+                  // Text(
+                  //   'Turno: ${filtrosController.turnoSeleccionado?.label ?? 'Todos'}',
+                  //   style: TextStyle(
+                  //     color: AppColors.textPrimary,
+                  //     fontSize: 16.sp,
+                  //     fontWeight: FontWeight.w600,
+                  //   ),
+                  // ),
+                  if (authRole.hasPermission(
+                    Permission.ver_graficos_pasajeros_semanal,
+                  )) ...[
+                    SizedBox(height: 20.h),
+                    ModernGraficoSemanal(
+                      data: pasajerosData,
+                      titulo:
+                          'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                          'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
+                    ),
+                  ],
+                  if (authRole.hasPermission(
+                    Permission.ver_graficos_pasajeros_semanal,
+                  )) ...[
+                    SizedBox(height: 32.h),
+                    ModernGraficoGananciasSemanal(
+                      data: gananciasData,
+                      titulo:
+                          'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                          'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
+                    ),
+                  ],
                 ],
               );
             },
@@ -630,61 +706,66 @@ class _ReportesViewState extends State<ReportesView>
   }
 
   Widget _buildNavigationCards() {
+    final authRole = context.watch<AuthController>();
     return Row(
       children: [
-        Expanded(
-          child: _buildNavigationCard(
-            title: 'Metas Actuales',
-            subtitle: 'Progreso de esta semana',
-            icon: Icons.flag_rounded,
-            gradient: LinearGradient(
-              colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChangeNotifierProvider(
-                    create: (_) => MetasController(),
-                    child: const MetasScreen(),
+        if (authRole.hasPermission(Permission.ver_cards_metas))
+          Expanded(
+            child: _buildNavigationCard(
+              title: 'Metas Actuales',
+              subtitle: 'Progreso de esta semana',
+              icon: Icons.flag_rounded,
+              gradient: LinearGradient(
+                colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider(
+                      create: (_) => MetasController(),
+                      child: const MetasScreen(),
+                    ),
                   ),
-                ),
-              );
-            },
-            child: ChangeNotifierProvider(  // Agrega Provider aquí
-              create: (_) => MetasController(),
-              child: _buildMetaProgress(),
+                );
+              },
+              child: ChangeNotifierProvider(
+                // Agrega Provider aquí
+                create: (_) => MetasController(),
+                child: _buildMetaProgress(),
+              ),
             ),
           ),
-        ),
         SizedBox(width: 16.w),
-        Expanded(
-          child: _buildNavigationCard(
-            title: 'Gastos Actuales',
-            subtitle: 'En pesos colombianos',
-            icon: Icons.receipt_long_rounded,
-            gradient: LinearGradient(
-              colors: [AppColors.error, Color(0xFFF87171)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChangeNotifierProvider(
-                    create: (_) => GastosController(),
-                    child: const ModernGastosScreen(),
+        if (authRole.hasPermission(Permission.ver_cards_gastos))
+          Expanded(
+            child: _buildNavigationCard(
+              title: 'Gastos Actuales',
+              subtitle: 'En pesos colombianos',
+              icon: Icons.receipt_long_rounded,
+              gradient: LinearGradient(
+                colors: [AppColors.error, Color(0xFFF87171)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider(
+                      create: (_) => GastosController(),
+                      child: const ModernGastosScreen(),
+                    ),
                   ),
-                ),
-              );
-            },
-            child: _buildGastosSemanal(),
+                );
+              },
+              child: _buildGastosSemanal(),
+            ),
           ),
-        ),
       ],
     );
   }
+
   Widget _buildNavigationCard({
     required String title,
     required String subtitle,
@@ -716,7 +797,8 @@ class _ReportesViewState extends State<ReportesView>
               color: AppColors.backgroundWhite,
               borderRadius: BorderRadius.circular(20.r),
             ),
-            child: SingleChildScrollView( // Scroll abarca title, subtitle y child
+            child: SingleChildScrollView(
+              // Scroll abarca title, subtitle y child
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -855,7 +937,10 @@ class _ReportesViewState extends State<ReportesView>
               );
             }
 
-            final progreso = (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0);
+            final progreso = (pasajerosActuales / metaPasajeros).clamp(
+              0.0,
+              1.0,
+            );
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -931,14 +1016,16 @@ class _ReportesViewState extends State<ReportesView>
     );
   }
 
-  Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(MetasController controller) async {
+  Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
+    MetasController controller,
+  ) async {
     final turno = Formatters.getTurnoActual();
     final meta = await controller.obtenerMetaSemanaActualTurnoActual();
-    final pasajeros = await controller.obtenerSumaPasajerosSemanaActualTurnoActual();
-    final turnoLabel = turno.label;  // Reutiliza la extensión
+    final pasajeros = await controller
+        .obtenerSumaPasajerosSemanaActualTurnoActual();
+    final turnoLabel = turno.label; // Reutiliza la extensión
     return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
   }
-
 
   Widget _buildGastosSemanal() {
     return Consumer<GastosController>(

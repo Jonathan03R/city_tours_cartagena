@@ -62,13 +62,13 @@ class GastosService {
   }
 
   Future<int> obtenerCantidadGastos() async {
-    try {
-      QuerySnapshot snapshot = await _firestore.collection('gastos').get();
-      return snapshot.docs.length;
-    } catch (e) {
-      throw Exception('Error al obtener cantidad de gastos: $e');
-    }
+  try {
+    QuerySnapshot snapshot = await _firestore.collection('gastos').where('estado', isEqualTo: 'activo').get();
+    return snapshot.docs.length;
+  } catch (e) {
+    throw Exception('Error al obtener cantidad de gastos: $e');
   }
+}
 
   Future<void> eliminar(String id) async {
     try {
