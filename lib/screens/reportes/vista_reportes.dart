@@ -1,0 +1,1111 @@
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/filters_controller.dart';
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
+import 'package:citytourscartagena/core/controller/metas_controller.dart';
+import 'package:citytourscartagena/core/controller/reportes_controller.dart';
+import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
+import 'package:citytourscartagena/core/models/permisos.dart';
+import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
+import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/screens/metas/metas_screen.dart';
+import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
+import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
+import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
+import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
+import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
+import 'package:citytourscartagena/screens/reservas/turno_selector.dart'
+    show SelectorTurnos, TurnoSelectorWidget;
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+
+class ReportesView extends StatefulWidget {
+  const ReportesView({super.key});
+
+  @override
+  State<ReportesView> createState() => _ReportesViewState();
+}
+
+class _ReportesViewState extends State<ReportesView>
+    with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  late FiltroFlexibleController _filtrosController;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutQuart),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
+
+    _fadeController.forward();
+    _slideController.forward();
+    _filtrosController = FiltroFlexibleController();
+
+    // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
+    _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
+    final now = DateTime.now();
+    for (int i = 0; i < 4; i++) {
+      _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
+    }
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    _filtrosController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authRole = context.watch<AuthController>();
+
+    return Consumer<ReportesController>(
+      builder: (context, controller, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.backgroundGray, AppColors.backgroundWhite],
+              stops: [0.0, 1.0],
+            ),
+          ),
+          child: StreamBuilder<List<ReservaConAgencia>>(
+            stream: controller.reservasStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildLoadingState();
+              }
+
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              final reservas = snapshot.data!;
+
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      // SliverAppBar(
+                      //   expandedHeight: 120.h,
+                      //   floating: false,
+                      //   pinned: true,
+                      //   elevation: 0,
+                      //   backgroundColor: Colors.transparent,
+                      //   flexibleSpace: Container(
+                      //     decoration: BoxDecoration(
+                      //       gradient: LinearGradient(
+                      //         begin: Alignment.topLeft,
+                      //         end: Alignment.bottomRight,
+                      //         colors: [
+                      //           AppColors.primaryNightBlue,
+                      //           AppColors.secondaryNightBlue,
+                      //           AppColors.accentBlue,
+                      //         ],
+                      //         stops: [0.0, 0.6, 1.0],
+                      //       ),
+                      //       borderRadius: BorderRadius.only(
+                      //         bottomLeft: Radius.circular(32.r),
+                      //         bottomRight: Radius.circular(32.r),
+                      //       ),
+                      //       boxShadow: [
+                      //         BoxShadow(
+                      //           color: AppColors.primaryNightBlue.withOpacity(
+                      //             0.3,
+                      //           ),
+                      //           blurRadius: 20.r,
+                      //           offset: Offset(0, 8.h),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //     child: FlexibleSpaceBar(
+                      //       title: ShaderMask(
+                      //         shaderCallback: (bounds) => LinearGradient(
+                      //           colors: [
+                      //             Colors.white,
+                      //             Colors.white.withOpacity(0.9),
+                      //           ],
+                      //         ).createShader(bounds),
+                      //         child: Text(
+                      //           'Dashboard Financiero',
+                      //           style: TextStyle(
+                      //             color: Colors.white,
+                      //             fontSize: 20.sp,
+                      //             fontWeight: FontWeight.w700,
+                      //             letterSpacing: 0.5,
+                      //             shadows: [
+                      //               Shadow(
+                      //                 color: AppColors.primaryNightBlue
+                      //                     .withOpacity(0.5),
+                      //                 blurRadius: 8.0,
+                      //                 offset: Offset(0, 2),
+                      //               ),
+                      //             ],
+                      //           ),
+                      //         ),
+                      //       ),
+                      //       centerTitle: true,
+                      //     ),
+                      //   ),
+                      // ),
+                      SliverPadding(
+                        padding: EdgeInsets.all(20.w),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            // if (authRole.hasPermission(Permission.ver_cards_navegacion))
+                            _buildNavigationCards(),
+                            TurnoSelectorWidget(
+                              onTurnoSelected: (turno) {
+                                // Aquí puedes manejar la lógica cuando se selecciona un turno
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ReservasView(
+                                      turno: turno,
+                                      onBack: () => Navigator.of(context).pop(),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            SizedBox(height: 24.h),
+                            if (authRole.hasPermission(
+                                  Permission.ver_graficos_pasajeros,
+                                ) ||
+                                authRole.hasPermission(
+                                  Permission.ver_graficos_gastos,
+                                )) ...[
+                              _graficosComparativos(controller, reservas),
+                              SizedBox(height: 24.h),
+                            ],
+                            if (authRole.hasPermission(
+                                  Permission.ver_graficos_pasajeros_semanal,
+                                ) ||
+                                authRole.hasPermission(
+                                  Permission.ver_graficos_gastos_semanal,
+                                )) ...[
+                              _buildWeeklyCharts(controller, reservas),
+                              SizedBox(height: 100.h), // Bottom padding
+                            ],
+                          ]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _titulos({
+    required String title,
+    required IconData icon,
+    required LinearGradient gradient,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundWhite,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryNightBlue.withOpacity(0.08),
+            blurRadius: 20.r,
+            offset: Offset(0, 4.h),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20.sp),
+          ),
+          SizedBox(width: 12.w),
+          Text(
+            title,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _graficosComparativos(
+    ReportesController reportesController,
+    List<ReservaConAgencia> reservas,
+  ) {
+    final authRole = context.watch<AuthController>();
+    return ChangeNotifierProvider.value(
+      value: _filtrosController,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // if (authRole.hasPermission(Permission.ver_graficos_pasajeros) ||
+          //     authRole.hasPermission(Permission.ver_graficos_gastos))
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _titulos(
+                title: 'Análisis Comparativo',
+                icon: Icons.analytics_rounded,
+                gradient: LinearGradient(
+                  colors: [AppColors.accentBlue, AppColors.lightBlue],
+                ),
+              ),
+              SizedBox(height: 16.h),
+              ModernFiltrosFlexiblesWidget(controller: _filtrosController),
+              SizedBox(height: 20.h),
+            ],
+          ),
+
+          Consumer<FiltroFlexibleController>(
+            builder: (context, filtrosController, child) {
+              // ... existing logic ...
+              final turno = filtrosController.turnoSeleccionado;
+              final periodo = filtrosController.periodoSeleccionado!;
+
+              final semanas = filtrosController.semanasSeleccionadasSorted;
+              final meses = filtrosController.mesesSeleccionadosSorted;
+              final anios = filtrosController.aniosSeleccionadosSorted;
+
+              List<ChartCategoryData> datosPasajeros = [];
+              List<ChartCategoryData> datosGanancias = [];
+
+              if (periodo == FiltroPeriodo.semana && semanas.isNotEmpty) {
+                datosPasajeros = reportesController.agruparPasajerosPorRangos(
+                  reservas,
+                  semanas,
+                  turno: turno,
+                );
+                datosGanancias = reportesController.agruparGananciasPorRangos(
+                  reservas,
+                  semanas,
+                  turno: turno,
+                );
+              } else if (periodo == FiltroPeriodo.mes && meses.isNotEmpty) {
+                final rangos = meses.map((m) {
+                  final inicio = DateTime(m.year, m.month, 1);
+                  final fin = DateTime(m.year, m.month + 1, 0);
+                  return DateTimeRange(start: inicio, end: fin);
+                }).toList();
+
+                datosPasajeros = reportesController.agruparPasajerosPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+                datosGanancias = reportesController.agruparGananciasPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+              } else if (periodo == FiltroPeriodo.anio && anios.isNotEmpty) {
+                final rangos = anios.map((y) {
+                  final inicio = DateTime(y, 1, 1);
+                  final fin = DateTime(y, 12, 31);
+                  return DateTimeRange(start: inicio, end: fin);
+                }).toList();
+
+                datosPasajeros = reportesController.agruparPasajerosPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+                datosGanancias = reportesController.agruparGananciasPorRangos(
+                  reservas,
+                  rangos,
+                  turno: turno,
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (authRole.hasPermission(
+                    Permission.ver_graficos_pasajeros,
+                  )) ...[
+                    ModernGraficoComparacion(
+                      datos: datosPasajeros,
+                      titulo: "Pasajeros",
+                    ),
+                    SizedBox(height: 32.h),
+                  ],
+                  if (authRole.hasPermission(Permission.ver_graficos_gastos))
+                    ModernGraficoComparacionLinea(
+                      datos: datosGanancias,
+                      titulo: "Ganancias",
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeeklyCharts(
+    ReportesController reportesController,
+    List<ReservaConAgencia> reservas,
+  ) {
+    final authRole = context.watch<AuthController>();
+    return ChangeNotifierProvider.value(
+      value: _filtrosController,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.08),
+                  blurRadius: 20.r,
+                  offset: Offset(0, 4.h),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10.r),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.success, Color(0xFF34D399)],
+                        ),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Icon(
+                        Icons.calendar_view_week_rounded,
+                        color: Colors.white,
+                        size: 20.sp,
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Text(
+                      'Análisis Semanal',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.accentBlue, AppColors.lightBlue],
+                    ),
+                    borderRadius: BorderRadius.circular(10.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentBlue.withOpacity(0.3),
+                        blurRadius: 8.r,
+                        offset: Offset(0, 4.h),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10.r),
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final fechaSeleccionada = await showDatePicker(
+                          context: context,
+                          initialDate: now,
+                          firstDate: DateTime(now.year - 5),
+                          lastDate: DateTime(now.year + 5),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: ColorScheme.light(
+                                  primary: AppColors.primaryNightBlue,
+                                  onPrimary: Colors.white,
+                                  surface: AppColors.backgroundWhite,
+                                  onSurface: AppColors.textPrimary,
+                                ),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
+
+                        if (fechaSeleccionada != null) {
+                          _filtrosController.seleccionarSemana(
+                            fechaSeleccionada,
+                          );
+                        }
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 8.h,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.date_range_rounded,
+                              color: Colors.white,
+                              size: 16.sp,
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              'Seleccionar',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20.h),
+          Consumer<FiltroFlexibleController>(
+            builder: (context, filtrosController, child) {
+              final semanaSeleccionada = filtrosController.semanaSeleccionada;
+
+              final pasajerosData = reportesController
+                  .calcularPasajerosPorSemana(
+                    list: reservas,
+                    inicio: semanaSeleccionada.start,
+                    fin: semanaSeleccionada.end,
+                    turno: filtrosController.turnoSeleccionado,
+                  );
+
+              final gananciasData = reportesController
+                  .calcularGananciasPorSemana(
+                    list: reservas,
+                    inicio: semanaSeleccionada.start,
+                    fin: semanaSeleccionada.end,
+                    turno: filtrosController.turnoSeleccionado,
+                  );
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 5.h),
+
+                  _titulos(
+                    title:
+                        'Filtros: ${filtrosController.turnoSeleccionado?.label ?? 'Todos'}',
+                    icon: Icons.analytics_rounded,
+                    gradient: LinearGradient(
+                      colors: [AppColors.accentBlue, AppColors.lightBlue],
+                    ),
+                  ),
+                  // Text(
+                  //   'Turno: ${filtrosController.turnoSeleccionado?.label ?? 'Todos'}',
+                  //   style: TextStyle(
+                  //     color: AppColors.textPrimary,
+                  //     fontSize: 16.sp,
+                  //     fontWeight: FontWeight.w600,
+                  //   ),
+                  // ),
+                  if (authRole.hasPermission(
+                    Permission.ver_graficos_pasajeros_semanal,
+                  )) ...[
+                    SizedBox(height: 20.h),
+                    ModernGraficoSemanal(
+                      data: pasajerosData,
+                      titulo:
+                          'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                          'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
+                    ),
+                  ],
+                  if (authRole.hasPermission(
+                    Permission.ver_graficos_pasajeros_semanal,
+                  )) ...[
+                    SizedBox(height: 32.h),
+                    ModernGraficoGananciasSemanal(
+                      data: gananciasData,
+                      titulo:
+                          'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                          'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(32.r),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.1),
+                  blurRadius: 32.r,
+                  offset: Offset(0, 8.h),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 48.w,
+                  height: 48.h,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.accentBlue,
+                    ),
+                    strokeWidth: 4.w,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Text(
+                  'Cargando datos financieros...',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Esto puede tomar unos segundos',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(40.r),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryNightBlue.withOpacity(0.08),
+                  blurRadius: 32.r,
+                  offset: Offset(0, 8.h),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(24.r),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.textSecondary.withOpacity(0.1),
+                        AppColors.textSecondary.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Icon(
+                    Icons.analytics_outlined,
+                    size: 64.sp,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                SizedBox(height: 32.h),
+                Text(
+                  'No hay datos disponibles',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  'Los reportes aparecerán cuando tengas reservas registradas en el sistema',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationCards() {
+    final authRole = context.watch<AuthController>();
+    return Row(
+      children: [
+        if (authRole.hasPermission(Permission.ver_cards_metas))
+          Expanded(
+            child: _buildNavigationCard(
+              title: 'Metas Actuales',
+              subtitle: 'Progreso de esta semana',
+              icon: Icons.flag_rounded,
+              gradient: LinearGradient(
+                colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider(
+                      create: (_) => MetasController(),
+                      child: const MetasScreen(),
+                    ),
+                  ),
+                );
+              },
+              child: ChangeNotifierProvider(
+                // Agrega Provider aquí
+                create: (_) => MetasController(),
+                child: _buildMetaProgress(),
+              ),
+            ),
+          ),
+        SizedBox(width: 16.w),
+        if (authRole.hasPermission(Permission.ver_cards_gastos))
+          Expanded(
+            child: _buildNavigationCard(
+              title: 'Gastos Actuales',
+              subtitle: 'En pesos colombianos',
+              icon: Icons.receipt_long_rounded,
+              gradient: LinearGradient(
+                colors: [AppColors.error, Color(0xFFF87171)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChangeNotifierProvider(
+                      create: (_) => GastosController(),
+                      child: const ModernGastosScreen(),
+                    ),
+                  ),
+                );
+              },
+              child: _buildGastosSemanal(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNavigationCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Gradient gradient,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryNightBlue.withOpacity(0.1),
+            blurRadius: 20.r,
+            offset: Offset(0, 8.h),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16.r),
+          onTap: onTap,
+          child: Container(
+            height: 240.h, // Mantener fijo para igualdad
+            padding: EdgeInsets.all(15.w),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundWhite,
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: SingleChildScrollView(
+              // Scroll abarca title, subtitle y child
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(12.r),
+                        decoration: BoxDecoration(
+                          gradient: gradient,
+                          borderRadius: BorderRadius.circular(12.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: gradient.colors.first.withOpacity(0.3),
+                              blurRadius: 8.r,
+                              offset: Offset(0, 4.h),
+                            ),
+                          ],
+                        ),
+                        child: Icon(icon, color: Colors.white, size: 24.sp),
+                      ),
+                      Container(
+                        padding: EdgeInsets.all(8.r),
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.textSecondary,
+                          size: 16.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 15.h),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  child, // Sin Expanded ni inner scroll
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetaProgress() {
+    return Consumer<MetasController>(
+      builder: (context, metasController, _) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _obtenerDatosMetaTurnoActual(metasController),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cargando progreso...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sin meta definida para este turno',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    height: 8.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            final data = snapshot.data!;
+            final metaPasajeros = data['meta'] as double?;
+            final pasajerosActuales = data['pasajeros'] as int;
+            final turnoLabel = data['turnoLabel'] as String;
+
+            if (metaPasajeros == null || metaPasajeros == 0) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sin meta para $turnoLabel',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    height: 8.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            final progreso = (pasajerosActuales / metaPasajeros).clamp(
+              0.0,
+              1.0,
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$pasajerosActuales',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      '/ $metaPasajeros',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Turno: $turnoLabel',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Stack(
+                  children: [
+                    Container(
+                      height: 8.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: progreso,
+                      child: Container(
+                        height: 8.h,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+                          ),
+                          borderRadius: BorderRadius.circular(4.r),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  '${(progreso * 100).toInt()}% completado',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
+    MetasController controller,
+  ) async {
+    final turno = Formatters.getTurnoActual();
+    final meta = await controller.obtenerMetaSemanaActualTurnoActual();
+    final pasajeros = await controller
+        .obtenerSumaPasajerosSemanaActualTurnoActual();
+    final turnoLabel = turno.label; // Reutiliza la extensión
+    return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
+  }
+
+  Widget _buildGastosSemanal() {
+    return Consumer<GastosController>(
+      builder: (context, controller, child) {
+        return FutureBuilder<double>(
+          future: controller.obtenerSumaGastosSemanaActual(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cargando...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            }
+            final totalGastos = snapshot.data ?? 0.0;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Formatters.formatCurrency(totalGastos),
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    Container(
+                      width: 8.w,
+                      height: 8.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Esta semana',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    'Tiempo real',
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}

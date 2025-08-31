@@ -1,14 +1,14 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
-import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
-import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -41,13 +41,172 @@ class _ReservasTableState extends State<ReservasTable> {
   final Map<String, DateTime> _fechaValues = {};
   final Map<String, String> _agenciaValues = {};
   late ReservasController _controller;
+  
+  final ScrollController _scrollController = ScrollController();
+  // removed unused GlobalKey _dataTableKey
+  bool _retryAttempted = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _controller = Provider.of<ReservasController>(context, listen: false);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _scrollToNotificatedReserva();
+      });
     });
+  }
+
+  @override
+  void didUpdateWidget(ReservasTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reservaIdNotificada != widget.reservaIdNotificada) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          _scrollToNotificatedReserva();
+        });
+      });
+    }
+  }
+
+  void _scrollToNotificatedReserva() {
+    if (widget.reservaIdNotificada == null) return;
+    
+    final reservaIndex = widget.reservas.indexWhere(
+      (ra) => ra.reserva.id == widget.reservaIdNotificada,
+    );
+    
+  if (reservaIndex != -1) {
+      debugPrint('[v0] Haciendo scroll a reserva notificada en índice: $reservaIndex');
+      
+      const double rowHeight = 56.0; // Altura más precisa de cada fila
+      const double headerHeight = 48.0; // Altura del header
+      final double targetPosition = headerHeight + (rowHeight * reservaIndex);
+      
+      // Asegurarse de que el ScrollController esté adjunto antes de usarlo.
+      if (_scrollController.hasClients) {
+        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+        final double finalPosition = targetPosition > maxScrollExtent ? maxScrollExtent : targetPosition;
+
+        _scrollController.animateTo(
+          finalPosition,
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeInOutCubic,
+        );
+      } else {
+        debugPrint('[v0] ScrollController no está adjunto aún, reintentando en next frame');
+        // Reintentar después de un frame corto
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (_scrollController.hasClients) {
+            final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+            final double finalPosition = targetPosition > maxScrollExtent ? maxScrollExtent : targetPosition;
+            _scrollController.animateTo(
+              finalPosition,
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeInOutCubic,
+            );
+          } else {
+            debugPrint('[v0] Reintento: ScrollController aún no adjunto. Omitiendo animación.');
+          }
+        });
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.notifications_active, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Reserva de la notificación encontrada y resaltada'),
+              ],
+            ),
+            duration: const Duration(seconds: 4),
+            backgroundColor: Colors.orange.shade700,
+              behavior: SnackBarBehavior.fixed,
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+    } else {
+      debugPrint('[v0] Reserva notificada no encontrada en la lista actual — intentaremos nuevamente');
+
+      // Intento único de reintento para dar tiempo a que el controlador cargue los datos
+      // antes de mostrar el SnackBar de "no encontrada".
+      if (!_retryAttempted && mounted) {
+        _retryAttempted = true;
+        Future.delayed(const Duration(milliseconds: 700), () {
+          if (!mounted) return;
+          final retryIndex = widget.reservas.indexWhere((ra) => ra.reserva.id == widget.reservaIdNotificada);
+          if (retryIndex != -1) {
+            // Si ahora aparece, hacer scroll hacia ella
+            const double rowHeight = 56.0;
+            const double headerHeight = 48.0;
+            final double targetPosition = headerHeight + (rowHeight * retryIndex);
+            if (_scrollController.hasClients) {
+              final double maxScrollExtent = _scrollController.position.maxScrollExtent;
+              final double finalPosition = targetPosition > maxScrollExtent ? maxScrollExtent : targetPosition;
+              _scrollController.animateTo(
+                finalPosition,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOutCubic,
+              );
+            } else {
+              debugPrint('[v0] Retry: ScrollController aún no adjunto en retry');
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.notifications_active, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text('Reserva de la notificación encontrada y resaltada'),
+                  ],
+                ),
+                duration: const Duration(seconds: 4),
+                backgroundColor: Colors.orange.shade700,
+                  behavior: SnackBarBehavior.fixed,
+              ),
+            );
+            return;
+          }
+
+          // Si sigue sin aparecer, mostrar mensaje de no encontrada
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.black87, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'La reserva notificada no está visible con los filtros actuales',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
+              duration: Duration(seconds: 5),
+              backgroundColor: Colors.amber.shade300,
+                behavior: SnackBarBehavior.fixed,
+              action: SnackBarAction(
+                label: 'Limpiar filtros',
+                textColor: Colors.black87,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
+            ),
+          );
+        });
+      }
+    }
   }
 
   @override
@@ -75,6 +234,12 @@ class _ReservasTableState extends State<ReservasTable> {
       );
       _controllers['${reserva.id}_saldo'] = TextEditingController(
         text: reserva.saldo.toString(),
+      );
+      _controllers['${reserva.id}_ticket'] = TextEditingController(
+        text: reserva.ticket,
+      );
+      _controllers['${reserva.id}_habitacion'] = TextEditingController(
+        text: reserva.habitacion,
       );
       _controllers['${reserva.id}_observacion'] = TextEditingController(
         text: reserva.observacion,
@@ -118,6 +283,12 @@ class _ReservasTableState extends State<ReservasTable> {
         telefono:
             _controllers['${_editingReservaId}_telefono']?.text ??
             reservaCA.telefono,
+        ticket:
+            _controllers['${_editingReservaId}_ticket']?.text ??
+            reservaCA.ticket,
+        habitacion:
+            _controllers['${_editingReservaId}_habitacion']?.text ??
+            reservaCA.habitacion,
         estado: _estadoValues[_editingReservaId] ?? reservaCA.estado,
         fecha: _fechaValues[_editingReservaId] ?? reservaCA.fecha,
         pax:
@@ -221,7 +392,12 @@ class _ReservasTableState extends State<ReservasTable> {
     final showFechaColumn =
         widget.currentFilter == DateFilterType.all ||
         widget.currentFilter == DateFilterType.lastWeek;
-    // Construir las columnas dinámicamente
+    // Determinar si mostrar columna Turno según filtro
+    final showTurnoColumn = widget.turno == null;
+  // Construir las columnas dinámicamente
+  // IMPORTANTE: El orden de columnas debe coincidir con el orden de DataCell en cada fila:
+  // Sel, Acción, [Turno], Número, Hotel, Nombre, [Fecha], Pax, Saldo,
+  // Observaciones, Agencia, Ticket, N° HB, Estatus, [Deuda], [Editar]
     final List<DataColumn> columns = [
       // Nueva columna de selección
       DataColumn(
@@ -248,9 +424,11 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : const Text('Sel'),
       ),
+
       DataColumn(label: Text('Acción')),
-      const DataColumn(label: Text('Turno')),
-      const DataColumn(label: Text('Número')),
+  if (showTurnoColumn) const DataColumn(label: Text('Turno')),
+  // "Número" hace referencia al teléfono del cliente
+  const DataColumn(label: Text('Número')),
       const DataColumn(label: Text('Hotel')),
       const DataColumn(label: Text('Nombre')),
       if (showFechaColumn) const DataColumn(label: Text('Fecha')),
@@ -258,6 +436,9 @@ class _ReservasTableState extends State<ReservasTable> {
       const DataColumn(label: Text('Saldo')),
       const DataColumn(label: Text('Observaciones')),
       const DataColumn(label: Text('Agencia')),
+      const DataColumn(label: Text('Ticket')),
+      const DataColumn(label: Text('N° HB')),
+      const DataColumn(label: Text('Estatus')),
       if (authController.hasPermission(Permission.ver_deuda_reservas))
         const DataColumn(label: Text('Deuda')),
       if (authController.hasPermission(Permission.edit_reserva))
@@ -268,8 +449,9 @@ class _ReservasTableState extends State<ReservasTable> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            columnSpacing: 12,
-            horizontalMargin: 16,
+            /// columnsSpacing es la separación horizontal entre las columnas
+            columnSpacing: 10.h,
+            horizontalMargin: 16.h,
             headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
             columns: columns,
             rows: [
@@ -289,7 +471,8 @@ class _ReservasTableState extends State<ReservasTable> {
                 cells: [
                   const DataCell(Text('')), // Celda de selección vacía
                   const DataCell(Text('')), // Celda de acción vacía
-                  const DataCell(Text('')), // Celda de turno vacía
+                  if (showTurnoColumn)
+                    const DataCell(Text('')), // Celda de turno vacía
                   const DataCell(Text('')), // Celda de número vacía
                   const DataCell(Text('')), // Celda de hotel vacía
                   if (!showFechaColumn)
@@ -409,8 +592,12 @@ class _ReservasTableState extends State<ReservasTable> {
                       ],
                     ),
                   ),
-                  const DataCell(Text('')),
-                  const DataCell(Text('')),
+                  // A partir de aquí, columnas después de "Saldo":
+                  const DataCell(Text('')), // Observaciones
+                  const DataCell(Text('')), // Agencia
+                  const DataCell(Text('')), // Ticket
+                  const DataCell(Text('')), // N° HB
+                  const DataCell(Text('')), // Estatus
                   if (authController.hasPermission(
                     Permission.ver_deuda_reservas,
                   ))
@@ -452,7 +639,7 @@ class _ReservasTableState extends State<ReservasTable> {
 
         // --- Botones de paginación ---
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -477,7 +664,7 @@ class _ReservasTableState extends State<ReservasTable> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16.w),
               ElevatedButton(
                 onPressed: _controller.canGoNext && !_controller.isFetchingPage
                     ? _controller.nextPage
@@ -500,10 +687,10 @@ class _ReservasTableState extends State<ReservasTable> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text('Elementos por página:'),
-              const SizedBox(width: 8),
+              SizedBox(width: 8.w),
               DropdownButton<int>(
                 value: _controller.itemsPerPage,
-                items: const [10, 20, 50]
+                items: const [20, 50, 100]
                     .map(
                       (value) => DropdownMenuItem<int>(
                         value: value,
@@ -534,9 +721,7 @@ class _ReservasTableState extends State<ReservasTable> {
     // --- Detectar si la reserva es "nueva" para el usuario ---
     final fechaRegistro = r.fechaRegistro ?? r.fecha;
     final lastSeen = widget.lastSeenReservas;
-    final esNueva = lastSeen != null && fechaRegistro != null
-        ? fechaRegistro.isAfter(lastSeen)
-        : false;
+    final esNueva = lastSeen != null ? fechaRegistro.isAfter(lastSeen) : false;
 
     // --- Detectar si la reserva es la notificada ---
     final esNotificada =
@@ -566,9 +751,9 @@ class _ReservasTableState extends State<ReservasTable> {
                         }
                       : null,
                 )
-              : const Icon(
+              : Icon(
                   Icons.check_box_outline_blank,
-                  size: 16,
+                  size: 16.sp,
                   color: Colors.grey,
                 ),
         ),
@@ -634,7 +819,7 @@ class _ReservasTableState extends State<ReservasTable> {
         ),
       ),
       // Resto de celdas existentes...
-      DataCell(Text(r.turno?.label ?? '')),
+      if (widget.turno == null) DataCell(Text(r.turno?.label ?? '')),
       DataCell(
         isEditing && authController.hasPermission(Permission.edit_reserva)
             ? TextField(
@@ -739,7 +924,11 @@ class _ReservasTableState extends State<ReservasTable> {
               )
             : Text(Formatters.formatCurrency(r.saldo)),
       ),
-      // Celda de Observaciones
+
+      // A PARTIR DE AQUÍ, RESPETAR EL ORDEN DE LAS COLUMNAS DESPUÉS DE "Saldo":
+      // Observaciones, Agencia, Ticket, N° HB, Estatus, [Deuda], [Editar]
+
+      // Observaciones (botón para ver/editar)
       DataCell(
         IconButton(
           icon: Icon(
@@ -747,18 +936,68 @@ class _ReservasTableState extends State<ReservasTable> {
             color: r.observacion.isNotEmpty ? Colors.blue : Colors.grey,
             size: 20,
           ),
-          onPressed:
-              authController.hasPermission(Permission.manage_observations)
-              ? () => _showObservacionDialog(ra)
-              : null,
+          onPressed: () => _showObservacionDialog(ra),
         ),
       ),
+
+      // Agencia (texto o dropdown si se está editando y hay permiso)
       DataCell(
         isEditing && authController.hasPermission(Permission.change_agency)
             ? _buildAgenciaDropdown(ra)
             : Text(ra.nombreAgencia),
       ),
-      if (authController.hasPermission(Permission.ver_deuda_reservas))
+
+      // Ticket (texto o campo editable)
+      DataCell(
+        isEditing && authController.hasPermission(Permission.edit_reserva)
+            ? TextField(
+                controller: _controllers['${r.id}_ticket'],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(8),
+                ),
+              )
+            : Text(r.ticket ?? ''),
+      ),
+
+      // N° Habitación (texto o campo editable)
+      DataCell(
+        isEditing && authController.hasPermission(Permission.edit_reserva)
+            ? TextField(
+                controller: _controllers['${r.id}_habitacion'],
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(8),
+                ),
+              )
+            : Text(r.habitacion ?? ''),
+      ),
+      // Celda de Estatus Reserva (A-E)
+      // Celda de Estatus Reserva siempre editable si tiene permiso
+      DataCell(
+        DropdownButton<String>(
+          // Valor por defecto siempre válido
+          value: ['A', 'B', 'C', 'D', 'E'].contains(r.estatusReserva)
+              ? r.estatusReserva!
+              : 'A',
+          items: [
+            'A',
+            'B',
+            'C',
+            'D',
+            'E',
+          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: (newValue) async {
+            if (newValue != null) {
+              final updated = ra.reserva.copyWith(estatusReserva: newValue);
+              await _controller.updateReserva(r.id, updated);
+            }
+          },
+          underline: const SizedBox.shrink(),
+          isDense: true,
+        ),
+      ),
+  if (authController.hasPermission(Permission.ver_deuda_reservas))
         DataCell(
           GestureDetector(
             onTap: authController.hasPermission(Permission.toggle_paid_status)
@@ -890,6 +1129,24 @@ class _ReservasTableState extends State<ReservasTable> {
           Colors.orange.shade200; // Color especial para la reserva notificada
     } else if (esNueva) {
       rowColor = Colors.yellow.shade100; // Color para nuevas reservas
+    } else {
+      // Colorear fila según estatusReserva: A (sin color), B (rojo), C (azul), D (verde), E (gris)
+      switch (r.estatusReserva) {
+        case 'B':
+          rowColor = Colors.red.shade100;
+          break;
+        case 'C':
+          rowColor = Colors.blue.shade100;
+          break;
+        case 'D':
+          rowColor = Colors.green.shade100;
+          break;
+        case 'E':
+          rowColor = Colors.grey.shade200;
+          break;
+        default:
+          rowColor = null;
+      }
     }
     // Aplicar color de fondo si está seleccionada o notificada
     return DataRow(

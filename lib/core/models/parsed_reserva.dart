@@ -12,6 +12,8 @@ class ParsedReserva {
   EstadoReserva estado;
   String telefono;
   double costoAsiento; // Nuevo campo
+  String habitacion; // Nuevo campo para habitación
+  String ticket;     // Nuevo campo para ticket
   String rawText; // Para la regla de agencia que necesita el texto completo
 
   ParsedReserva({
@@ -25,6 +27,8 @@ class ParsedReserva {
     this.estado = EstadoReserva.pendiente,
     this.telefono = '',
     this.costoAsiento = 0.0, // Inicialización del nuevo campo
+  this.habitacion = '',    // Inicialización de habitación
+  this.ticket = '',        // Inicialización de ticket
     required this.rawText,
   });
 
@@ -42,6 +46,8 @@ class ParsedReserva {
       'estado': estado.toString().split('.').last, // Convertir enum a String
       'telefono': telefono,
       'costoAsiento': costoAsiento, // Añadido el nuevo campo
+    'habitacion': habitacion,     // Añadido habitación
+    'ticket': ticket,             // Añadido ticket
     };
   }
 }

@@ -15,6 +15,9 @@ class PermissionService {
       Permission.ver_pagina_usuarios,
       // Permission.crear_reserva,
       Permission.crear_agencias_agencias,
+      Permission.ver_deuda_reservas,
+      Permission.crear_reserva,
+
       // Permission.manage_observations,
       // Permission.select_reservas,
       // Una agencia solo puede contactar, ver observaciones y seleccionar
@@ -44,8 +47,49 @@ class PermissionService {
       Permission.ver_reservas,
       Permission.contact_whatsapp,
       Permission.ver_pagina_usuarios,
+      Permission.recibir_notificaciones,
+      Permission.ver_pagina_reportes,
+      // Permission.ver_cards_metas,
+      // Permission.ver_graficos_pasajeros,
+
       // Define permisos específicos para el rol 'verReservas'
     ],
+
+    Roles.verCardMetas: [
+      Permission.ver_cards_metas,
+    ],
+
+     // ver_cards_metas,
+  // ver_cards_gastos,
+
+  // ver_graficos_pasajeros,
+  // ver_graficos_gastos,
+
+
+  // ver_graficos_pasajeros_semanal,
+  // ver_graficos_gastos_semanal,
+  // /// ver graficos
+
+    Roles.verCardGastos: [
+      Permission.ver_cards_gastos,
+    ],
+
+    Roles.verGraficoSemanalPasajero: [
+      Permission.ver_graficos_pasajeros_semanal,
+    ],
+
+    Roles.verGraficoSemanalGastos: [
+      Permission.ver_graficos_gastos_semanal,
+    ],
+
+    Roles.verGraficosPasajeros: [
+      Permission.ver_graficos_pasajeros,
+    ],
+
+    Roles.verGraficosGastos: [
+      Permission.ver_graficos_gastos,
+    ],
+
     Roles.verColaborador: [
       Permission.ver_pagina_usuarios,
 
@@ -59,6 +103,7 @@ class PermissionService {
     Roles.verDeudasReservas: [
       Permission.ver_deuda_reservas,
     ],
+
 
     // Roles.reservas: [
     //   // Define permisos específicos para el rol 'reservas' si es distinto de 'colaborador'

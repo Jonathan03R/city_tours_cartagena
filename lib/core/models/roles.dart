@@ -23,6 +23,23 @@ class Roles {
   /// Ver finanzas
   static const String verFinanzas = 'ver finanzas';
 
+  // ver_cards_metas,
+  // ver_cards_gastos,
+
+  // ver_graficos_pasajeros,
+  // ver_graficos_gastos,
+
+
+  // ver_graficos_pasajeros_semanal,
+  // ver_graficos_gastos_semanal,
+  // /// ver graficos
+  static const String verGraficosPasajeros = 'ver grafico de pasajeros';
+  static const String verGraficosGastos = 'ver grafico de gastos';
+  static const String verCardMetas = "Ver metas";
+  static const String verCardGastos = "ver gastos";
+  static const String verGraficoSemanalPasajero = "ver grafico semanal de pasajeros";
+  static const String verGraficoSemanalGastos = "ver grafico semanal de gastos";
+
   static List<String> get allRoles => [
         admin,
         agencia,
@@ -36,7 +53,12 @@ class Roles {
         verColaborador,
         verFinanzas,
         verDeudasReservas,
-
+        verGraficosPasajeros,
+        verGraficosGastos,
+        verGraficoSemanalPasajero,
+        verGraficoSemanalGastos,
+        verCardGastos,
+        verCardMetas
       ];
 
 }

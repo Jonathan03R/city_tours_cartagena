@@ -1,4 +1,4 @@
-import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum EstadoReserva { pendiente, pagada, cancelada }
@@ -18,6 +18,9 @@ class Reserva {
   final String telefono;
   final bool whatsappContactado;
   final TurnoType? turno;
+  final String? ticket; // es el id de los tickets asociados a la reserva (opcional)
+  final String? habitacion; // numero de habitación asociado a la reserva (opcional)
+  final String? estatusReserva; // estado de la reserva (opcional)
 
 
   Reserva({
@@ -35,8 +38,17 @@ class Reserva {
     required this.telefono,
     this.whatsappContactado = false,
     required this.turno,
+    this.ticket,
+    this.habitacion,
+    this.estatusReserva,
   });
-
+  
+  double get ganancia {
+    if (turno == TurnoType.privado) {
+      return costoAsiento;
+    }
+    return costoAsiento * pax;
+  }
   //este constructor es para crear una reserva desde un mapa de datos
   //usado para leer datos de Firestore
   factory Reserva.fromFirestore(Map<String, dynamic> data, String id) {
@@ -57,10 +69,18 @@ class Reserva {
       telefono: data['telefono'] as String? ?? '',
       whatsappContactado: data['whatsappContactado'] as bool? ?? false,
       turno: _mapTurno(data['turno'] as String? ?? 'normal'),
+      ticket: data['tickets'] != null ? data['tickets'] as String : null,
+      habitacion: data['habitacion'] != null ? data['habitacion'] as String : null,
+      estatusReserva: data['estatusReserva'] as String? ?? '',
     );
   }
 
-  double get deuda => costoAsiento * pax - saldo;
+  double get deuda {
+    if (turno == TurnoType.privado) {
+      return costoAsiento - saldo;
+    }
+    return costoAsiento * pax - saldo;
+  }
 
   //este metodo convierte la reserva a un mapa de datos
   //usado para guardar datos en Firestore
@@ -79,6 +99,9 @@ class Reserva {
       'telefono': telefono,
       'whatsappContactado': whatsappContactado,
       'turno': turno?.toString().split('.').last, // Convertir TurnoType a String
+      'tickets': ticket, // id de ticket (opcional)
+      'habitacion': habitacion, // numero de habitación (opcional)
+      'estatusReserva': estatusReserva, // estado de la reserva (opcional)
     };
   }
 
@@ -88,6 +111,8 @@ class Reserva {
         return TurnoType.manana;
       case 'tarde':
         return TurnoType.tarde;
+      case 'privado':
+        return TurnoType.privado;
       default:
         return null; // o puedes lanzar una excepción si es un turno desconocido
     }
@@ -121,7 +146,9 @@ class Reserva {
     String? telefono,
     bool? whatsappContactado,
     TurnoType? turno,
-
+    String? ticket, // Cambiado de tickets a ticket
+    String? habitacion,
+    String? estatusReserva,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -137,6 +164,9 @@ class Reserva {
       telefono: telefono ?? this.telefono,
       whatsappContactado: whatsappContactado ?? this.whatsappContactado,
       turno: turno ?? this.turno,
+      ticket: ticket ?? this.ticket, // Cambiado de tickets a ticket
+      habitacion: habitacion ?? this.habitacion,
+      estatusReserva: estatusReserva ?? this.estatusReserva,
     );
   }
 }

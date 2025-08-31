@@ -17,7 +17,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # esta es la version de la aplicacion
-version: 2.17.2+7
+version: 2.43.30+12
 # MAJOR = versión principal (1): cambia cuando hay cambios grandes o incompatibles.
 
 # MINOR = nueva funcionalidad sin romper nada.
@@ -67,6 +67,10 @@ dependencies:
   firebase_analytics: ^11.6.0
   flutter_local_notifications: ^19.4.0
   cloud_functions: ^5.6.2
+  phosphor_flutter: ^2.1.0
+  connectivity_plus: ^6.1.4
+  syncfusion_flutter_charts: ^30.2.6+1
+  month_picker_dialog: ^6.5.0
   # flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
@@ -81,6 +85,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  test: ^1.26.2
 
 flutter_launcher_icons:
   android: true
@@ -103,6 +108,7 @@ flutter:
   assets:
     - assets/data/datos.json
     - assets/images/logo.png
+    - assets/images/iconWasap.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

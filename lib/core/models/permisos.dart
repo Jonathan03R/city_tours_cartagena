@@ -8,6 +8,8 @@ enum Permission {
   edit_agencias,
   ver_agencias,
   crear_agencias_agencias,
+  ver_deuda_agencias_usuario,
+  contacto_agencia_whatsapp,
 
   // CONTACTO
   contact_whatsapp,
@@ -28,6 +30,8 @@ enum Permission {
   crear_agencias,
   crear_reserva,
 
+  crear_reservas_privadas,
+
   /// USUARIOS
   ver_perfil,
   ver_todos_usuarios,
@@ -35,9 +39,20 @@ enum Permission {
 
 
 
-  
+  //recibir_notificaciones
 
-
+  recibir_notificaciones,
 
   // Añade aquí cualquier otra acción granular que necesites controlar
+
+  ver_pagina_reportes,
+  ver_cards_metas,
+  ver_cards_gastos,
+
+  ver_graficos_pasajeros,
+  ver_graficos_gastos,
+
+
+  ver_graficos_pasajeros_semanal,
+  ver_graficos_gastos_semanal,
 }

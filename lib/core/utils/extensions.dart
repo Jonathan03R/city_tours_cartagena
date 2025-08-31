@@ -1,7 +1,7 @@
 
 
 // Extensión para firstWhereOrNull, ya que no está en todas las versiones de Dart
-import 'package:citytourscartagena/screens/main_screens.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 
 extension IterableExtension<T> on Iterable<T> {
   T? firstWhereOrNull(bool Function(T) test) {
@@ -22,6 +22,8 @@ extension TurnoTypeExtension on TurnoType {
         return 'mañana';
       case TurnoType.tarde:
         return 'tarde';
+      case TurnoType.privado:
+        return 'privado';
     }
   }
 }

@@ -1,8 +1,8 @@
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart'; // Necesario para DateFilterType
 import 'package:citytourscartagena/core/widgets/reservas_table.dart';
-import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart'; // Importar Provider
@@ -172,65 +172,66 @@ class _TableOnlyViewScreenState extends State<TableOnlyViewScreen> {
                     },
                   ),
                   // Botones de paginación
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: reservasController.canGoPrevious && !reservasController.isFetchingPage
-                              ? reservasController.previousPage
-                              : null,
-                          child: reservasController.isFetchingPage && reservasController.canGoPrevious
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Anterior'),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          'Página ${reservasController.currentPage}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: reservasController.canGoNext && !reservasController.isFetchingPage
-                              ? reservasController.nextPage
-                              : null,
-                          child: reservasController.isFetchingPage && reservasController.canGoNext
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Siguiente'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Selector de elementos por página
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Elementos por página:'),
-                        const SizedBox(width: 8),
-                        DropdownButton<int>(
-                          value: reservasController.itemsPerPage,
-                          items: const [10, 20, 50].map((value) => DropdownMenuItem<int>(
-                                value: value,
-                                child: Text('$value'),
-                              )).toList(),
-                          onChanged: (newValue) {
-                            if (newValue != null) reservasController.setItemsPerPage(newValue);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Padding(
+                  //   padding: const EdgeInsets.all(16.0),
+                  //   child: Row(
+                  //     mainAxisAlignment: MainAxisAlignment.center,
+                  //     children: [
+                  //       ElevatedButton(
+                  //         onPressed: reservasController.canGoPrevious && !reservasController.isFetchingPage
+                  //             ? reservasController.previousPage
+                  //             : null,
+                  //         child: reservasController.isFetchingPage && reservasController.canGoPrevious
+                  //             ? const SizedBox(
+                  //                 width: 20,
+                  //                 height: 20,
+                  //                 child: CircularProgressIndicator(strokeWidth: 2),
+                  //               )
+                  //             : const Text('Anterior'),
+                  //       ),
+                  //       const SizedBox(width: 16),
+                  //       Text(
+                  //         'Página ${reservasController.currentPage}',
+                  //         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  //       ),
+                  //       const SizedBox(width: 16),
+                  //       ElevatedButton(
+                  //         onPressed: reservasController.canGoNext && !reservasController.isFetchingPage
+                  //             ? reservasController.nextPage
+                  //             : null,
+                  //         child: reservasController.isFetchingPage && reservasController.canGoNext
+                  //             ? const SizedBox(
+                  //                 width: 20,
+                  //                 height: 20,
+                  //                 child: CircularProgressIndicator(strokeWidth: 2),
+                  //               )
+                  //             : const Text('Siguiente'),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  // // Selector de elementos por página
+                  // Padding(
+                  //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  //   child: Row(
+                  //     mainAxisAlignment: MainAxisAlignment.center,
+                  //     children: [
+                  //       const Text('Elementos por página:'),
+                  //       const SizedBox(width: 8),
+                  //       DropdownButton<int>(
+                  //         value: reservasController.itemsPerPage,
+                  //         items: const [10, 20, 50].map((value) => DropdownMenuItem<int>(
+                  //               value: value,
+                  //               child: Text('$value'),
+                  //             )).toList(),
+                  //         onChanged: (newValue) {
+                  //           if (newValue != null) reservasController.setItemsPerPage(newValue);
+                  //         },
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                
                 ],
               ),
             ),

@@ -1,13 +1,14 @@
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
-import 'package:citytourscartagena/core/utils/extensions.dart';
 import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
-import 'package:citytourscartagena/screens/main_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:math' as math;
+import 'error_dialogs.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/agencias_controller.dart';
@@ -25,6 +26,7 @@ class AddReservaProForm extends StatefulWidget {
 
 class _AddReservaProFormState extends State<AddReservaProForm> {
   final _textController = TextEditingController();
+  final _costoTotalPrivadoController = TextEditingController();
   Map<String, dynamic>? _parsedData;
   bool _showPreview = false;
   bool _isLoading = false;
@@ -32,6 +34,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   String? _selectedAgenciaId;
   bool _turnoError = false;
   TurnoType? _selectedTurno;
+  bool _costoPrivadoError = false;
 
   // Instancia de TextParser
   final TextParser _textParser = TextParser();
@@ -71,6 +74,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   @override
   void dispose() {
     _textController.dispose();
+    _costoTotalPrivadoController.dispose();
     super.dispose();
   }
 
@@ -79,6 +83,12 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     Configuracion? config,
     Agencia? agencia,
   }) {
+    if (turno == TurnoType.privado) {
+      // Si es privado, el precio lo ingresa el usuario
+      final v = _costoTotalPrivadoController.text.trim();
+      final parsed = double.tryParse(v.replaceAll(',', '.'));
+      return (parsed != null && parsed > 0) ? parsed : 0.0;
+    }
     // primero precio de agencia, si lo tiene y es >0
     if (agencia != null) {
       final precioAg = turno == TurnoType.manana
@@ -113,33 +123,20 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
 
   EstadoReserva _computeEstado(double costoAsiento) {
     if (_parsedData == null) return EstadoReserva.pendiente;
-
     final pax = _parsedData!['pax'] as int? ?? 1;
     final saldo = _parsedData!['saldo'] as double? ?? 0.0;
-
-    return saldo == pax * costoAsiento
-        ? EstadoReserva.pagada
-        : EstadoReserva.pendiente;
+    if (_selectedTurno == TurnoType.privado) {
+      // En privado, el costoAsiento es el total, no por pax
+      return saldo >= costoAsiento ? EstadoReserva.pagada : EstadoReserva.pendiente;
+    }
+    return saldo == pax * costoAsiento ? EstadoReserva.pagada : EstadoReserva.pendiente;
   }
 
   Future<void> _submitReserva() async {
     debugPrint('Submitting reserva with data: $_parsedData');
 
     if (_selectedAgenciaId == null) {
-      // Mostrar mensaje emergente si no hay agencia seleccionada
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Agencia requerida'),
-          content: const Text('Por favor selecciona una agencia.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor selecciona una agencia.');
       return;
     }
     final fechaRaw = _parsedData?['fechaReserva'] as String?;
@@ -149,87 +146,33 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     final turno = _selectedTurno;
 
     if (fechaRaw == null) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Fecha requerida'),
-          content: const Text('Por favor ingresa la fecha de la reserva.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa la fecha de la reserva.');
       return;
     } else if (nombreCliente == null || nombreCliente.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Nombre requerido'),
-          content: const Text('Por favor ingresa el nombre del cliente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa el nombre del cliente.');
       return;
     } else if (telefono == null || telefono.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Teléfono requerido'),
-          content: const Text('Por favor ingresa el teléfono del cliente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa el teléfono del cliente.');
       return;
     } else if (hotel == null || hotel.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Hotel requerido'),
-          content: const Text('Por favor ingresa el hotel del cliente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa el hotel del cliente.');
       return;
     } else if (turno == null) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Turno requerido'),
-          content: const Text('Por favor selecciona un turno.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Por favor selecciona un turno.');
       return;
     }
 
-    // Obtener la agencia seleccionada para verificar su precio específico
-    // final agenciasController = Provider.of<AgenciasController>(
-    //   context,
-    //   listen: false,
-    // );
+    // Validación especial para privado
+    if (turno == TurnoType.privado) {
+      final v = _costoTotalPrivadoController.text.trim();
+      final parsed = double.tryParse(v.replaceAll(',', '.'));
+      if (parsed == null || parsed <= 0) {
+        setState(() => _costoPrivadoError = true);
+        await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa un costo total válido para el servicio privado.');
+        return;
+      }
+    }
+
     // Obtener agencia seleccionada (si existe)
     final selectedAgencia = _selectedAgenciaId != null
         ? context.read<AgenciasController>().getAgenciaById(_selectedAgenciaId!)
@@ -241,36 +184,23 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       agencia: selectedAgencia,
     );
     if (costoAsiento <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Error: precio por asiento no válido, comunícate con el administrador',
-          ),
-        ),
-      );
+      await ErrorDialogs.showErrorDialog(context, _selectedTurno == TurnoType.privado
+        ? 'Por favor ingresa un costo total válido para el servicio privado.'
+        : 'Error: precio por asiento no válido, comunícate con el administrador');
       return;
     }
 
     // Resetear error de agencia y validar que tengamos datos parseados
     if (_agencyError) setState(() => _agencyError = false);
     if (_parsedData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Falta texto o seleccionar agencia')),
-      );
+      await ErrorDialogs.showErrorDialog(context, 'Falta texto o seleccionar agencia');
       return;
     }
 
     setState(() => _isLoading = true);
-    // Validar que los campos requeridos estén presentes
-    // aqui saldo es  = a _parsedData que es un mapa
     final pax = _parsedData!['pax'] as int? ?? 1;
     final saldo = _parsedData!['saldo'] as double? ?? 0.0;
-    // calcular total esperado y determinar estado
     final estado = _computeEstado(costoAsiento);
-    // final estado = saldo > 0
-    //     ? EstadoReserva.pagada
-    //     : EstadoReserva.pendiente;
-    // final telefono = (_parsedData!['telefono'] as String?)?.trim() ?? '';
 
     final newReserva = Reserva(
       id: '',
@@ -287,6 +217,8 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       costoAsiento: costoAsiento, // Usar el costoAsiento determinado
       telefono: telefono,
       turno: turno,
+      ticket: _parsedData!['ticket'] as String? ?? '',
+      habitacion: _parsedData!['habitacion'] as String? ?? '',
     );
 
     try {
@@ -304,9 +236,17 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error creando reserva: $e')));
+      final msg = e.toString();
+      if (msg.contains('los cupos están bloqueados')) {
+        await ErrorDialogs.showErrorDialog(context, msg.replaceFirst('Exception: ', ''));
+      } else if (msg.contains('No hay cupos disponibles')) {
+        final regex = RegExp(r'WhatsApp: ([^\s]+)');
+        final match = regex.firstMatch(msg);
+        final whatsapp = match != null ? match.group(1) : null;
+        await ErrorDialogs.showDialogVerificarDisponibilidad(context, whatsapp);
+      } else {
+        await ErrorDialogs.showErrorDialog(context, 'Error creando reserva: $msg');
+      }
     }
   }
 
@@ -359,21 +299,23 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     ? 'Agencia'
     : 'Global';
 
-    final priceLabel = 'Precio asiento ($priceSource)';
+  final priceLabel = _selectedTurno == TurnoType.privado
+    ? 'Costo total del servicio'
+    : 'Precio asiento ($priceSource)';
 
-    final computedEstado = _parsedData != null
-        ? _computeEstado(usedPrice)
-        : EstadoReserva.pendiente;
+  final computedEstado = _parsedData != null
+    ? _computeEstado(usedPrice)
+    : EstadoReserva.pendiente;
 
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
-    final double availableHeight =
-        MediaQuery.of(context).size.height * 0.9 - keyboardInset;
+    final double minHeight = MediaQuery.of(context).size.height * 0.5;
+    final double availableHeight = MediaQuery.of(context).size.height * 0.9 - keyboardInset;
     return Padding(
       padding: EdgeInsets.only(bottom: keyboardInset),
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: availableHeight,
-          minHeight: MediaQuery.of(context).size.height * 0.5,
+          maxHeight: math.max(availableHeight, minHeight),
+          minHeight: minHeight,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -407,28 +349,42 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    AgenciaSelector(
-                      selectedAgenciaId: _selectedAgenciaId,
-                      onAgenciaSelected: (id) {
-                        setState(() {
-                          _selectedAgenciaId = id;
-                          _agencyError = false;
-                        });
-                      },
-                    ),
-                    // Mostrar error si no hay agencia seleccionada
-                    if (_agencyError)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, left: 4),
-                        child: Text(
-                          'Debes seleccionar una agencia',
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontSize: 12,
+                    // If the form was given an initial agency, show it read-only; otherwise show selector
+                    if (widget.agencia != null) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.business, size: 18, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Agencia: ${widget.agencia!.nombre} (ID: ${widget.agencia!.id})',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      AgenciaSelector(
+                        selectedAgenciaId: _selectedAgenciaId,
+                        onAgenciaSelected: (id) {
+                          setState(() {
+                            _selectedAgenciaId = id;
+                            _agencyError = false;
+                          });
+                        },
+                      ),
+                      if (_agencyError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, left: 4),
+                          child: Text(
+                            'Debes seleccionar una agencia',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
-                    // Selector de turno justo debajo de la agencia
+                    ],
                     const SizedBox(height: 12),
                     const Text(
                       'Turno *',
@@ -453,9 +409,13 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                       onChanged: (value) => setState(() {
                         _selectedTurno = value;
                         _turnoError = false;
+                        // Limpiar error de costo privado si cambia el turno
+                        if (_selectedTurno != TurnoType.privado) {
+                          _costoPrivadoError = false;
+                          _costoTotalPrivadoController.clear();
+                        }
                       }),
                     ),
-                    // Mostrar error si no hay turno seleccionado
                     if (_turnoError)
                       Padding(
                         padding: const EdgeInsets.only(top: 4, left: 4),
@@ -467,6 +427,25 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                           ),
                         ),
                       ),
+                    // Campo de costo total privado SOLO si es privado
+                    if (_selectedTurno == TurnoType.privado) ...[
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _costoTotalPrivadoController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'Costo total del servicio *',
+                          border: const OutlineInputBorder(),
+                          errorText: _costoPrivadoError ? 'Ingresa un valor mayor a 0' : null,
+                          prefixIcon: const Icon(Icons.attach_money),
+                        ),
+                        onChanged: (_) {
+                          setState(() {
+                            _costoPrivadoError = false;
+                          });
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     if (_showPreview && _parsedData != null)
                       Container(
@@ -528,13 +507,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                   'Saldo',
                                   _parsedData!['saldo'].toString(),
                                 ),
-                                // _buildPreviewItem(
-                                //   'Estado',
-                                //   _parsedData!['estado']
-                                //       .toString()
-                                //       .split('.')
-                                //       .last,
-                                // ),
                                 _buildPreviewItem(
                                   'Observación',
                                   _parsedData!['observacion'],
@@ -547,7 +519,6 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                   priceLabel,
                                   usedPrice.toStringAsFixed(2),
                                 ),
-
                                 _buildPreviewItem(
                                   'Turno',
                                   _selectedTurno != null
@@ -557,6 +528,14 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                                 _buildPreviewItem(
                                   'Estado calculado',
                                   computedEstado.name,
+                                ),
+                                _buildPreviewItem(
+                                  'Habitación',
+                                  _parsedData!['habitacion'] as String?,
+                                ),
+                                _buildPreviewItem(
+                                  'Ticket',
+                                  _parsedData!['ticket'] as String?,
                                 ),
                               ],
                             ),
