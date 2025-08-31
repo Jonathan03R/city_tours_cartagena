@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
+import 'package:citytourscartagena/core/controller/filters_controller.dart';
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
@@ -16,8 +18,6 @@ import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reportes/vista_reportes.dart';
-import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
-import 'package:citytourscartagena/screens/reservas/turno_selector.dart';
 import 'package:citytourscartagena/screens/servicios/servicio_view.dart';
 import 'package:citytourscartagena/screens/usuarios/tabar.dart';
 import 'package:flutter/material.dart';
@@ -112,6 +112,9 @@ class _MainScreenState extends State<MainScreen> {
     final canViewUsuarios = authController.hasPermission(
       Permission.ver_pagina_usuarios,
     );
+    // final canViewReportes = authController.hasPermission(
+    //   Permission.ver_pagina_reportes,
+    // );
 
     /// Si no tiene permisos, redirigir a la pantalla de configuración
     final authRole = context.read<AuthController>();
@@ -134,21 +137,10 @@ class _MainScreenState extends State<MainScreen> {
         const UsuariosScreen(), // Pestaña de colaboradores
       ] else ...[
         if (canViewReservas)
-          (_turnoSeleccionado == null
-              ? TurnoSelectorWidget(
-                  onTurnoSelected: (turno) => setState(() {
-                    _turnoSeleccionado = turno as TurnoType?;
-                  }),
-                )
-              : ReservasView(
-                  turno: _turnoSeleccionado,
-                  onBack: () => setState(() {
-                    _turnoSeleccionado = null;
-                  }),
-                )),
+          const ReportesView(),
         if (canViewAgencias) AgenciasView(searchTerm: _searchTerm),
         if (canViewUsuarios) const UsuariosScreen(),
-        const ReportesView(), // Nueva página de estadísticas
+        // if (canViewReportes) const ReportesView(), // Nueva página de estadísticas
       ],
     ];
     // Definir los ítems del bottom bar según permisos
@@ -166,7 +158,7 @@ class _MainScreenState extends State<MainScreen> {
       ] else ...[
         if (canViewReservas)
           const BottomNavigationBarItem(
-            icon: Icon(Icons.event),
+            icon: Icon(Icons.home),
             label: 'Reservas',
           ),
         if (canViewAgencias)
@@ -179,10 +171,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.people),
             label: 'Colaboradores',
           ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Estadisticas',
-        ),
+        // if (canViewReportes)
+        //   const BottomNavigationBarItem(
+        //     icon: Icon(Icons.bar_chart),
+        //     label: 'Estadisticas',
+        //   ),
       ],
     ];
     // Asegurar que currentIndex esté dentro de los límites de navItems
@@ -197,6 +190,8 @@ class _MainScreenState extends State<MainScreen> {
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
         // Provider para reportes
         ChangeNotifierProvider(create: (_) => ReportesController()),
+        ChangeNotifierProvider(create: (_) => FiltroFlexibleController()),
+        ChangeNotifierProvider(create: (_) => GastosController()),
       ],
       child: Scaffold(
         key: _scaffoldKey,

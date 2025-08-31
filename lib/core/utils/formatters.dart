@@ -1,21 +1,28 @@
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:intl/intl.dart';
 
 class Formatters {
-  static String formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(locale: 'es_ES', symbol: '\$');
+   static String formatCurrency(double amount) {
+    final formatter = NumberFormat.currency(locale: 'es_CO', symbol: 'COP ');
     return formatter.format(amount);
   }
-
   static String formatDate(DateTime date) {
-    final formatter = DateFormat('dd/MM/yyyy', 'es_ES');
+    final formatter = DateFormat('dd/MM/yyyy', 'es_CO');
     return formatter.format(date);
   }
 
   static String formatDateLong(DateTime date) {
-    final formatter = DateFormat('EEEE, dd MMMM yyyy', 'es_ES');
+    final formatter = DateFormat('EEEE, dd MMMM yyyy', 'es_CO');
     return formatter.format(date);
   }
+
+  static TurnoType getTurnoActual() {
+    final nowUtc = DateTime.now().toUtc();
+    final nowColombia = nowUtc.add(const Duration(hours: -5));
+    return nowColombia.hour < 12 ? TurnoType.manana : TurnoType.tarde;
+  }
+
 
   static String getEstadoText(EstadoReserva estado) {
     switch (estado) {
@@ -29,7 +36,7 @@ class Formatters {
   }
 
   static String formatDateTime(DateTime dateTime) {
-    final formatter = DateFormat('dd/MM/yyyy HH:mm', 'es_ES');
+    final formatter = DateFormat('dd/MM/yyyy HH:mm', 'es_CO');
     return formatter.format(dateTime);
   }
 
