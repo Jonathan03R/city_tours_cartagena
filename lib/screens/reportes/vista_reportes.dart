@@ -16,7 +16,7 @@ import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comp
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart'
-    show SelectorTurnos, TurnoSelectorWidget;
+    show TurnoSelectorWidget;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -64,10 +64,10 @@ class _ReportesViewState extends State<ReportesView>
 
     // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
-    final now = DateTime.now();
-    for (int i = 0; i < 4; i++) {
-      _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
-    }
+    // final now = DateTime.now();
+    // for (int i = 0; i < 4; i++) {
+    //   _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
+    // }
   }
 
   @override
@@ -301,7 +301,7 @@ class _ReportesViewState extends State<ReportesView>
             builder: (context, filtrosController, child) {
               // ... existing logic ...
               final turno = filtrosController.turnoSeleccionado;
-              final periodo = filtrosController.periodoSeleccionado!;
+              final periodo = filtrosController.periodoSeleccionado;
 
               final semanas = filtrosController.semanasSeleccionadasSorted;
               final meses = filtrosController.mesesSeleccionadosSorted;

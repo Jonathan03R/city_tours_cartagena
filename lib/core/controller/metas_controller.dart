@@ -3,6 +3,7 @@ import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
 import 'package:citytourscartagena/core/services/finanzas/metas_service.dart';
+import 'package:citytourscartagena/core/services/reservas/reservas_service.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ class MetasController extends ChangeNotifier {
   final ReservasController _reservasController;
   final MetasService _metasService;
   final FinanzasService _finanzasService;
+  final ReservasService _reservasService;
 
   MetasController({
     ReservasController? reservasController,
@@ -18,7 +20,8 @@ class MetasController extends ChangeNotifier {
     FinanzasService? finanzasService,
   })  : _reservasController = reservasController ?? ReservasController(),
         _metasService = metasService ?? MetasService(),
-        _finanzasService = finanzasService ?? FinanzasService();
+        _finanzasService = finanzasService ?? FinanzasService(),
+        _reservasService = ReservasService();
 
   /// Verifica si la suma de pasajeros de la semana actual >= meta para el turno dado.
   Future<bool> verificarMetaSemanal(TurnoType turno) async {
@@ -66,11 +69,11 @@ class MetasController extends ChangeNotifier {
   }
 
   /// Obtiene la suma de pasajeros para la semana actual y turno dado.
-  Future<int> obtenerSumaPasajerosSemanaActual(TurnoType turno) async {
-    final fechaHoy = DateTime.now();
-    final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
-    return await _calcularSumaPasajeros(rango.start, rango.end, turno);
-  }
+  // Future<int> obtenerSumaPasajerosSemanaActual(TurnoType turno) async {
+  //   final fechaHoy = DateTime.now();
+  //   final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
+  //   return await _calcularSumaPasajeros(rango.start, rango.end, turno);
+  // }
 
   /// Obtiene la meta activa para la semana actual y turno dado.
   Future<double?> obtenerMetaSemanaActual(TurnoType turno) async {
@@ -131,9 +134,12 @@ class MetasController extends ChangeNotifier {
   }
 
   Future<int> obtenerSumaPasajerosSemanaActualTurnoActual() async {
-    final turno = Formatters.getTurnoActual();
-    return await obtenerSumaPasajerosSemanaActual(turno);
-  }
+  final fechaHoy = DateTime.now();
+  final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
+  final turno = Formatters.getTurnoActual().name; // O pásalo como String si tu servicio lo pide
+  // Si quieres todos los turnos, pásalo sin turno: reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end)
+  return await _reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end, turno: turno);
+}
   
 
   /// Obtiene la meta activa para la semana actual usando el turno actual (mañana o tarde).
@@ -143,22 +149,29 @@ class MetasController extends ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> obtenerEstadoSemanaActual() async {
-    final estados = <Map<String, dynamic>>[];
-    for (final turno in TurnoType.values) {
-      try {
-        final cumplida = await verificarMetaSemanal(turno);
-        final pasajeros = await obtenerSumaPasajerosSemanaActual(turno);
-        final meta = await obtenerMetaSemanaActual(turno);
-        estados.add({
-          'turno': turno.label,
-          'pasajeros': pasajeros,
-          'meta': meta ?? 0,
-          'cumplida': cumplida,
-        });
-      } catch (e) {
-        debugPrint('Error obteniendo estado para $turno: $e');
-      }
+  final estados = <Map<String, dynamic>>[];
+  final fechaHoy = DateTime.now();
+  final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
+
+  for (final turno in TurnoType.values) {
+    try {
+      final cumplida = await verificarMetaSemanal(turno);
+      final pasajeros = await _reservasService.obtenerSumaPasajerosPorRango(
+        rango.start,
+        rango.end,
+        turno: turno.name,
+      );
+      final meta = await obtenerMetaSemanaActual(turno);
+      estados.add({
+        'turno': turno.label,
+        'pasajeros': pasajeros,
+        'meta': meta ?? 0,
+        'cumplida': cumplida,
+      });
+    } catch (e) {
+      debugPrint('Error obteniendo estado para $turno: $e');
     }
-    return estados;
+  }
+  return estados;
   }
 }

@@ -657,26 +657,26 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
     );
   }
 
-  Future<List<Map<String, dynamic>>> _obtenerEstadoSemanaActual(MetasController controller) async {
-    final estados = <Map<String, dynamic>>[];
-    for (final turno in TurnoType.values) {
-      try {
-        final cumplida = await controller.verificarMetaSemanal(turno);
-        final pasajeros = await controller.obtenerSumaPasajerosSemanaActual(turno);
-        final meta = await controller.obtenerMetaSemanaActual(turno);
-        estados.add({
-          'turno': turno.label,
-          'pasajeros': pasajeros,
-          'meta': meta ?? 0,
-          'cumplida': cumplida,
-        });
-      } catch (e) {
-        debugPrint('Error obteniendo estado para $turno: $e');
-      }
-    }
-    debugPrint('Estados obtenidos: $estados');
-    return estados;
-  }
+  // Future<List<Map<String, dynamic>>> _obtenerEstadoSemanaActual(MetasController controller) async {
+  //   final estados = <Map<String, dynamic>>[];
+  //   for (final turno in TurnoType.values) {
+  //     try {
+  //       final cumplida = await controller.verificarMetaSemanal(turno);
+  //       final pasajeros = await controller.obtenerSumaPasajerosSemanaActual(turno);
+  //       final meta = await controller.obtenerMetaSemanaActual(turno);
+  //       estados.add({
+  //         'turno': turno.label,
+  //         'pasajeros': pasajeros,
+  //         'meta': meta ?? 0,
+  //         'cumplida': cumplida,
+  //       });
+  //     } catch (e) {
+  //       debugPrint('Error obteniendo estado para $turno: $e');
+  //     }
+  //   }
+  //   debugPrint('Estados obtenidos: $estados');
+  //   return estados;
+  // }
 
   Future<void> _eliminarMeta(String id, MetasController controller) async {
     try {

@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/moder_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -91,7 +92,7 @@ class ModernGraficaFinanzas extends StatelessWidget {
             ],
           ),
           SizedBox(height: 24.h),
-          
+
           // Gráfico
           Container(
             height: 350.h,
@@ -150,7 +151,10 @@ class ModernGraficaFinanzas extends StatelessWidget {
                   xValueMapper: (d, _) => d.label,
                   yValueMapper: (d, _) => d.revenues,
                   gradient: LinearGradient(
-                    colors: [AppColors.success, AppColors.success.withOpacity(0.7)],
+                    colors: [
+                      AppColors.success,
+                      AppColors.success.withOpacity(0.7),
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -223,9 +227,18 @@ class ModernGraficaFinanzas extends StatelessWidget {
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w500,
                 ),
+
                 // borderRadius: 8.r,
-                elevation: 8,
+                elevation: 10,
               ),
+              onTooltipRender: (TooltipArgs args) {
+                final idx = (args.pointIndex ?? 0).toInt();
+                final puntos = args.dataPoints;
+                if (puntos != null && idx < puntos.length) {
+                  final valor = puntos[idx].y;
+                  args.text = Formatters.formatCurrency(valor);
+                }
+              },
             ),
           ),
         ],

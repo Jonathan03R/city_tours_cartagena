@@ -3,10 +3,19 @@ import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:intl/intl.dart';
 
 class Formatters {
-   static String formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(locale: 'es_CO', symbol: 'COP ');
+  static String formatCurrencyCompact(double amount) {
+    final formatter = NumberFormat.compactCurrency(
+      locale: 'es_CO',
+      symbol: 'COP ',
+    );
     return formatter.format(amount);
   }
+
+  static String formatCurrency(double amount) {
+    final formatter = NumberFormat.currency(locale: 'es_CO', symbol: 'COP ',decimalDigits: 0,);
+    return formatter.format(amount);
+  }
+
   static String formatDate(DateTime date) {
     final formatter = DateFormat('dd/MM/yyyy', 'es_CO');
     return formatter.format(date);
@@ -22,7 +31,6 @@ class Formatters {
     final nowColombia = nowUtc.add(const Duration(hours: -5));
     return nowColombia.hour < 12 ? TurnoType.manana : TurnoType.tarde;
   }
-
 
   static String getEstadoText(EstadoReserva estado) {
     switch (estado) {

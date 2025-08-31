@@ -2,32 +2,45 @@ import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:flutter/material.dart';
 
-
 class FiltroFlexibleController extends ChangeNotifier {
   FiltroPeriodo? periodoSeleccionado;
   TurnoType? turnoSeleccionado;
-  final List<DateTimeRange> semanasSeleccionadas = [];
+  final List<DateTimeRange> semanasSeleccionadas;
   final List<DateTime> mesesSeleccionados = [];
   final List<int> aniosSeleccionados = [];
 
+  FiltroFlexibleController()
+    : semanasSeleccionadas = _generarSemanasPorDefecto() {
+    debugPrint('Semanas inicializadas: $semanasSeleccionadas');
+  }
+  static List<DateTimeRange> _generarSemanasPorDefecto([int cantidad = 4]) {
+    final semanas = <DateTimeRange>[];
+    final now = DateTime.now();
+    for (var i = 0; i < cantidad; i++) {
+      final fecha = now.subtract(Duration(days: i * 7));
+      final lunes = fecha.subtract(Duration(days: fecha.weekday - 1));
+      final domingo = lunes.add(const Duration(days: 6));
+      semanas.add(DateTimeRange(start: lunes, end: domingo));
+    }
+    return semanas;
+  }
 
   List<DateTimeRange> get semanasSeleccionadasSorted {
-    return List<DateTimeRange>.from(semanasSeleccionadas)
-      ..sort((a, b) => a.start.compareTo(b.start)); // Ascendente: más antigua primero
+    return List<DateTimeRange>.from(semanasSeleccionadas)..sort(
+      (a, b) => a.start.compareTo(b.start),
+    ); // Ascendente: más antigua primero
   }
 
   List<DateTime> get mesesSeleccionadosSorted {
-    return List<DateTime>.from(mesesSeleccionados)
-      ..sort((a, b) {
-        if (a.year != b.year) return a.year.compareTo(b.year);
-        return a.month.compareTo(b.month);
-      }); // Ascendente: más antiguo primero
+    return List<DateTime>.from(mesesSeleccionados)..sort((a, b) {
+      if (a.year != b.year) return a.year.compareTo(b.year);
+      return a.month.compareTo(b.month);
+    }); // Ascendente: más antiguo primero
   }
 
   List<int> get aniosSeleccionadosSorted {
     return List<int>.from(aniosSeleccionados)..sort(); // Ascendente
   }
-
 
   ///semanaSeleccionada la inicializamos con la fecha de hoy
   DateTimeRange semanaSeleccionada = DateTimeRange(
@@ -37,39 +50,36 @@ class FiltroFlexibleController extends ChangeNotifier {
         .add(const Duration(days: 6)),
   );
 
-
   DateTimeRange get rangoSeleccionado {
-  switch (periodoSeleccionado) {
-    case FiltroPeriodo.semana:
-      return semanaSeleccionada;
+    switch (periodoSeleccionado) {
+      case FiltroPeriodo.semana:
+        return semanaSeleccionada;
 
-    case FiltroPeriodo.mes:
-      if (mesesSeleccionados.isNotEmpty) {
-        final ultimoMes = mesesSeleccionados.last;
-        final inicio = DateTime(ultimoMes.year, ultimoMes.month, 1);
-        final fin = DateTime(ultimoMes.year, ultimoMes.month + 1, 0);
-        return DateTimeRange(start: inicio, end: fin);
-      }
-      break;
+      case FiltroPeriodo.mes:
+        if (mesesSeleccionados.isNotEmpty) {
+          final ultimoMes = mesesSeleccionados.last;
+          final inicio = DateTime(ultimoMes.year, ultimoMes.month, 1);
+          final fin = DateTime(ultimoMes.year, ultimoMes.month + 1, 0);
+          return DateTimeRange(start: inicio, end: fin);
+        }
+        break;
 
-    case FiltroPeriodo.anio:
-      if (aniosSeleccionados.isNotEmpty) {
-        final ultimoAnio = aniosSeleccionados.last;
-        final inicio = DateTime(ultimoAnio, 1, 1);
-        final fin = DateTime(ultimoAnio, 12, 31);
-        return DateTimeRange(start: inicio, end: fin);
-      }
-      break;
+      case FiltroPeriodo.anio:
+        if (aniosSeleccionados.isNotEmpty) {
+          final ultimoAnio = aniosSeleccionados.last;
+          final inicio = DateTime(ultimoAnio, 1, 1);
+          final fin = DateTime(ultimoAnio, 12, 31);
+          return DateTimeRange(start: inicio, end: fin);
+        }
+        break;
 
-    default:
-      break;
+      default:
+        break;
+    }
+
+    // fallback → si no hay nada seleccionado, usa la semana actual
+    return semanaSeleccionada;
   }
-  
-
-  // fallback → si no hay nada seleccionado, usa la semana actual
-  return semanaSeleccionada;
-}
-
 
   void seleccionarPeriodo(FiltroPeriodo periodo) {
     periodoSeleccionado = periodo;
