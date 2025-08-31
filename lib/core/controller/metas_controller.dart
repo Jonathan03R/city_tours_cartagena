@@ -134,6 +134,7 @@ class MetasController extends ChangeNotifier {
     final turno = Formatters.getTurnoActual();
     return await obtenerSumaPasajerosSemanaActual(turno);
   }
+  
 
   /// Obtiene la meta activa para la semana actual usando el turno actual (mañana o tarde).
   Future<double?> obtenerMetaSemanaActualTurnoActual() async {

@@ -53,7 +53,12 @@ class Roles {
         verColaborador,
         verFinanzas,
         verDeudasReservas,
-
+        verGraficosPasajeros,
+        verGraficosGastos,
+        verGraficoSemanalPasajero,
+        verGraficoSemanalGastos,
+        verCardGastos,
+        verCardMetas
       ];
 
 }
