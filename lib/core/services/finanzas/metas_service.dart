@@ -2,6 +2,7 @@ import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class MetasService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -13,41 +14,91 @@ class MetasService {
   }) async {
     try {
       final fechaHoy = DateTime.now();
-      final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
+      final rango = _finanzasService.obtenerRangoPorFecha(
+        fechaHoy,
+        FiltroPeriodo.semana,
+      );
 
-      // Verificar si ya existe una meta para esta semana y turno
-      final existe = await _existeMetaParaSemana(rango.start, rango.end, turno);
-      if (existe) {
-        throw Exception('Ya existe una meta activa para esta semana y turno. ¡No seas repetitivo!');
+      // Buscar si ya existe una meta para esta semana y turno
+      final existingDocId = await _obtenerMetaExistente(
+        rango.start,
+        rango.end,
+        turno,
+      );
+      if (existingDocId != null) {
+        // Actualizar la meta existente
+        await actualizar(id: existingDocId, numeroMeta: numeroMeta, turno: turno);
+        return;
       }
 
+      // Si no existe, agregar nueva
       await _firestore.collection('metas').add({
         'numeroMeta': numeroMeta,
-        'turno': turno.name, // Cambiado a turno.name para guardar solo "manana", "tarde", etc.
+        'turno': turno.name,
         'fechaCreacion': fechaHoy,
         'fechaInicio': rango.start,
         'fechaFin': rango.end,
         'estado': 'activo',
       });
     } catch (e) {
-      throw Exception('Error al agregar meta: $e');
+      throw Exception('Error al agregar/actualizar meta: $e');
     }
   }
 
-  Future<bool> _existeMetaParaSemana(DateTime inicio, DateTime fin, TurnoType turno) async {
+    Future<String?> _obtenerMetaExistente(
+    DateTime inicio,
+    DateTime fin,
+    TurnoType turno,
+  ) async {
     try {
+      final startOfWeek = DateTime(inicio.year, inicio.month, inicio.day);
+      final endOfWeek = DateTime(fin.year, fin.month, fin.day, 23, 59, 59, 999);
       final snapshot = await _firestore
           .collection('metas')
           .where('estado', isEqualTo: 'activo')
-          .where('turno', isEqualTo: turno.name) // Cambiado a turno.name
-          .where('fechaInicio', isEqualTo: inicio)
-          .where('fechaFin', isEqualTo: fin)
+          .where('turno', isEqualTo: turno.name)
+          .where(
+            'fechaInicio',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+          )
+          .where(
+            'fechaInicio',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfWeek),
+          )
+          .limit(1)
           .get();
-      return snapshot.docs.isNotEmpty;
+      return snapshot.docs.isNotEmpty ? snapshot.docs.first.id : null;
     } catch (e) {
-      throw Exception('Error al verificar existencia de meta: $e');
+      throw Exception('Error al buscar meta existente: $e');
     }
   }
+
+  // Future<bool> _existeMetaParaSemana(
+  //   DateTime inicio,
+  //   DateTime fin,
+  //   TurnoType turno,
+  // ) async {
+  //   try {
+  //     final startOfWeek = DateTime(inicio.year, inicio.month, inicio.day);
+  //     final endOfWeek = DateTime(fin.year, fin.month, fin.day, 23, 59, 59, 999);
+  //     final snapshot = await _firestore
+  //         .collection('metas')
+  //         .where('estado', isEqualTo: 'activo')
+  //         .where('turno', isEqualTo: turno.name)
+  //         .where(
+  //           'fechaInicio',
+  //           isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+  //         )
+  //         .where(
+  //           'fechaInicio',
+  //           isLessThanOrEqualTo: Timestamp.fromDate(endOfWeek),
+  //         )
+  //         .get();
+  //     return snapshot.docs.isNotEmpty;
+  //   } catch (e) {
+  //     throw Exception('Error al verificar existencia de meta: $e');
+  //   }
+  // }
 
   Future<QuerySnapshot> obtenerMetas({int limite = 10}) async {
     try {
@@ -87,6 +138,36 @@ class MetasService {
       });
     } catch (e) {
       throw Exception('Error al actualizar meta: $e');
+    }
+  }
+
+  Future<QuerySnapshot> obtenerMetaActivaPorSemanaYTurno(
+    DateTime inicio,
+    DateTime fin,
+    TurnoType turno,
+  ) async {
+    try {
+      debugPrint('Obteniendo metas para semana $inicio - $fin y turno $turno');
+      final startOfWeek = DateTime(inicio.year, inicio.month, inicio.day);
+      final endOfWeek = DateTime(fin.year, fin.month, fin.day, 23, 59, 59, 999);
+      final datos = await _firestore
+          .collection('metas')
+          .where('estado', isEqualTo: 'activo')
+          .where('turno', isEqualTo: turno.name)
+          .where(
+            'fechaInicio',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+          )
+          .where(
+            'fechaInicio',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfWeek),
+          )
+          .limit(1)
+          .get();
+      debugPrint('Datos: ${datos.docs.map((doc) => doc.data()).toList()}');
+      return datos;
+    } catch (e) {
+      throw Exception('Error obteniendo meta activa: $e');
     }
   }
 }

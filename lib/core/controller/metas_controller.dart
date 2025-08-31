@@ -3,6 +3,7 @@ import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
 import 'package:citytourscartagena/core/services/finanzas/metas_service.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -77,29 +78,16 @@ class MetasController extends ChangeNotifier {
       final fechaHoy = DateTime.now();
       final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
 
-      final metasSnapshot = await _metasService.obtenerMetas();
-      final metas = metasSnapshot.docs.map((doc) => doc.data()).toList();
-
-      final metaActiva = metas.firstWhere(
-        (meta) {
-          final metaData = meta as Map<String, dynamic>;
-          final metaInicio = (metaData['fechaInicio'] as Timestamp).toDate();
-          final metaFin = (metaData['fechaFin'] as Timestamp).toDate();
-          final metaTurno = metaData['turno'] as String;
-          return metaData['estado'] == 'activo' &&
-                 metaTurno == turno.name && // Cambiado a turno.name
-                 metaInicio == rango.start &&
-                 metaFin == rango.end;
-        },
-        orElse: () => null,
-      );
-
-      if (metaActiva == null) return null;
-      return (metaActiva as Map<String, dynamic>)['numeroMeta'] as double;
+      final snapshot = await _metasService.obtenerMetaActivaPorSemanaYTurno(rango.start, rango.end, turno);
+      if (snapshot.docs.isEmpty) return null;
+      final metaData = snapshot.docs.first.data() as Map<String, dynamic>;
+      debugPrint('Meta semanal obtenida: $metaData');
+      return metaData['numeroMeta'] as double;
     } catch (e) {
       throw Exception('Error obteniendo meta semanal: $e');
     }
   }
+
 
   /// Método auxiliar para calcular suma de pasajeros en un rango.
   Future<int> _calcularSumaPasajeros(DateTime inicio, DateTime fin, TurnoType turno) async {
@@ -123,15 +111,6 @@ class MetasController extends ChangeNotifier {
     await _metasService.agregar(numeroMeta: numeroMeta, turno: turno);
   }
 
-  /// Actualiza una meta existente usando el servicio.
-  Future<void> actualizarMeta({
-    required String id,
-    required double numeroMeta,
-    required TurnoType turno,
-  }) async {
-    await _metasService.actualizar(id: id, numeroMeta: numeroMeta, turno: turno);
-  }
-
   /// Elimina una meta (cambia estado a inactivo o borra físicamente).
   Future<void> eliminarMeta(String id) async {
     try {
@@ -149,5 +128,36 @@ class MetasController extends ChangeNotifier {
   /// Obtiene todas las metas (activas e inactivas) para historial.
   Future<QuerySnapshot> obtenerTodasMetas() async {
     return await _metasService.obtenerTodasMetas();
+  }
+
+  Future<int> obtenerSumaPasajerosSemanaActualTurnoActual() async {
+    final turno = Formatters.getTurnoActual();
+    return await obtenerSumaPasajerosSemanaActual(turno);
+  }
+
+  /// Obtiene la meta activa para la semana actual usando el turno actual (mañana o tarde).
+  Future<double?> obtenerMetaSemanaActualTurnoActual() async {
+    final turno = Formatters.getTurnoActual();
+    return await obtenerMetaSemanaActual(turno);
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerEstadoSemanaActual() async {
+    final estados = <Map<String, dynamic>>[];
+    for (final turno in TurnoType.values) {
+      try {
+        final cumplida = await verificarMetaSemanal(turno);
+        final pasajeros = await obtenerSumaPasajerosSemanaActual(turno);
+        final meta = await obtenerMetaSemanaActual(turno);
+        estados.add({
+          'turno': turno.label,
+          'pasajeros': pasajeros,
+          'meta': meta ?? 0,
+          'cumplida': cumplida,
+        });
+      } catch (e) {
+        debugPrint('Error obteniendo estado para $turno: $e');
+      }
+    }
+    return estados;
   }
 }

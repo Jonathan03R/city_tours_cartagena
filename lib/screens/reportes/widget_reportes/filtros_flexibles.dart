@@ -2,6 +2,7 @@ import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/moder_buttom.dart';
 import 'package:citytourscartagena/core/widgets/moder_card.dart';
 import 'package:flutter/material.dart';
@@ -386,7 +387,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
 
   Widget _buildCompactSemanasChips(FiltroFlexibleController c) {
     final semanasOrdenadas = List<DateTimeRange>.from(c.semanasSeleccionadas)
-      ..sort((a, b) => a.start.compareTo(b.start));
+      ..sort((a, b) => a.start.compareTo(b.start)); // Ascendente: más antigua primero
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,6 +408,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
             itemCount: semanasOrdenadas.length,
             separatorBuilder: (context, index) => SizedBox(width: 8.w),
             itemBuilder: (context, i) {
+              final semana = semanasOrdenadas[i];
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                 decoration: BoxDecoration(
@@ -427,7 +429,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
                     ),
                     SizedBox(width: 6.w),
                     Text(
-                      'S${i + 1}',
+                      '${i + 1} (${_formatDate(semana.start)} - ${_formatDate(semana.end)})',
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w600,
@@ -437,7 +439,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
                     SizedBox(width: 6.w),
                     GestureDetector(
                       onTap: () {
-                        c.eliminarSemana(semanasOrdenadas[i]);
+                        c.eliminarSemana(semana);
                         setState(() {});
                       },
                       child: Icon(
@@ -461,7 +463,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
       ..sort((a, b) {
         if (a.year != b.year) return a.year.compareTo(b.year);
         return a.month.compareTo(b.month);
-      });
+      }); // Ascendente: más antiguo primero
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,7 +505,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
                     ),
                     SizedBox(width: 6.w),
                     Text(
-                      '${_nombreMes(m.month)} ${m.year}',
+                      '${index + 1} (${_nombreMes(m.month)} ${m.year})',
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w600,
@@ -533,11 +535,14 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
   }
 
   Widget _buildCompactAniosChips(FiltroFlexibleController c) {
+    final aniosOrdenados = List<int>.from(c.aniosSeleccionados)
+      ..sort(); // Ascendente: más antiguo primero
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Años Seleccionados (${c.aniosSeleccionados.length}):',
+          'Años Seleccionados (${aniosOrdenados.length}):',
           style: TextStyle(
             fontSize: 14.sp,
             fontWeight: FontWeight.w600,
@@ -549,10 +554,10 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
           height: 40.h,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: c.aniosSeleccionados.length,
+            itemCount: aniosOrdenados.length,
             separatorBuilder: (context, index) => SizedBox(width: 8.w),
             itemBuilder: (context, index) {
-              final a = c.aniosSeleccionados[index];
+              final a = aniosOrdenados[index];
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                 decoration: BoxDecoration(
@@ -573,7 +578,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
                     ),
                     SizedBox(width: 6.w),
                     Text(
-                      a.toString(),
+                      '${index + 1} (${a})',
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w600,
@@ -612,6 +617,14 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
         return Icons.calendar_today;
     }
   }
+
+  String _formatDate(DateTime date) {
+    // Usa Formatters.formatDate pero trunca a dd/MM para semanas
+    final fullDate = Formatters.formatDate(date); // dd/MM/yyyy
+    return fullDate.substring(0, 5); // dd/MM
+  }
+
+
 
   String _nombreMes(int mes) {
     const meses = [

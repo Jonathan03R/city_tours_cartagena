@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:intl/intl.dart';
 
@@ -15,6 +16,13 @@ class Formatters {
     final formatter = DateFormat('EEEE, dd MMMM yyyy', 'es_CO');
     return formatter.format(date);
   }
+
+  static TurnoType getTurnoActual() {
+    final nowUtc = DateTime.now().toUtc();
+    final nowColombia = nowUtc.add(const Duration(hours: -5));
+    return nowColombia.hour < 12 ? TurnoType.manana : TurnoType.tarde;
+  }
+
 
   static String getEstadoText(EstadoReserva estado) {
     switch (estado) {

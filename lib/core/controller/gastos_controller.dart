@@ -47,18 +47,12 @@ class GastosController extends ChangeNotifier {
     await cargarPagina();
   }
 
-  // Future<void> cargarPagina() async {
-  //   final snapshot = await _gastosService.obtenerPagina(
-  //     limite: _limite,
-  //     ultimoDoc: _ultimoDoc,
-  //   );
-
-  //   gastosActuales = snapshot.docs;
-
-  //   if (gastosActuales.isNotEmpty) {
-  //     _ultimoDoc = gastosActuales.last;
-  //   }
-  // }
+  Future<double> obtenerSumaGastosSemanaActual() async {
+    final now = DateTime.now();
+    final primerDiaSemana = now.subtract(Duration(days: now.weekday % 7));
+    final ultimoDiaSemana = primerDiaSemana.add(const Duration(days: 6));
+    return await _gastosService.obtenerSumaDeGastosEntre(primerDiaSemana, ultimoDiaSemana);
+  }
 
   Future<void> cargarPagina() async {
     // Si ya está en cache, la usamos

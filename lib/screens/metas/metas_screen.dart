@@ -271,7 +271,7 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildCurrentWeekSection(MetasController controller) {
+   Widget _buildCurrentWeekSection(MetasController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -285,7 +285,7 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
         ),
         SizedBox(height: 16.h),
         FutureBuilder<List<Map<String, dynamic>>>(
-          future: _obtenerEstadoSemanaActual(controller),
+          future: controller.obtenerEstadoSemanaActual(),  // Movido al controller
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return _buildLoadingCard();
@@ -671,9 +671,10 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
           'cumplida': cumplida,
         });
       } catch (e) {
-        // Ignorar errores por turno
+        debugPrint('Error obteniendo estado para $turno: $e');
       }
     }
+    debugPrint('Estados obtenidos: $estados');
     return estados;
   }
 

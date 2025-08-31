@@ -3,18 +3,17 @@ import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/metas_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
+import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
-import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/screens/metas/metas_screen.dart';
 import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class ReportesView extends StatefulWidget {
@@ -45,20 +44,19 @@ class _ReportesViewState extends State<ReportesView>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOutQuart));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5), 
-      end: Offset.zero
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutQuart),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
     _fadeController.forward();
     _slideController.forward();
     _filtrosController = FiltroFlexibleController();
-    
+
     // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
     final now = DateTime.now();
@@ -132,7 +130,9 @@ class _ReportesViewState extends State<ReportesView>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primaryNightBlue.withOpacity(0.3),
+                                color: AppColors.primaryNightBlue.withOpacity(
+                                  0.3,
+                                ),
                                 blurRadius: 20.r,
                                 offset: Offset(0, 8.h),
                               ),
@@ -141,7 +141,10 @@ class _ReportesViewState extends State<ReportesView>
                           child: FlexibleSpaceBar(
                             title: ShaderMask(
                               shaderCallback: (bounds) => LinearGradient(
-                                colors: [Colors.white, Colors.white.withOpacity(0.9)],
+                                colors: [
+                                  Colors.white,
+                                  Colors.white.withOpacity(0.9),
+                                ],
                               ).createShader(bounds),
                               child: Text(
                                 'Dashboard Financiero',
@@ -152,7 +155,8 @@ class _ReportesViewState extends State<ReportesView>
                                   letterSpacing: 0.5,
                                   shadows: [
                                     Shadow(
-                                      color: AppColors.primaryNightBlue.withOpacity(0.5),
+                                      color: AppColors.primaryNightBlue
+                                          .withOpacity(0.5),
                                       blurRadius: 8.0,
                                       offset: Offset(0, 2),
                                     ),
@@ -164,7 +168,7 @@ class _ReportesViewState extends State<ReportesView>
                           ),
                         ),
                       ),
-                      
+
                       SliverPadding(
                         padding: EdgeInsets.all(20.w),
                         sliver: SliverList(
@@ -248,9 +252,9 @@ class _ReportesViewState extends State<ReportesView>
               final turno = filtrosController.turnoSeleccionado;
               final periodo = filtrosController.periodoSeleccionado!;
 
-              final semanas = filtrosController.semanasSeleccionadas;
-              final meses = filtrosController.mesesSeleccionados;
-              final anios = filtrosController.aniosSeleccionados;
+               final semanas = filtrosController.semanasSeleccionadasSorted;
+              final meses = filtrosController.mesesSeleccionadosSorted;
+              final anios = filtrosController.aniosSeleccionadosSorted;
 
               List<ChartCategoryData> datosPasajeros = [];
               List<ChartCategoryData> datosGanancias = [];
@@ -416,11 +420,16 @@ class _ReportesViewState extends State<ReportesView>
                         );
 
                         if (fechaSeleccionada != null) {
-                          _filtrosController.seleccionarSemana(fechaSeleccionada);
+                          _filtrosController.seleccionarSemana(
+                            fechaSeleccionada,
+                          );
                         }
                       },
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 8.h,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -452,30 +461,44 @@ class _ReportesViewState extends State<ReportesView>
             builder: (context, filtrosController, child) {
               final semanaSeleccionada = filtrosController.semanaSeleccionada;
 
-              final pasajerosData = reportesController.calcularPasajerosPorSemana(
-                list: reservas,
-                inicio: semanaSeleccionada.start,
-                fin: semanaSeleccionada.end,
-              );
-              
-              final gananciasData = reportesController.calcularGananciasPorSemana(
-                list: reservas,
-                inicio: semanaSeleccionada.start,
-                fin: semanaSeleccionada.end,
-              );
+              final pasajerosData = reportesController
+                  .calcularPasajerosPorSemana(
+                    list: reservas,
+                    inicio: semanaSeleccionada.start,
+                    fin: semanaSeleccionada.end,
+                    turno: filtrosController.turnoSeleccionado,
+                  );
+
+              final gananciasData = reportesController
+                  .calcularGananciasPorSemana(
+                    list: reservas,
+                    inicio: semanaSeleccionada.start,
+                    fin: semanaSeleccionada.end,
+                    turno: filtrosController.turnoSeleccionado,
+                  );
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Turno: ${filtrosController.turnoSeleccionado?.label ?? 'Todos'}',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   ModernGraficoSemanal(
                     data: pasajerosData,
-                    titulo: 'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                    titulo:
+                        'Pasajeros del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
                         'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
                   ),
                   SizedBox(height: 32.h),
                   ModernGraficoGananciasSemanal(
                     data: gananciasData,
-                    titulo: 'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
+                    titulo:
+                        'Ganancias del ${semanaSeleccionada.start.day}/${semanaSeleccionada.start.month} '
                         'al ${semanaSeleccionada.end.day}/${semanaSeleccionada.end.month}',
                   ),
                 ],
@@ -511,7 +534,9 @@ class _ReportesViewState extends State<ReportesView>
                   width: 48.w,
                   height: 48.h,
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.accentBlue,
+                    ),
                     strokeWidth: 4.w,
                   ),
                 ),
@@ -564,7 +589,10 @@ class _ReportesViewState extends State<ReportesView>
                   padding: EdgeInsets.all(24.r),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.textSecondary.withOpacity(0.1), AppColors.textSecondary.withOpacity(0.05)],
+                      colors: [
+                        AppColors.textSecondary.withOpacity(0.1),
+                        AppColors.textSecondary.withOpacity(0.05),
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(20.r),
                   ),
@@ -624,7 +652,10 @@ class _ReportesViewState extends State<ReportesView>
                 ),
               );
             },
-            child: _buildMetaProgress(),
+            child: ChangeNotifierProvider(  // Agrega Provider aquí
+              create: (_) => MetasController(),
+              child: _buildMetaProgress(),
+            ),
           ),
         ),
         SizedBox(width: 16.w),
@@ -654,7 +685,6 @@ class _ReportesViewState extends State<ReportesView>
       ],
     );
   }
-
   Widget _buildNavigationCard({
     required String title,
     required String subtitle,
@@ -677,71 +707,73 @@ class _ReportesViewState extends State<ReportesView>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(16.r),
           onTap: onTap,
           child: Container(
-            height: 200.h,
-            padding: EdgeInsets.all(20.w),
+            height: 240.h, // Mantener fijo para igualdad
+            padding: EdgeInsets.all(15.w),
             decoration: BoxDecoration(
               color: AppColors.backgroundWhite,
               borderRadius: BorderRadius.circular(20.r),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(12.r),
-                      decoration: BoxDecoration(
-                        gradient: gradient,
-                        borderRadius: BorderRadius.circular(12.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: gradient.colors.first.withOpacity(0.3),
-                            blurRadius: 8.r,
-                            offset: Offset(0, 4.h),
-                          ),
-                        ],
+            child: SingleChildScrollView( // Scroll abarca title, subtitle y child
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(12.r),
+                        decoration: BoxDecoration(
+                          gradient: gradient,
+                          borderRadius: BorderRadius.circular(12.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: gradient.colors.first.withOpacity(0.3),
+                              blurRadius: 8.r,
+                              offset: Offset(0, 4.h),
+                            ),
+                          ],
+                        ),
+                        child: Icon(icon, color: Colors.white, size: 24.sp),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 24.sp),
-                    ),
-                    Container(
-                      padding: EdgeInsets.all(8.r),
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8.r),
+                      Container(
+                        padding: EdgeInsets.all(8.r),
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.textSecondary,
+                          size: 16.sp,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: AppColors.textSecondary,
-                        size: 16.sp,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20.h),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w700,
+                    ],
                   ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
+                  SizedBox(height: 15.h),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                SizedBox(height: 16.h),
-                Expanded(child: child),
-              ],
+                  SizedBox(height: 4.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  child, // Sin Expanded ni inner scroll
+                ],
+              ),
             ),
           ),
         ),
@@ -750,214 +782,141 @@ class _ReportesViewState extends State<ReportesView>
   }
 
   Widget _buildMetaProgress() {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    final FinanzasService _finanzasService = FinanzasService();
-    
-    return Consumer<ReportesController>(
-      builder: (context, controller, _) {
-        return StreamBuilder<List<ReservaConAgencia>>(
-          stream: controller.reservasStream,
-          builder: (context, reservasSnapshot) {
-            final reservas = reservasSnapshot.data ?? [];
-            return StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('metas')
-                  .where(
-                    'startOfWeek',
-                    isGreaterThanOrEqualTo: Timestamp.fromDate(
-                      DateTime(
-                        startOfWeek.year,
-                        startOfWeek.month,
-                        startOfWeek.day,
-                      ),
+    return Consumer<MetasController>(
+      builder: (context, metasController, _) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _obtenerDatosMetaTurnoActual(metasController),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cargando progreso...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
                     ),
-                  )
-                  .where(
-                    'startOfWeek',
-                    isLessThan: Timestamp.fromDate(
-                      DateTime(
-                        startOfWeek.year,
-                        startOfWeek.month,
-                        startOfWeek.day + 1,
-                      ),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sin meta definida para este turno',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
                     ),
-                  )
-                  .limit(1)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sin meta definida',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 12.h),
-                      Container(
-                        height: 8.h,
-                        decoration: BoxDecoration(
-                          color: AppColors.textSecondary.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4.r),
-                        ),
-                      ),
-                    ],
-                  );
-                }
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    height: 8.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ],
+              );
+            }
 
-                final metaDoc = snapshot.data!.docs.first;
-                final metaPasajeros = metaDoc['goal'] ?? 0;
+            final data = snapshot.data!;
+            final metaPasajeros = data['meta'] as double?;
+            final pasajerosActuales = data['pasajeros'] as int;
+            final turnoLabel = data['turnoLabel'] as String;
 
-                final pasajerosActuales = _finanzasService
-                    .calcularPasajerosEnRango(reservas, startOfWeek, endOfWeek);
+            if (metaPasajeros == null || metaPasajeros == 0) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sin meta para $turnoLabel',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    height: 8.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ],
+              );
+            }
 
-                final progreso = metaPasajeros > 0
-                    ? (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0)
-                    : 0.0;
+            final progreso = (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0);
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '$pasajerosActuales',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 24.sp,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          '/ $metaPasajeros',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12.h),
-                    Stack(
-                      children: [
-                        Container(
-                          height: 8.h,
-                          decoration: BoxDecoration(
-                            color: AppColors.textSecondary.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: progreso,
-                          child: Container(
-                            height: 8.h,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
-                              ),
-                              borderRadius: BorderRadius.circular(4.r),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.h),
                     Text(
-                      '${(progreso * 100).toInt()}% completado',
+                      '$pasajerosActuales',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      '/ $metaPasajeros',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildGastosSemanal() {
-    final now = DateTime.now();
-    final primerDiaSemana = now.subtract(Duration(days: now.weekday % 7));
-    final ultimoDiaSemana = primerDiaSemana.add(const Duration(days: 6));
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('gastos')
-          .where(
-            'date',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(primerDiaSemana),
-          )
-          .where(
-            'date',
-            isLessThanOrEqualTo: Timestamp.fromDate(ultimoDiaSemana),
-          )
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Cargando...',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
                 ),
-              ),
-            ],
-          );
-        }
-
-        double totalGastos = 0;
-        for (var doc in snapshot.data!.docs) {
-          totalGastos += (doc['amount'] ?? doc['amount'] ?? 0).toDouble();
-        }
-
-        final formatter = NumberFormat.currency(
-          locale: 'es_CO',
-          symbol: '\$',
-          decimalDigits: 0,
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              formatter.format(totalGastos),
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 24.sp,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Row(
-              children: [
-                Container(
-                  width: 8.w,
-                  height: 8.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
+                SizedBox(height: 8.h),
+                Text(
+                  'Turno: $turnoLabel',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(width: 8.w),
+                SizedBox(height: 12.h),
+                Stack(
+                  children: [
+                    Container(
+                      height: 8.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: progreso,
+                      child: Container(
+                        height: 8.h,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+                          ),
+                          borderRadius: BorderRadius.circular(4.r),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
                 Text(
-                  '${snapshot.data!.docs.length} transacciones',
+                  '${(progreso * 100).toInt()}% completado',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12.sp,
@@ -965,24 +924,99 @@ class _ReportesViewState extends State<ReportesView>
                   ),
                 ),
               ],
-            ),
-            SizedBox(height: 8.h),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6.r),
-              ),
-              child: Text(
-                'Tiempo real',
-                style: TextStyle(
-                  color: AppColors.success,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(MetasController controller) async {
+    final turno = Formatters.getTurnoActual();
+    final meta = await controller.obtenerMetaSemanaActualTurnoActual();
+    final pasajeros = await controller.obtenerSumaPasajerosSemanaActualTurnoActual();
+    final turnoLabel = turno.label;  // Reutiliza la extensión
+    return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
+  }
+
+
+  Widget _buildGastosSemanal() {
+    return Consumer<GastosController>(
+      builder: (context, controller, child) {
+        return FutureBuilder<double>(
+          future: controller.obtenerSumaGastosSemanaActual(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cargando...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            }
+            final totalGastos = snapshot.data ?? 0.0;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Formatters.formatCurrency(totalGastos),
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-            ),
-          ],
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    Container(
+                      width: 8.w,
+                      height: 8.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Esta semana',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    'Tiempo real',
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );

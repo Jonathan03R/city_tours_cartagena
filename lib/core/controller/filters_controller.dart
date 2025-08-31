@@ -10,6 +10,25 @@ class FiltroFlexibleController extends ChangeNotifier {
   final List<DateTime> mesesSeleccionados = [];
   final List<int> aniosSeleccionados = [];
 
+
+  List<DateTimeRange> get semanasSeleccionadasSorted {
+    return List<DateTimeRange>.from(semanasSeleccionadas)
+      ..sort((a, b) => a.start.compareTo(b.start)); // Ascendente: más antigua primero
+  }
+
+  List<DateTime> get mesesSeleccionadosSorted {
+    return List<DateTime>.from(mesesSeleccionados)
+      ..sort((a, b) {
+        if (a.year != b.year) return a.year.compareTo(b.year);
+        return a.month.compareTo(b.month);
+      }); // Ascendente: más antiguo primero
+  }
+
+  List<int> get aniosSeleccionadosSorted {
+    return List<int>.from(aniosSeleccionados)..sort(); // Ascendente
+  }
+
+
   ///semanaSeleccionada la inicializamos con la fecha de hoy
   DateTimeRange semanaSeleccionada = DateTimeRange(
     start: DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1)),
