@@ -148,7 +148,7 @@ class ModernGraficoSemanal extends StatelessWidget {
                 ColumnSeries<ChartCategoryData, String>(
                   dataSource: data,
                   xValueMapper: (ChartCategoryData data, _) => data.label,
-                  yValueMapper: (ChartCategoryData data, _) => data.value,
+                  yValueMapper: (ChartCategoryData data, _) => data.value1,
                   gradient: LinearGradient(
                     colors: [AppColors.accentBlue, AppColors.lightBlue],
                     begin: Alignment.topCenter,
@@ -316,7 +316,7 @@ class ModernGraficoGananciasSemanal extends StatelessWidget {
                 SplineAreaSeries<ChartCategoryData, String>(
                   dataSource: data,
                   xValueMapper: (ChartCategoryData data, _) => data.label,
-                  yValueMapper: (ChartCategoryData data, _) => data.value,
+                  yValueMapper: (ChartCategoryData data, _) => data.value1,
                   gradient: LinearGradient(
                     colors: [
                       accentColor.withOpacity(0.4),

@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:citytourscartagena/core/widgets/moder_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -108,7 +109,7 @@ class ModernGraficoComparacion extends StatelessWidget {
                 ColumnSeries<ChartCategoryData, String>(
                   dataSource: datos,
                   xValueMapper: (ChartCategoryData data, _) => data.label,
-                  yValueMapper: (ChartCategoryData data, _) => data.value,
+                  yValueMapper: (ChartCategoryData data, _) => data.value1,
                   gradient: LinearGradient(
                     colors: [AppColors.accentBlue, AppColors.lightBlue],
                     begin: Alignment.topCenter,
@@ -147,7 +148,7 @@ class ModernGraficoComparacion extends StatelessWidget {
 
 /// Gráfico de líneas moderno para comparar series de datos
 class ModernGraficoComparacionLinea extends StatelessWidget {
-  final List<ChartCategoryData> datos;
+  final List<ChartCategoryData> datos; // Cambiado a List<ChartCategoryData>
   final String titulo;
 
   const ModernGraficoComparacionLinea({
@@ -247,10 +248,11 @@ class ModernGraficoComparacionLinea extends StatelessWidget {
                 majorTickLines: MajorTickLines(color: Colors.transparent),
               ),
               series: <CartesianSeries>[
+                // Primera línea (value1)
                 SplineAreaSeries<ChartCategoryData, String>(
                   dataSource: datos,
                   xValueMapper: (d, _) => d.label,
-                  yValueMapper: (d, _) => d.value,
+                  yValueMapper: (d, _) => d.value1.toDouble(),
                   gradient: LinearGradient(
                     colors: [
                       AppColors.warning.withOpacity(0.3),
@@ -267,8 +269,8 @@ class ModernGraficoComparacionLinea extends StatelessWidget {
                     color: AppColors.warning,
                     borderColor: Colors.white,
                     borderWidth: 2.w,
-                    height: 8.h,
-                    width: 8.w,
+                    height: 12.h,
+                    width: 12.w,
                   ),
                   dataLabelSettings: DataLabelSettings(
                     isVisible: true,
@@ -278,7 +280,43 @@ class ModernGraficoComparacionLinea extends StatelessWidget {
                       fontSize: 10.sp,
                     ),
                   ),
+                  name: 'Ganancias',
                 ),
+                // Segunda línea (value2) solo si hay datos no cero
+                if (datos.any((d) => d.value2 != 0))
+                  SplineAreaSeries<ChartCategoryData, String>(
+                    dataSource: datos,
+                    xValueMapper: (d, _) => d.label,
+                    yValueMapper: (d, _) => d.value2.toDouble(), 
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.accentBlue.withOpacity(0.3),
+                        AppColors.accentBlue.withOpacity(0.1),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderColor: AppColors.accentBlue,
+                    borderWidth: 3.w,
+                    splineType: SplineType.cardinal,
+                    markerSettings: MarkerSettings(
+                      isVisible: true,
+                      color: AppColors.accentBlue,
+                      borderColor: Colors.white,
+                      borderWidth: 2.w,
+                      height: 12.h,
+                      width: 12.w,
+                    ),
+                    dataLabelSettings: DataLabelSettings(
+                      isVisible: true,
+                      textStyle: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10.sp,
+                      ),
+                    ),
+                    name: 'Gastos',
+                  ),
               ],
               tooltipBehavior: TooltipBehavior(
                 enable: true,
@@ -287,8 +325,16 @@ class ModernGraficoComparacionLinea extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 12.sp,
                 ),
-                // borderRadius: 8.r,
               ),
+               onTooltipRender: (TooltipArgs args) {
+                final idx = (args.pointIndex ?? 0).toInt();
+                final puntos = args.dataPoints;
+                if (puntos != null && idx < puntos.length) {
+                  final valor = puntos[idx].y.toDouble(); // Cast a double para evitar error de tipo
+                  args.text = Formatters.formatCurrency(valor);
+                }
+              },
+
             ),
           ),
         ],

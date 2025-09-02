@@ -7,11 +7,17 @@ import 'package:citytourscartagena/core/services/finanzas/gastos_service.dart';
 import 'package:citytourscartagena/core/utils/date_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
 
 class GastosController extends ChangeNotifier {
   final GastosService _gastosService = GastosService();
   final FinanzasService _finanzasService = FinanzasService();
   final ReservasController reservasController = ReservasController();
+  final BehaviorSubject<List<Map<String, dynamic>>> _gastosSubject =
+      BehaviorSubject<List<Map<String, dynamic>>>();
+  Stream<List<Map<String, dynamic>>> get gastosStream => _gastosSubject.stream;
+
+  
   List<Map<String, dynamic>> _gastos = [];
   List<Map<String, dynamic>> get gastos => _gastos;
   bool _cargando = true;
@@ -45,6 +51,24 @@ class GastosController extends ChangeNotifier {
     _totalPaginas = (_totalGastos / _limite).ceil();
 
     await cargarPagina();
+  }
+  Future<void> cargarTodosLosGastos() async {
+    _gastos.clear();
+    DocumentSnapshot? ultimoDoc;
+    try {
+      while (true) {
+        final snapshot = await _gastosService.obtenerPagina(
+          limite: 100, // Límite alto para cargar más rápido
+          ultimoDoc: ultimoDoc,
+        );
+        if (snapshot.docs.isEmpty) break;
+        _gastos.addAll(snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>));
+        ultimoDoc = snapshot.docs.last;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error al cargar todos los gastos: $e');
+    }
   }
 
   Future<double> obtenerSumaGastosSemanaActual() async {

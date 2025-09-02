@@ -17,4 +17,9 @@ class DateHelper {
     ];
     return meses[mes - 1];
   }
+
+  static String nombreDia(int weekday) {
+    const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    return dias[weekday - 1];
+  }
 }

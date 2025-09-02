@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 class FiltroFlexibleController extends ChangeNotifier {
   FiltroPeriodo? periodoSeleccionado;
   TurnoType? turnoSeleccionado;
+  DateTime? fechaSeleccionada; 
   final List<DateTimeRange> semanasSeleccionadas;
   final List<DateTime> mesesSeleccionados = [];
   final List<int> aniosSeleccionados = [];
 
   FiltroFlexibleController()
-    : semanasSeleccionadas = _generarSemanasPorDefecto() {
-    debugPrint('Semanas inicializadas: $semanasSeleccionadas');
+    : semanasSeleccionadas = _generarSemanasPorDefecto(), 
+    fechaSeleccionada = DateTime.now() {
+    // debugPrint('Semanas inicializadas: $semanasSeleccionadas');
   }
   static List<DateTimeRange> _generarSemanasPorDefecto([int cantidad = 4]) {
     final semanas = <DateTimeRange>[];

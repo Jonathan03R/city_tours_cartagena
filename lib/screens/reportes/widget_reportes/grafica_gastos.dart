@@ -206,8 +206,8 @@ class ModernGraficaFinanzas extends StatelessWidget {
                     color: AppColors.accentBlue,
                     borderColor: Colors.white,
                     borderWidth: 2.w,
-                    height: 8.h,
-                    width: 8.w,
+                    height: 12.h,
+                    width: 12.w,
                   ),
                   dataLabelSettings: DataLabelSettings(
                     isVisible: true,

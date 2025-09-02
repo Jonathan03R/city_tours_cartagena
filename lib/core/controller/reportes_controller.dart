@@ -1,9 +1,12 @@
+import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/services/finanzas/finanzas_service.dart';
+import 'package:citytourscartagena/core/services/reservas/reservas_service.dart';
 import 'package:citytourscartagena/core/utils/date_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 typedef _Metric =
@@ -21,6 +24,8 @@ class ReportesController extends ChangeNotifier {
   // ============================================================
   final ReservasController reservasController;
   final FinanzasService _finanzasService = FinanzasService();
+  final ReservasService _reservasService = ReservasService();
+    final GastosController _gastosController = GastosController();
 
   ReportesController({ReservasController? reservasController})
     : reservasController = reservasController ?? ReservasController();
@@ -41,7 +46,6 @@ class ReportesController extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   // Último documento cargado (para la paginación)
-  String? _lastDocumentId;
 
   // ============================================================
   // Métodos privados auxiliares
@@ -140,26 +144,27 @@ class ReportesController extends ChangeNotifier {
         turno: turno,
       );
 
-      final label =
-          'Semana ${i + 1} ';
+      final label = 'Semana ${i + 1} ';
 
       resultado.add(ChartCategoryData(label, valor));
     }
 
     return resultado;
   }
+  
 
   // Devuelve agrupación de ganancias por múltiples rangos
   List<ChartCategoryData> agruparGananciasPorRangos(
     List<ReservaConAgencia> reservas,
     List<DateTimeRange> rangos, {
     TurnoType? turno,
+    required List<Map<String, dynamic>> gastos,
   }) {
     final List<ChartCategoryData> resultado = [];
 
     for (int i = 0; i < rangos.length; i++) {
       final rango = rangos[i];
-      final valor = _finanzasService
+      final ganancias = _finanzasService
           .calcularGananciasEnRango(
             reservas,
             rango.start,
@@ -168,10 +173,29 @@ class ReportesController extends ChangeNotifier {
           )
           .round();
 
-      final label =
-          'Semana ${i + 1} ';
+      final gastosFiltrados = gastos.where((gasto) {
+        final fecha = (gasto['fecha'] as Timestamp).toDate();
+        final fechaSolo = DateTime(fecha.year, fecha.month, fecha.day);
+        final startSolo = DateTime(rango.start.year, rango.start.month, rango.start.day);
+        final endSolo = DateTime(rango.end.year, rango.end.month, rango.end.day);
+        return fechaSolo.isAfter(startSolo.subtract(const Duration(days: 1))) &&
+               fechaSolo.isBefore(endSolo.add(const Duration(days: 1)));
+      }).toList();
 
-      resultado.add(ChartCategoryData(label, valor));
+      final gastosValor = gastosFiltrados.fold(0.0, (sum, gasto) => sum + (gasto['monto'] as double)).round();
+
+      // Debug prints
+            debugPrint('Rango ${i + 1}: ${rango.start} - ${rango.end}');
+      debugPrint('Ganancias: $ganancias');
+      debugPrint('Gastos filtrados: ${gastosFiltrados.length}');
+      debugPrint('Montos de gastos filtrados: ${gastosFiltrados.map((g) => g['monto'])}'); // Nuevo debug
+      debugPrint('Gastos valor: $gastosValor');
+      debugPrint('Total gastos en lista: ${gastos.length}');
+
+
+      final label = 'Semana ${i + 1}';
+
+      resultado.add(ChartCategoryData(label, ganancias, gastosValor));
     }
 
     return resultado;
@@ -201,68 +225,84 @@ class ReportesController extends ChangeNotifier {
   // ============================================================
 
   List<ChartCategoryData> calcularPasajerosPorSemana({
-    required List<ReservaConAgencia> list,
-    required DateTime inicio,
-    required DateTime fin,
+    required List<ReservaConAgencia> reservas,
+    required DateTime fecha,
     TurnoType? turno,
   }) {
-    if (fin.difference(inicio).inDays > 6) {
-      throw ArgumentError('El rango de fechas no puede exceder los 7 días.');
-    }
-
-    final lunes = inicio.subtract(Duration(days: inicio.weekday - 1));
-    final domingo = lunes.add(const Duration(days: 6));
+    final rango = _finanzasService.obtenerRangoPorFecha(
+      fecha,
+      FiltroPeriodo.semana,
+    );
 
     final Map<int, int> pasajerosPorDia = {for (var i = 1; i <= 7; i++) i: 0};
 
-    for (var reserva in list) {
-      final fecha = reserva.reserva.fecha;
-      if (fecha.isBefore(lunes) || fecha.isAfter(domingo)) continue;
-      if (turno != null && reserva.reserva.turno != turno) continue;
-      final diaSemana = fecha.weekday;
-      final pasajeros =  reserva.reserva.pax;
-      pasajerosPorDia[diaSemana] =
-          (pasajerosPorDia[diaSemana] ?? 0) + pasajeros;
+    for (var reservaConAgencia in reservas) {
+      final reserva = reservaConAgencia.reserva;
+      final fechaSolo = DateTime(
+        reserva.fecha.year,
+        reserva.fecha.month,
+        reserva.fecha.day,
+      );
+      for (int i = 1; i <= 7; i++) {
+        final diaSemana = rango.start.add(Duration(days: i - 1));
+        final diaSolo = DateTime(
+          diaSemana.year,
+          diaSemana.month,
+          diaSemana.day,
+        );
+        if (fechaSolo == diaSolo) {
+          if (turno != null && reserva.turno != turno) break;
+          pasajerosPorDia[i] = (pasajerosPorDia[i] ?? 0) + (reserva.pax);
+          break;
+        }
+      }
     }
 
-    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     return pasajerosPorDia.entries.map((entry) {
-      final dia = diasSemana[entry.key - 1];
+      final dia = DateHelper.nombreDia(entry.key);
       final pasajeros = entry.value;
       return ChartCategoryData(dia, pasajeros);
     }).toList();
   }
 
   List<ChartCategoryData> calcularGananciasPorSemana({
-    required List<ReservaConAgencia> list,
-    required DateTime inicio,
-    required DateTime fin,
+    required List<ReservaConAgencia> reservas,
+    required DateTime fecha,
     TurnoType? turno,
   }) {
-    if (fin.difference(inicio).inDays > 6) {
-      throw ArgumentError('El rango de fechas no puede exceder los 7 días.');
-    }
-
-    final lunes = inicio.subtract(Duration(days: inicio.weekday - 1));
-    final domingo = lunes.add(const Duration(days: 6));
+    final rango = _finanzasService.obtenerRangoPorFecha(
+      fecha,
+      FiltroPeriodo.semana,
+    );
 
     final Map<int, double> gananciasPorDia = {
       for (var i = 1; i <= 7; i++) i: 0.0,
     };
 
-    for (var reserva in list) {
-      final fecha = reserva.reserva.fecha;
-      if (fecha.isBefore(lunes) || fecha.isAfter(domingo)) continue;
-      if (turno != null && reserva.reserva.turno != turno) continue;
-      final diaSemana = fecha.weekday;
-      final ganancia = reserva.reserva.ganancia;
-      gananciasPorDia[diaSemana] =
-          (gananciasPorDia[diaSemana] ?? 0.0) + ganancia;
+    for (var reservaConAgencia in reservas) {
+      final reserva = reservaConAgencia.reserva;
+      final fechaSolo = DateTime(
+        reserva.fecha.year,
+        reserva.fecha.month,
+        reserva.fecha.day,
+      );
+      for (int i = 1; i <= 7; i++) {
+        final diaSemana = rango.start.add(Duration(days: i - 1));
+        final diaSolo = DateTime(
+          diaSemana.year,
+          diaSemana.month,
+          diaSemana.day,
+        );
+        if (fechaSolo == diaSolo) {
+          if (turno != null && reserva.turno != turno) break;
+          gananciasPorDia[i] = gananciasPorDia[i]! + reserva.ganancia;
+          break;
+        }
+      }
     }
 
-    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     return gananciasPorDia.entries.map((entry) {
-      final dia = diasSemana[entry.key - 1];
+      final dia = DateHelper.nombreDia(entry.key);
       final ganancia = entry.value.round();
       return ChartCategoryData(dia, ganancia);
     }).toList();
@@ -286,10 +326,10 @@ class PasajerosData {
 
 class ChartCategoryData {
   final String label;
-  final int value;
-  ChartCategoryData(this.label, this.value);
+  final int value1; // Ganancias
+  final int value2; // Gastos
+  ChartCategoryData(this.label, this.value1, [this.value2 = 0]);
 }
-
 class MetasHistoryData {
   final String id;
   final DateTime date;
@@ -325,3 +365,4 @@ class FinanceCategoryData {
     required this.margin,
   });
 }
+
