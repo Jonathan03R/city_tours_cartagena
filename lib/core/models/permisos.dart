@@ -58,4 +58,6 @@ enum Permission {
 
 
   ver_historial,
+
+  ver_selector_fecha,
 }

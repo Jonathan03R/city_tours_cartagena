@@ -21,7 +21,7 @@ class ModernGraficoComparacion extends StatelessWidget {
   Widget build(BuildContext context) {
     if (datos.isEmpty) {
       return ModernCard(
-        child: Container(
+        child: SizedBox(
           height: 300.h,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -49,7 +49,7 @@ class ModernGraficoComparacion extends StatelessWidget {
     return ModernCard(
       hasGradient: true,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Header
           Row(
@@ -77,7 +77,7 @@ class ModernGraficoComparacion extends StatelessWidget {
           ),
           SizedBox(height: 24.h),
           
-          Container(
+          SizedBox(
             height: 300.h,
             child: SfCartesianChart(
               backgroundColor: Colors.transparent,

@@ -39,6 +39,7 @@ class Roles {
   static const String verCardGastos = "ver gastos";
   static const String verGraficoSemanalPasajero = "ver grafico semanal de pasajeros";
   static const String verGraficoSemanalGastos = "ver grafico semanal de gastos";
+  static const String verSelectorFecha = "ver selector de fecha";
 
   static List<String> get allRoles => [
         admin,
@@ -58,7 +59,8 @@ class Roles {
         verGraficoSemanalPasajero,
         verGraficoSemanalGastos,
         verCardGastos,
-        verCardMetas
+        verCardMetas,
+        verSelectorFecha
       ];
 
 }

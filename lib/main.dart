@@ -28,9 +28,9 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
   debugPrint(
     '🔔 Notificación en segundo plano: ${message.notification?.title}',
   );
-  print(
-    '📝 apps en este isolate: ${Firebase.apps.map((a) => a.name).toList()}',
-  );
+  // print(
+  //   '📝 apps en este isolate: ${Firebase.apps.map((a) => a.name).toList()}',
+  // );
 }
 
 Future<void> main() async {

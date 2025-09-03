@@ -490,31 +490,32 @@ class _ReportesViewState extends State<ReportesView>
                               );
                             }
                           },
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 8.h,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.date_range_rounded,
-                                  color: Colors.white,
-                                  size: 16.sp,
+                           child: authRole.hasPermission(Permission.ver_selector_fecha)
+                              ?   Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 8.h,
                                 ),
-                                SizedBox(width: 6.w),
-                                Text(
-                                  'Seleccionar',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.date_range_rounded,
+                                      color: Colors.white,
+                                      size: 16.sp,
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'Seleccionar',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
+                              ) : SizedBox.shrink(),
                         ),
                       ),
                     ),
@@ -578,7 +579,7 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ],
                   if (authRole.hasPermission(
-                    Permission.ver_graficos_pasajeros_semanal,
+                    Permission.ver_graficos_gastos_semanal,
                   )) ...[
                     SizedBox(height: 32.h),
                     ModernGraficoGananciasSemanal(
@@ -749,7 +750,8 @@ class _ReportesViewState extends State<ReportesView>
               authRole: authRole, 
             ),
           ),
-        SizedBox(width: 16.w),
+        if (authRole.hasPermission(Permission.ver_cards_metas) && authRole.hasPermission(Permission.ver_cards_gastos))
+          SizedBox(width: 16.w),
         if (authRole.hasPermission(Permission.ver_cards_gastos))
           Expanded(
             child: _buildNavigationCard(

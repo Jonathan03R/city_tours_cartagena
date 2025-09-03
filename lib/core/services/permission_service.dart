@@ -127,6 +127,10 @@ class PermissionService {
       // Define permisos específicos para el rol 'crearReservas'
     ],
 
+    Roles.verSelectorFecha: [
+      Permission.ver_selector_fecha,
+    ],
+
 
   };
 

@@ -8,7 +8,6 @@ import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
-import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/widgets/debt_summary_by_turno.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.dart';
@@ -34,7 +33,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0; // 0=Reservas,1=Agencias,2=Colaboradores
-  TurnoType? _turnoSeleccionado; // turno elegido
   StreamSubscription<List<AgenciaConReservas>>? _agenciasPreloadSubscription;
 
   // Controlador para el search de agencias
