@@ -256,6 +256,23 @@ class _TurnoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final gradient = _backgroundGradient(estado, _isPrivado);
+    final screenWidth = MediaQuery.of(context).size.width;
+    double mainFontSize;
+    double empresaFontSize;
+    double badgeFontSize;
+    if (screenWidth < 400) {
+      mainFontSize = 18.sp; // Aumentado
+      empresaFontSize = 14.sp; // Aumentado
+      badgeFontSize = 12.sp; // Aumentado
+    } else if (screenWidth < 800) {
+      mainFontSize = 22.sp; // Aumentado
+      empresaFontSize = 16.sp; // Aumentado
+      badgeFontSize = 14.sp; // Aumentado
+    } else {
+      mainFontSize = 28.sp; // Aumentado
+      empresaFontSize = 20.sp; // Aumentado
+      badgeFontSize = 18.sp; // Aumentado
+    }
 
     return Semantics(
       button: true,
@@ -296,7 +313,7 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16.sp,
+                    fontSize: mainFontSize,
                     color: _isPrivado ? Colors.amber.shade50 : Colors.white,
                     letterSpacing: 0.2,
                   ),
@@ -309,12 +326,12 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 12.sp,
+                    fontSize: empresaFontSize,
                     color: Colors.white,
                   ),
                 ),
                 SizedBox(height: 8.w),
-                _EstadoBadge(estado: estado), // “… hoy”
+                _EstadoBadge(estado: estado, fontSize: badgeFontSize), // “… hoy”
               ],
             ),
           ),
@@ -424,8 +441,9 @@ class _AgencyAvatar extends StatelessWidget {
 }
 
 class _EstadoBadge extends StatelessWidget {
-  const _EstadoBadge({required this.estado});
+  const _EstadoBadge({required this.estado, required this.fontSize});
   final CuposEstado estado;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -453,7 +471,7 @@ class _EstadoBadge extends StatelessWidget {
         style: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontSize: 10.sp,
+          fontSize: fontSize,
           // letterSpacing: 0.8,
         ),
       ),
