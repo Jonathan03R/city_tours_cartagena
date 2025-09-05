@@ -61,6 +61,7 @@ class FinanzasService {
         
       }
     }
+    debugPrint('Total pasajeros en rango: $totalPasajeros');
     return totalPasajeros;
   }
 

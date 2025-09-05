@@ -7,11 +7,17 @@ import 'package:citytourscartagena/core/services/finanzas/gastos_service.dart';
 import 'package:citytourscartagena/core/utils/date_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
 
 class GastosController extends ChangeNotifier {
   final GastosService _gastosService = GastosService();
   final FinanzasService _finanzasService = FinanzasService();
   final ReservasController reservasController = ReservasController();
+  final BehaviorSubject<List<Map<String, dynamic>>> _gastosSubject =
+      BehaviorSubject<List<Map<String, dynamic>>>();
+  Stream<List<Map<String, dynamic>>> get gastosStream => _gastosSubject.stream;
+
+  
   List<Map<String, dynamic>> _gastos = [];
   List<Map<String, dynamic>> get gastos => _gastos;
   bool _cargando = true;
@@ -46,41 +52,65 @@ class GastosController extends ChangeNotifier {
 
     await cargarPagina();
   }
+  Future<void> cargarTodosLosGastos() async {
+    _gastos.clear();
+    DocumentSnapshot? ultimoDoc;
+    try {
+      while (true) {
+        final snapshot = await _gastosService.obtenerPagina(
+          limite: 100, // Límite alto para cargar más rápido
+          ultimoDoc: ultimoDoc,
+        );
+        if (snapshot.docs.isEmpty) break;
+        _gastos.addAll(snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>));
+        ultimoDoc = snapshot.docs.last;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error al cargar todos los gastos: $e');
+    }
+  }
 
   Future<double> obtenerSumaGastosSemanaActual() async {
     final now = DateTime.now();
-    final primerDiaSemana = now.subtract(Duration(days: now.weekday % 7));
+    final primerDiaSemana = DateTime(
+      now.year,
+      now.month,
+      now.day - (now.weekday - 1),
+    );
     final ultimoDiaSemana = primerDiaSemana.add(const Duration(days: 6));
+    debugPrint('Consultando gastos entre $primerDiaSemana y $ultimoDiaSemana');
     return await _gastosService.obtenerSumaDeGastosEntre(
       primerDiaSemana,
       ultimoDiaSemana,
     );
   }
-Future<void> cargarPagina() async {
-  try {
-    if (_paginaActual <= _cachePaginas.length) {
-      gastosActuales = _cachePaginas[_paginaActual - 1];
+
+  Future<void> cargarPagina() async {
+    try {
+      if (_paginaActual <= _cachePaginas.length) {
+        gastosActuales = _cachePaginas[_paginaActual - 1];
+        notifyListeners();
+        return;
+      }
+
+      final snapshot = await _gastosService.obtenerPagina(
+        limite: _limite,
+        ultimoDoc: _ultimoDoc,
+      );
+
+      gastosActuales = snapshot.docs;
+
+      if (gastosActuales.isNotEmpty) {
+        _ultimoDoc = gastosActuales.last;
+      }
+
+      _cachePaginas.add(gastosActuales);
       notifyListeners();
-      return;
+    } catch (e) {
+      debugPrint('Error al cargar la página: $e');
     }
-
-    final snapshot = await _gastosService.obtenerPagina(
-      limite: _limite,
-      ultimoDoc: _ultimoDoc,
-    );
-
-    gastosActuales = snapshot.docs;
-
-    if (gastosActuales.isNotEmpty) {
-      _ultimoDoc = gastosActuales.last;
-    }
-
-    _cachePaginas.add(gastosActuales);
-    notifyListeners();
-  } catch (e) {
-    debugPrint('Error al cargar la página: $e');
   }
-}
 
   Future<void> siguientePagina() async {
     if (_paginaActual < _totalPaginas) {
@@ -126,30 +156,32 @@ Future<void> cargarPagina() async {
     }
   }
 
- Future<void> eliminarGasto(String id) async {
-  try {
-    _cargando = true;
-    notifyListeners();
-    await _gastosService.eliminar(id);
-    // Actualiza totales después de borrar
-    _totalGastos = await _gastosService.obtenerCantidadGastos();
-    _totalPaginas = (_totalGastos / _limite).ceil();
-    // Limpia la caché y recarga los datos desde Firestore
-    _cachePaginas.clear();
-    _ultimoDoc = null;
-    await cargarPagina();
-  } catch (e) {
-    // Manejo de errores
-    debugPrint('Error al eliminar gasto en el controlador: $e');
-  } finally {
-    _cargando = false;
-    notifyListeners();
+  Future<void> eliminarGasto(String id) async {
+    try {
+      _cargando = true;
+      notifyListeners();
+      await _gastosService.eliminar(id);
+      // Actualiza totales después de borrar
+      _totalGastos = await _gastosService.obtenerCantidadGastos();
+      _totalPaginas = (_totalGastos / _limite).ceil();
+      // Limpia la caché y recarga los datos desde Firestore
+      _cachePaginas.clear();
+      _ultimoDoc = null;
+      await cargarPagina();
+    } catch (e) {
+      // Manejo de errores
+      debugPrint('Error al eliminar gasto en el controlador: $e');
+    } finally {
+      _cargando = false;
+      notifyListeners();
+    }
   }
-}
 
   /// Modelo para métricas financieras por periodo.
   /// Agrupa gastos + ganancias + utilidad + margen según el periodo seleccionado.
   /// Usa las mismas reglas de intervalo (semana/mes/año) que _agruparPorPeriodo.
+  DateTime soloFecha(DateTime fecha) =>
+      DateTime(fecha.year, fecha.month, fecha.day);
   Future<List<FinanceCategoryData>> agruparFinanzasPorPeriodo(
     List<ReservaConAgencia> reservas,
     DateTime inicio,
@@ -158,6 +190,13 @@ Future<void> cargarPagina() async {
     required String tipoAgrupacion,
   }) async {
     final List<FinanceCategoryData> resultado = [];
+    inicio = soloFecha(inicio);
+    fin = soloFecha(fin);
+    // debugPrint('--- INICIO agruparFinanzasPorPeriodo ---');
+    // debugPrint('Tipo agrupación: $tipoAgrupacion');
+    // debugPrint('Fecha inicio: $inicio');
+    // debugPrint('Fecha fin: $fin');
+    // debugPrint('Reservas recibidas: ${reservas.length}');
 
     if (tipoAgrupacion == 'semana') {
       DateTime pi = inicio;
@@ -172,7 +211,12 @@ Future<void> cargarPagina() async {
           pf,
           turno: turno,
         );
+
         final exp = await _gastosService.obtenerSumaDeGastosEntre(pi, pf);
+        // debugPrint(
+        //   'Semana $semanaNum: $pi - $pf | Gastos: $exp | Ganancias: $rev',
+        // );
+
         final util = rev - exp;
         final double margin = rev != 0 ? util / rev * 100 : 0;
 

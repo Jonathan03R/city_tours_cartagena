@@ -27,12 +27,12 @@ class _ModernGastosScreenState extends State<ModernGastosScreen> {
   void initState() {
     super.initState();
     _filtrosController = FiltroFlexibleController();
-    // Default: última semana y 3 anteriores
+    // // Default: última semana y 3 anteriores
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
-    final now = DateTime.now();
-    for (var i = 0; i < 4; i++) {
-      _filtrosController.agregarSemana(now.subtract(Duration(days: i * 7)));
-    }
+    // final now = DateTime.now();
+    // for (var i = 0; i < 4; i++) {
+    //   _filtrosController.agregarSemana(now.subtract(Duration(days: i * 7)));
+    // }
   }
 
   @override
@@ -562,7 +562,7 @@ class _ModernGastosScreenState extends State<ModernGastosScreen> {
                             builder: (context, snapFin) {
                               if (snapFin.connectionState == ConnectionState.waiting) {
                                 return ModernCard(
-                                  child: Container(
+                                  child: SizedBox(
                                     height: 200.h,
                                     child: Center(
                                       child: CircularProgressIndicator(

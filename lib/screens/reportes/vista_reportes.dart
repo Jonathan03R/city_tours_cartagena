@@ -16,7 +16,7 @@ import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comp
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart'
-    show SelectorTurnos, TurnoSelectorWidget;
+    show TurnoSelectorWidget;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -36,7 +36,8 @@ class _ReportesViewState extends State<ReportesView>
   late Animation<Offset> _slideAnimation;
 
   late FiltroFlexibleController _filtrosController;
-
+  late FiltroFlexibleController _weeklyFiltrosController; 
+  bool _gastosLoaded = false;
   @override
   void initState() {
     super.initState();
@@ -61,13 +62,20 @@ class _ReportesViewState extends State<ReportesView>
     _fadeController.forward();
     _slideController.forward();
     _filtrosController = FiltroFlexibleController();
+     _weeklyFiltrosController = FiltroFlexibleController();
 
     // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
-    final now = DateTime.now();
-    for (int i = 0; i < 4; i++) {
-      _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
-    }
+    // final now = DateTime.now();
+    // for (int i = 0; i < 4; i++) {
+    //   _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
+    // }
+  _weeklyFiltrosController.seleccionarPeriodo(FiltroPeriodo.semana);
+    _weeklyFiltrosController.seleccionarSemana(DateTime.now());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final gastosController = Provider.of<GastosController>(context, listen: false);
+      gastosController.cargarTodosLosGastos();
+    });
   }
 
   @override
@@ -75,6 +83,7 @@ class _ReportesViewState extends State<ReportesView>
     _fadeController.dispose();
     _slideController.dispose();
     _filtrosController.dispose();
+    _weeklyFiltrosController.dispose();
     super.dispose();
   }
 
@@ -113,68 +122,6 @@ class _ReportesViewState extends State<ReportesView>
                   child: CustomScrollView(
                     physics: const BouncingScrollPhysics(),
                     slivers: [
-                      // SliverAppBar(
-                      //   expandedHeight: 120.h,
-                      //   floating: false,
-                      //   pinned: true,
-                      //   elevation: 0,
-                      //   backgroundColor: Colors.transparent,
-                      //   flexibleSpace: Container(
-                      //     decoration: BoxDecoration(
-                      //       gradient: LinearGradient(
-                      //         begin: Alignment.topLeft,
-                      //         end: Alignment.bottomRight,
-                      //         colors: [
-                      //           AppColors.primaryNightBlue,
-                      //           AppColors.secondaryNightBlue,
-                      //           AppColors.accentBlue,
-                      //         ],
-                      //         stops: [0.0, 0.6, 1.0],
-                      //       ),
-                      //       borderRadius: BorderRadius.only(
-                      //         bottomLeft: Radius.circular(32.r),
-                      //         bottomRight: Radius.circular(32.r),
-                      //       ),
-                      //       boxShadow: [
-                      //         BoxShadow(
-                      //           color: AppColors.primaryNightBlue.withOpacity(
-                      //             0.3,
-                      //           ),
-                      //           blurRadius: 20.r,
-                      //           offset: Offset(0, 8.h),
-                      //         ),
-                      //       ],
-                      //     ),
-                      //     child: FlexibleSpaceBar(
-                      //       title: ShaderMask(
-                      //         shaderCallback: (bounds) => LinearGradient(
-                      //           colors: [
-                      //             Colors.white,
-                      //             Colors.white.withOpacity(0.9),
-                      //           ],
-                      //         ).createShader(bounds),
-                      //         child: Text(
-                      //           'Dashboard Financiero',
-                      //           style: TextStyle(
-                      //             color: Colors.white,
-                      //             fontSize: 20.sp,
-                      //             fontWeight: FontWeight.w700,
-                      //             letterSpacing: 0.5,
-                      //             shadows: [
-                      //               Shadow(
-                      //                 color: AppColors.primaryNightBlue
-                      //                     .withOpacity(0.5),
-                      //                 blurRadius: 8.0,
-                      //                 offset: Offset(0, 2),
-                      //               ),
-                      //             ],
-                      //           ),
-                      //         ),
-                      //       ),
-                      //       centerTitle: true,
-                      //     ),
-                      //   ),
-                      // ),
                       SliverPadding(
                         padding: EdgeInsets.all(20.w),
                         sliver: SliverList(
@@ -296,12 +243,23 @@ class _ReportesViewState extends State<ReportesView>
               SizedBox(height: 20.h),
             ],
           ),
+          Consumer<GastosController>(
+            builder: (context, gastosController, child) {
+              // Cargar gastos una vez si no están cargados
+              if (!_gastosLoaded && gastosController.gastos.isEmpty) {
+                _gastosLoaded = true;
+                gastosController.cargarTodosLosGastos(); // Carga async
+              }
+              return SizedBox.shrink(); // No renderiza nada, solo para cargar
+            },
+          ),
 
           Consumer<FiltroFlexibleController>(
             builder: (context, filtrosController, child) {
+              final gastosController = context.watch<GastosController>();
               // ... existing logic ...
               final turno = filtrosController.turnoSeleccionado;
-              final periodo = filtrosController.periodoSeleccionado!;
+              final periodo = filtrosController.periodoSeleccionado;
 
               final semanas = filtrosController.semanasSeleccionadasSorted;
               final meses = filtrosController.mesesSeleccionadosSorted;
@@ -320,6 +278,7 @@ class _ReportesViewState extends State<ReportesView>
                   reservas,
                   semanas,
                   turno: turno,
+                  gastos: gastosController.gastos,
                 );
               } else if (periodo == FiltroPeriodo.mes && meses.isNotEmpty) {
                 final rangos = meses.map((m) {
@@ -337,6 +296,7 @@ class _ReportesViewState extends State<ReportesView>
                   reservas,
                   rangos,
                   turno: turno,
+                  gastos: gastosController.gastos,
                 );
               } else if (periodo == FiltroPeriodo.anio && anios.isNotEmpty) {
                 final rangos = anios.map((y) {
@@ -354,6 +314,7 @@ class _ReportesViewState extends State<ReportesView>
                   reservas,
                   rangos,
                   turno: turno,
+                  gastos: gastosController.gastos,
                 );
               }
 
@@ -389,23 +350,25 @@ class _ReportesViewState extends State<ReportesView>
   ) {
     final authRole = context.watch<AuthController>();
     return ChangeNotifierProvider.value(
-      value: _filtrosController,
+      value: _weeklyFiltrosController,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: AppColors.backgroundWhite,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryNightBlue.withOpacity(0.08),
-                  blurRadius: 20.r,
-                  offset: Offset(0, 4.h),
+          Consumer<FiltroFlexibleController>(
+            builder: (context, filtrosController, child) {
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundWhite,
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryNightBlue.withOpacity(0.08),
+                      blurRadius: 20.r,
+                      offset: Offset(0, 4.h),
+                    ),
+                  ],
                 ),
-              ],
-            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -436,102 +399,151 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ],
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.accentBlue, AppColors.lightBlue],
-                    ),
-                    borderRadius: BorderRadius.circular(10.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accentBlue.withOpacity(0.3),
-                        blurRadius: 8.r,
-                        offset: Offset(0, 4.h),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
+                Row(
+                  children: [
+                    // ComboBox de Turno SOLO para los gráficos semanales
+                    Container(
+                    width: 120.w,
+                    padding: EdgeInsets.symmetric(horizontal: 8.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundWhite,
                       borderRadius: BorderRadius.circular(10.r),
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final fechaSeleccionada = await showDatePicker(
-                          context: context,
-                          initialDate: now,
-                          firstDate: DateTime(now.year - 5),
-                          lastDate: DateTime(now.year + 5),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppColors.primaryNightBlue,
-                                  onPrimary: Colors.white,
-                                  surface: AppColors.backgroundWhite,
-                                  onSurface: AppColors.textPrimary,
-                                ),
-                              ),
-                              child: child!,
-                            );
-                          },
-                        );
-
-                        if (fechaSeleccionada != null) {
-                          _filtrosController.seleccionarSemana(
-                            fechaSeleccionada,
-                          );
-                        }
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
-                          vertical: 8.h,
+                      border: Border.all(
+                        color: AppColors.textLight.withOpacity(0.3),
+                        width: 1.w,
+                      ),
+                    ),
+                    child: DropdownButton<TurnoType?>(
+                      value: _weeklyFiltrosController.turnoSeleccionado,
+                      isExpanded: true,
+                      underline: SizedBox(),
+                      icon: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.textSecondary,
+                      ),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      items: [
+                        DropdownMenuItem<TurnoType?>(
+                          value: null,
+                          child: Text('Todos'),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.date_range_rounded,
-                              color: Colors.white,
-                              size: 16.sp,
-                            ),
-                            SizedBox(width: 6.w),
-                            Text(
-                              'Seleccionar',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        ...TurnoType.values.map((tt) {
+                          return DropdownMenuItem<TurnoType?>(
+                            value: tt,
+                            child: Text(tt.label),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (tt) {
+                        filtrosController.seleccionarTurno(tt); // <--- SIN setState
+                      },
+                    ),
+                  ),
+                    SizedBox(width: 8.w),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.accentBlue, AppColors.lightBlue],
+                        ),
+                        borderRadius: BorderRadius.circular(10.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentBlue.withOpacity(0.3),
+                            blurRadius: 8.r,
+                            offset: Offset(0, 4.h),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10.r),
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final fechaSeleccionada = await showDatePicker(
+                              context: context,
+                              initialDate: now,
+                              firstDate: DateTime(now.year - 5),
+                              lastDate: DateTime(now.year + 5),
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: ColorScheme.light(
+                                      primary: AppColors.primaryNightBlue,
+                                      onPrimary: Colors.white,
+                                      surface: AppColors.backgroundWhite,
+                                      onSurface: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+
+                            if (fechaSeleccionada != null) {
+                              _weeklyFiltrosController.seleccionarSemana(
+                                fechaSeleccionada,
+                              );
+                            }
+                          },
+                           child: authRole.hasPermission(Permission.ver_selector_fecha)
+                              ?   Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 8.h,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.date_range_rounded,
+                                      color: Colors.white,
+                                      size: 16.sp,
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'Seleccionar',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ) : SizedBox.shrink(),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
+          );
+            },
           ),
           SizedBox(height: 20.h),
           Consumer<FiltroFlexibleController>(
             builder: (context, filtrosController, child) {
               final semanaSeleccionada = filtrosController.semanaSeleccionada;
+              final turnoSelectoTurno = filtrosController.turnoSeleccionado;
 
               final pasajerosData = reportesController
                   .calcularPasajerosPorSemana(
-                    list: reservas,
-                    inicio: semanaSeleccionada.start,
-                    fin: semanaSeleccionada.end,
-                    turno: filtrosController.turnoSeleccionado,
+                    reservas: reservas,
+                    fecha: semanaSeleccionada.start,
+                    turno: turnoSelectoTurno,
                   );
 
               final gananciasData = reportesController
                   .calcularGananciasPorSemana(
-                    list: reservas,
-                    inicio: semanaSeleccionada.start,
-                    fin: semanaSeleccionada.end,
-                    turno: filtrosController.turnoSeleccionado,
+                    reservas: reservas,
+                    fecha: semanaSeleccionada.start,
+                    turno: turnoSelectoTurno,
                   );
 
               return Column(
@@ -567,7 +579,7 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ],
                   if (authRole.hasPermission(
-                    Permission.ver_graficos_pasajeros_semanal,
+                    Permission.ver_graficos_gastos_semanal,
                   )) ...[
                     SizedBox(height: 32.h),
                     ModernGraficoGananciasSemanal(
@@ -735,9 +747,11 @@ class _ReportesViewState extends State<ReportesView>
                 create: (_) => MetasController(),
                 child: _buildMetaProgress(),
               ),
+              authRole: authRole, 
             ),
           ),
-        SizedBox(width: 16.w),
+        if (authRole.hasPermission(Permission.ver_cards_metas) && authRole.hasPermission(Permission.ver_cards_gastos))
+          SizedBox(width: 16.w),
         if (authRole.hasPermission(Permission.ver_cards_gastos))
           Expanded(
             child: _buildNavigationCard(
@@ -758,8 +772,10 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ),
                 );
+                
               },
               child: _buildGastosSemanal(),
+              authRole: authRole, 
             ),
           ),
       ],
@@ -773,6 +789,7 @@ class _ReportesViewState extends State<ReportesView>
     required Gradient gradient,
     required VoidCallback onTap,
     required Widget child,
+    required AuthController authRole, 
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -789,7 +806,11 @@ class _ReportesViewState extends State<ReportesView>
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16.r),
-          onTap: onTap,
+          onTap: () {
+            if (authRole.hasPermission(Permission.ver_historial)) {
+              onTap(); // Llama al onTap original solo si tiene permiso
+            }
+          },
           child: Container(
             height: 240.h, // Mantener fijo para igualdad
             padding: EdgeInsets.all(15.w),
@@ -820,18 +841,19 @@ class _ReportesViewState extends State<ReportesView>
                         ),
                         child: Icon(icon, color: Colors.white, size: 24.sp),
                       ),
-                      Container(
-                        padding: EdgeInsets.all(8.r),
-                        decoration: BoxDecoration(
-                          color: AppColors.textSecondary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: AppColors.textSecondary,
-                          size: 16.sp,
-                        ),
-                      ),
+                      if (authRole.hasPermission(Permission.ver_historial))
+                        Container(
+                          padding: EdgeInsets.all(8.r),
+                          decoration: BoxDecoration(
+                            color: AppColors.textSecondary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: AppColors.textSecondary,
+                            size: 16.sp,
+                          ),
+                        )
                     ],
                   ),
                   SizedBox(height: 15.h),

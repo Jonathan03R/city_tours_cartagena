@@ -62,13 +62,16 @@ class GastosService {
   }
 
   Future<int> obtenerCantidadGastos() async {
-  try {
-    QuerySnapshot snapshot = await _firestore.collection('gastos').where('estado', isEqualTo: 'activo').get();
-    return snapshot.docs.length;
-  } catch (e) {
-    throw Exception('Error al obtener cantidad de gastos: $e');
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('gastos')
+          .where('estado', isEqualTo: 'activo')
+          .get();
+      return snapshot.docs.length;
+    } catch (e) {
+      throw Exception('Error al obtener cantidad de gastos: $e');
+    }
   }
-}
 
   Future<void> eliminar(String id) async {
     try {
@@ -78,20 +81,27 @@ class GastosService {
     }
   }
 
-  Future<double> obtenerSumaDeGastosEntre(DateTime inicio, DateTime fin) async {
-    try {
-      final snapshot = await _firestore
-          .collection('gastos')
-          .where('estado', isEqualTo: 'activo')
-          .where('fecha', isGreaterThanOrEqualTo: inicio)
-          .where('fecha', isLessThanOrEqualTo: fin)
-          .get();
-      return snapshot.docs.fold<double>(0.0, (suma, doc) {
-        final data = doc.data();
-        return suma + (data['monto'] as num).toDouble();
-      });
-    } catch (e) {
-      throw Exception('Error al obtener la suma de gastos: $e');
-    }
+Future<double> obtenerSumaDeGastosEntre(DateTime inicio, DateTime fin) async {
+  DateTime soloFecha(DateTime fecha) => DateTime(fecha.year, fecha.month, fecha.day);
+  // debugPrint('Consultando gastos entre $inicio y $fin');
+
+  try {
+    final snapshot = await _firestore
+        .collection('gastos')
+        .where('estado', isEqualTo: 'activo')
+        .where('fecha', isGreaterThanOrEqualTo: soloFecha(inicio))
+        .where('fecha', isLessThanOrEqualTo: soloFecha(fin))
+        .get();
+
+    // for (var doc in snapshot.docs) {
+    //   // debugPrint('Consultando gastos  Gasto: ${doc.data()}');
+    // }
+    return snapshot.docs.fold<double>(0.0, (suma, doc) {
+      final data = doc.data();
+      return suma + (data['monto'] as num).toDouble();
+    });
+  } catch (e) {
+    throw Exception('Error al obtener la suma de gastos: $e');
   }
+}
 }

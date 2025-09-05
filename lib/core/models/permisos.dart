@@ -55,4 +55,9 @@ enum Permission {
 
   ver_graficos_pasajeros_semanal,
   ver_graficos_gastos_semanal,
+
+
+  ver_historial,
+
+  ver_selector_fecha,
 }
