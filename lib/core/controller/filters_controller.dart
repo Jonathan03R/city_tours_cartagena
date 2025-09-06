@@ -156,4 +156,23 @@ class FiltroFlexibleController extends ChangeNotifier {
     aniosSeleccionados.remove(anio);
     notifyListeners();
   }
+
+    void resetearSemanasPorDefecto() {
+      semanasSeleccionadas.clear();
+      final now = DateTime.now();
+      final primerDiaMes = DateTime(now.year, now.month, 1);
+      final ultimoDiaMes = DateTime(now.year, now.month + 1, 0);
+      DateTime inicioSemana = primerDiaMes.subtract(Duration(days: primerDiaMes.weekday - 1));
+      while (inicioSemana.isBefore(ultimoDiaMes)) {
+        final finSemana = inicioSemana.add(const Duration(days: 6));
+        // Solo agregar semanas que están completamente dentro del mes actual
+        if (inicioSemana.isAfter(primerDiaMes.subtract(const Duration(days: 1))) &&
+            finSemana.isBefore(ultimoDiaMes.add(const Duration(days: 1))) &&
+            inicioSemana.month == now.month && finSemana.month == now.month) {
+          semanasSeleccionadas.add(DateTimeRange(start: inicioSemana, end: finSemana));
+        }
+        inicioSemana = inicioSemana.add(const Duration(days: 7));
+      }
+      notifyListeners();
+    }
 }

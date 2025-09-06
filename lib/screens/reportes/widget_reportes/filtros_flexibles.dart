@@ -231,37 +231,47 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
                 SizedBox(height: 16.h),
 
                 // Botones de acción según el período
-                if (c.periodoSeleccionado == FiltroPeriodo.semana)
-                  ModernButton(
-                    text: 'Agregar Semana',
-                    icon: Icons.calendar_view_week,
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final fecha = await showDatePicker(
-                        context: context,
-                        initialDate: now,
-                        firstDate: DateTime(now.year - 5),
-                        lastDate: DateTime(now.year + 5),
-                        builder: (context, child) {
-                          return Theme(
-                            data: Theme.of(context).copyWith(
-                              colorScheme: ColorScheme.light(
-                                primary: AppColors.accentBlue,
-                                onPrimary: Colors.white,
-                                surface: Colors.white,
-                                onSurface: AppColors.textPrimary,
+                  if (c.periodoSeleccionado == FiltroPeriodo.semana) ...[
+                    ModernButton(
+                      text: 'Agregar Semana',
+                      icon: Icons.calendar_view_week,
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final fecha = await showDatePicker(
+                          context: context,
+                          initialDate: now,
+                          firstDate: DateTime(now.year - 5),
+                          lastDate: DateTime(now.year + 5),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: ColorScheme.light(
+                                  primary: AppColors.accentBlue,
+                                  onPrimary: Colors.white,
+                                  surface: Colors.white,
+                                  onSurface: AppColors.textPrimary,
+                                ),
                               ),
-                            ),
-                            child: child!,
-                          );
-                        },
-                      );
-                      if (fecha != null) {
-                        c.agregarSemana(fecha);
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (fecha != null) {
+                          c.agregarSemana(fecha);
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    SizedBox(height: 8.h),
+                    ModernButton(
+                      text: 'Resetear',
+                      icon: Icons.lock_reset,
+                      onPressed: () {
+                        c.resetearSemanasPorDefecto();
                         setState(() {});
-                      }
-                    },
-                  ),
+                      },
+                    ),
+                  ],
 
                 if (c.periodoSeleccionado == FiltroPeriodo.mes)
                   ModernButton(

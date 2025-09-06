@@ -399,127 +399,130 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    // ComboBox de Turno SOLO para los gráficos semanales
-                    Container(
-                    width: 120.w,
-                    padding: EdgeInsets.symmetric(horizontal: 8.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundWhite,
-                      borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(
-                        color: AppColors.textLight.withOpacity(0.3),
-                        width: 1.w,
-                      ),
-                    ),
-                    child: DropdownButton<TurnoType?>(
-                      value: _weeklyFiltrosController.turnoSeleccionado,
-                      isExpanded: true,
-                      underline: SizedBox(),
-                      icon: Icon(
-                        Icons.keyboard_arrow_down,
-                        color: AppColors.textSecondary,
-                      ),
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      items: [
-                        DropdownMenuItem<TurnoType?>(
-                          value: null,
-                          child: Text('Todos'),
-                        ),
-                        ...TurnoType.values.map((tt) {
-                          return DropdownMenuItem<TurnoType?>(
-                            value: tt,
-                            child: Text(tt.label),
-                          );
-                        }).toList(),
-                      ],
-                      onChanged: (tt) {
-                        filtrosController.seleccionarTurno(tt); // <--- SIN setState
-                      },
-                    ),
-                  ),
-                    SizedBox(width: 8.w),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.accentBlue, AppColors.lightBlue],
-                        ),
-                        borderRadius: BorderRadius.circular(10.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accentBlue.withOpacity(0.3),
-                            blurRadius: 8.r,
-                            offset: Offset(0, 4.h),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
+                Flexible(
+                  child: Row(
+                    children: [
+                      // ComboBox de Turno SOLO para los gráficos semanales
+                      Container(
+                        width: 90.w,
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.backgroundWhite,
                           borderRadius: BorderRadius.circular(10.r),
-                          onTap: () async {
-                            final now = DateTime.now();
-                            final fechaSeleccionada = await showDatePicker(
-                              context: context,
-                              initialDate: now,
-                              firstDate: DateTime(now.year - 5),
-                              lastDate: DateTime(now.year + 5),
-                              builder: (context, child) {
-                                return Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: ColorScheme.light(
-                                      primary: AppColors.primaryNightBlue,
-                                      onPrimary: Colors.white,
-                                      surface: AppColors.backgroundWhite,
-                                      onSurface: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  child: child!,
-                                );
-                              },
-                            );
-
-                            if (fechaSeleccionada != null) {
-                              _weeklyFiltrosController.seleccionarSemana(
-                                fechaSeleccionada,
+                          border: Border.all(
+                            color: AppColors.textLight.withOpacity(0.3),
+                            width: 1.w,
+                          ),
+                        ),
+                        child: DropdownButton<TurnoType?>(
+                          value: _weeklyFiltrosController.turnoSeleccionado,
+                          isExpanded: true,
+                          underline: SizedBox(),
+                          icon: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: AppColors.textSecondary,
+                          ),
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          items: [
+                            DropdownMenuItem<TurnoType?>(
+                              value: null,
+                              child: Text('Todos'),
+                            ),
+                            ...TurnoType.values.map((tt) {
+                              return DropdownMenuItem<TurnoType?>(
+                                value: tt,
+                                child: Text(tt.label),
                               );
-                            }
+                            }).toList(),
+                          ],
+                          onChanged: (tt) {
+                            filtrosController.seleccionarTurno(tt); // <--- SIN setState
                           },
-                           child: authRole.hasPermission(Permission.ver_selector_fecha)
-                              ?   Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w,
-                                  vertical: 8.h,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.date_range_rounded,
-                                      color: Colors.white,
-                                      size: 16.sp,
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      'Seleccionar',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.accentBlue, AppColors.lightBlue],
+                          ),
+                          borderRadius: BorderRadius.circular(10.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accentBlue.withOpacity(0.3),
+                              blurRadius: 8.r,
+                              offset: Offset(0, 4.h),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10.r),
+                            onTap: () async {
+                              final now = DateTime.now();
+                              final fechaSeleccionada = await showDatePicker(
+                                context: context,
+                                initialDate: now,
+                                firstDate: DateTime(now.year - 5),
+                                lastDate: DateTime(now.year + 5),
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: Theme.of(context).copyWith(
+                                      colorScheme: ColorScheme.light(
+                                        primary: AppColors.primaryNightBlue,
+                                        onPrimary: Colors.white,
+                                        surface: AppColors.backgroundWhite,
+                                        onSurface: AppColors.textPrimary,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ) : SizedBox.shrink(),
+                                    child: child!,
+                                  );
+                                },
+                              );
+
+                              if (fechaSeleccionada != null) {
+                                _weeklyFiltrosController.seleccionarSemana(
+                                  fechaSeleccionada,
+                                );
+                              }
+                            },
+                            child: authRole.hasPermission(Permission.ver_selector_fecha)
+                                ? Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12.w,
+                                      vertical: 8.h,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.date_range_rounded,
+                                          color: Colors.white,
+                                          size: 16.sp,
+                                        ),
+                                        SizedBox(width: 6.w),
+                                        Text(
+                                          'Seleccionar',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12.sp,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : SizedBox.shrink(),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
