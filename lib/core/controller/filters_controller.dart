@@ -15,7 +15,7 @@ class FiltroFlexibleController extends ChangeNotifier {
     fechaSeleccionada = DateTime.now() {
     // debugPrint('Semanas inicializadas: $semanasSeleccionadas');
   }
-  static List<DateTimeRange> _generarSemanasPorDefecto([int cantidad = 4]) {
+  static List<DateTimeRange> _generarSemanasPorDefecto([int cantidad = 1]) {
     final semanas = <DateTimeRange>[];
     final now = DateTime.now();
     for (var i = 0; i < cantidad; i++) {
