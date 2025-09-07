@@ -229,7 +229,7 @@ class FirestoreService {
     try {
       await _db.collection('reservas').add(reserva.toFirestore());
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 
@@ -244,7 +244,7 @@ class FirestoreService {
           .doc(id)
           .set(reserva.toFirestore(), SetOptions(merge: true));
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 
@@ -258,33 +258,6 @@ class FirestoreService {
     }
   }
 
-  ///OBSOLETO ESTE METODO YA NO SE UTILIZARA POR EL HECHO QUE AHORA SE MANEJAN POR 2 PRECIOS POR ASIENTOS DIFERENTES
-  // // NUEVO MÉTODO: Actualiza el costoAsiento de todas las reservas de una agencia
-  // Future<void> updateReservasCostoAsiento(
-  //   String agenciaId,
-  //   double newCostoAsiento,
-  // ) async {
-  //   try {
-  //     final querySnapshot = await _db
-  //         .collection('reservas')
-  //         .where('agenciaId', isEqualTo: agenciaId)
-  //         .get();
-
-  //     final batch = _db.batch();
-  //     for (var doc in querySnapshot.docs) {
-  //       batch.update(doc.reference, {'costoAsiento': newCostoAsiento});
-  //     }
-  //     await batch.commit();
-  //     debugPrint(
-  //       '✅ Costo por asiento actualizado para ${querySnapshot.docs.length} reservas de la agencia $agenciaId a $newCostoAsiento',
-  //     );
-  //   } catch (e) {
-  //     debugPrint(
-  //       '❌ Error actualizando costo por asiento de reservas para agencia $agenciaId: $e',
-  //     );
-  //     throw e;
-  //   }
-  // }
 
   Future<void> updateReservasCostoAsientoManana(
     String agenciaId,
