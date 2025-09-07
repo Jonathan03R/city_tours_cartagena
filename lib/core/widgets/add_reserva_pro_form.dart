@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
@@ -7,12 +9,11 @@ import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:math' as math;
-import 'error_dialogs.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/agencias_controller.dart';
 import '../controller/reservas_controller.dart';
+import 'error_dialogs.dart';
 
 class AddReservaProForm extends StatefulWidget {
   final TurnoType? turno;
@@ -35,6 +36,9 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   bool _turnoError = false;
   TurnoType? _selectedTurno;
   bool _costoPrivadoError = false;
+  // NUEVO: Hora seleccionada para reservas privadas
+  TimeOfDay? _selectedTime;
+  bool _horaPrivadoError = false;
 
   // Instancia de TextParser
   final TextParser _textParser = TextParser();
@@ -171,6 +175,12 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
         await ErrorDialogs.showErrorDialog(context, 'Por favor ingresa un costo total válido para el servicio privado.');
         return;
       }
+      // Validar hora para privado
+      if (_selectedTime == null) {
+        setState(() => _horaPrivadoError = true);
+        await ErrorDialogs.showErrorDialog(context, 'Por favor selecciona una hora para el servicio privado.');
+        return;
+      }
     }
 
     // Obtener agencia seleccionada (si existe)
@@ -219,6 +229,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       turno: turno,
       ticket: _parsedData!['ticket'] as String? ?? '',
       habitacion: _parsedData!['habitacion'] as String? ?? '',
+      hora: _selectedTime,
     );
 
     try {
@@ -445,6 +456,48 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                           });
                         },
                       ),
+                      const SizedBox(height: 12),
+                      // Campo Hora para privado
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedTime != null
+                                  ? 'Hora seleccionada: ${_selectedTime!.format(context)}'
+                                  : 'Seleccione una hora',
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: _selectedTime ?? TimeOfDay.now(),
+                                useRootNavigator: true,
+                                initialEntryMode: TimePickerEntryMode.dial,
+                                builder: (BuildContext ctx, Widget? child) {
+                                  final mq = MediaQuery.of(ctx).copyWith(viewInsets: EdgeInsets.zero, alwaysUse24HourFormat: true);
+                                  return MediaQuery(data: mq, child: child ?? const SizedBox.shrink());
+                                },
+                              );
+                              if (time != null) {
+                                setState(() {
+                                  _selectedTime = time;
+                                  _horaPrivadoError = false;
+                                });
+                              }
+                            },
+                            child: const Text('Seleccionar Hora'),
+                          ),
+                        ],
+                      ),
+                      if (_horaPrivadoError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            'La hora es obligatoria para servicio privado',
+                            style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                          ),
+                        ),
                     ],
                     const SizedBox(height: 20),
                     if (_showPreview && _parsedData != null)

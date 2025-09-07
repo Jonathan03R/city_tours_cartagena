@@ -82,6 +82,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   final _estadoKey = UniqueKey();
   final _totalesKey = UniqueKey();
 
+  // Add a TimeOfDay field to handle the selected time for private reservations
+  TimeOfDay? _selectedTime;
+
   @override
   void initState() {
     super.initState();
@@ -353,6 +356,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
         ticket: _ticketController.text.trim(),
         habitacion: _habitacionController.text.trim(),
         estatusReserva: 'A',
+        // NUEVO: Hora para reservas privadas
+        hora: _selectedTime,
       );
 
       final reservasController = context.read<ReservasController>();
@@ -435,8 +440,11 @@ class _AddReservaFormState extends State<AddReservaForm> {
     // Decisión: usar SafeArea + Form (refactor) y agregar padding inferior para teclado (feature).
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return SafeArea(
-      child: Container(
+    return MediaQuery.removeViewInsets(
+      context: context,
+      removeBottom: true,
+      child: SafeArea(
+        child: Container(
         height: MediaQuery.of(context).size.height * 0.9,
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -580,6 +588,54 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                       return 'Ingresa un valor válido';
                                     return null;
                                   },
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _LabeledField(
+                                label: 'Hora',
+                                isRequired: true,
+                                icon: Icons.access_time,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _selectedTime != null
+                                            ? 'Hora seleccionada: ${_selectedTime!.format(context)}'
+                                            : 'Seleccione una hora',
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        final time = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.now(),
+                                          builder:
+                                              (
+                                                BuildContext context,
+                                                Widget? child,
+                                              ) {
+                                                final mq = MediaQuery.of(
+                                                  context,
+                                                );
+                                                return MediaQuery(
+                                                  data: mq.copyWith(
+                                                    alwaysUse24HourFormat: true,
+                                                    viewInsets: EdgeInsets
+                                                        .zero, // 🔑 evita el error de constraints
+                                                  ),
+                                                  child: child!,
+                                                );
+                                              },
+                                        );
+                                        if (time != null) {
+                                          setState(() {
+                                            _selectedTime = time;
+                                          });
+                                        }
+                                      },
+                                      child: const Text('Seleccionar Hora'),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -780,6 +836,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
               onSubmit: _isLoading ? null : _onSubmit,
             ),
           ],
+        ),
         ),
       ),
     );
