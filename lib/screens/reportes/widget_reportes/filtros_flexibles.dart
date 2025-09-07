@@ -387,7 +387,7 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
 
   Widget _buildCompactSemanasChips(FiltroFlexibleController c) {
     final semanasOrdenadas = List<DateTimeRange>.from(c.semanasSeleccionadas)
-      ..sort((a, b) => a.start.compareTo(b.start)); // Ascendente: más antigua primero
+      ..sort((a, b) => b.start.compareTo(a.start)); // Descendente: más reciente primero
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,6 +409,9 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
             separatorBuilder: (context, index) => SizedBox(width: 8.w),
             itemBuilder: (context, i) {
               final semana = semanasOrdenadas[i];
+              final hoy = DateTime.now();
+              final lunesActual = hoy.subtract(Duration(days: hoy.weekday - 1));
+              final esActual = semana.start.year == lunesActual.year && semana.start.month == lunesActual.month && semana.start.day == lunesActual.day;
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                 decoration: BoxDecoration(
@@ -437,17 +440,18 @@ class _ModernFiltrosFlexiblesWidgetState extends State<ModernFiltrosFlexiblesWid
                       ),
                     ),
                     SizedBox(width: 6.w),
-                    GestureDetector(
-                      onTap: () {
-                        c.eliminarSemana(semana);
-                        setState(() {});
-                      },
-                      child: Icon(
-                        Icons.close,
-                        size: 16.sp,
-                        color: AppColors.accentBlue,
+                    if (!esActual)
+                      GestureDetector(
+                        onTap: () {
+                          c.eliminarSemana(semana);
+                          setState(() {});
+                        },
+                        child: Icon(
+                          Icons.close,
+                          size: 16.sp,
+                          color: AppColors.accentBlue,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               );

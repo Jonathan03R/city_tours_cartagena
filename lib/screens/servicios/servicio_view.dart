@@ -283,7 +283,7 @@ class _TurnoCard extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(4.w, 4.h, 4.w, 8.h),
+            padding: EdgeInsets.fromLTRB(4.w, 20.h, 4.w, 20.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -296,7 +296,7 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16.sp,
+                      fontSize: 25.sp, // como pa que no lo veas XDD
                     color: _isPrivado ? Colors.amber.shade50 : Colors.white,
                     letterSpacing: 0.2,
                   ),
@@ -309,7 +309,7 @@ class _TurnoCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 12.sp,
+                      fontSize: 20.sp, // ¡Para que ni tu abuela se lo pierda!
                     color: Colors.white,
                   ),
                 ),
@@ -441,7 +441,7 @@ class _EstadoBadge extends StatelessWidget {
     };
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(999),
@@ -453,7 +453,7 @@ class _EstadoBadge extends StatelessWidget {
         style: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontSize: 10.sp,
+          fontSize: 15.sp, //Lo agrande papu
           // letterSpacing: 0.8,
         ),
       ),
