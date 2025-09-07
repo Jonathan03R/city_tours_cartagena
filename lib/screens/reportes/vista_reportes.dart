@@ -720,9 +720,11 @@ class _ReportesViewState extends State<ReportesView>
   Widget _buildNavigationCards() {
     final authRole = context.watch<AuthController>();
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (authRole.hasPermission(Permission.ver_cards_metas))
-          Expanded(
+          Flexible(
+            fit: FlexFit.loose,
             child: _buildNavigationCard(
               title: 'Metas Actuales',
               subtitle: 'Progreso de esta semana',
@@ -743,7 +745,6 @@ class _ReportesViewState extends State<ReportesView>
                 );
               },
               child: ChangeNotifierProvider(
-                // Agrega Provider aquí
                 create: (_) => MetasController(),
                 child: _buildMetaProgress(),
               ),
@@ -753,7 +754,8 @@ class _ReportesViewState extends State<ReportesView>
         if (authRole.hasPermission(Permission.ver_cards_metas) && authRole.hasPermission(Permission.ver_cards_gastos))
           SizedBox(width: 16.w),
         if (authRole.hasPermission(Permission.ver_cards_gastos))
-          Expanded(
+          Flexible(
+            fit: FlexFit.loose,
             child: _buildNavigationCard(
               title: 'Gastos Actuales',
               subtitle: 'En pesos colombianos',
@@ -812,14 +814,12 @@ class _ReportesViewState extends State<ReportesView>
             }
           },
           child: Container(
-            height: 240.h, // Mantener fijo para igualdad
             padding: EdgeInsets.all(15.w),
             decoration: BoxDecoration(
               color: AppColors.backgroundWhite,
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: SingleChildScrollView(
-              // Scroll abarca title, subtitle y child
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -889,7 +889,7 @@ class _ReportesViewState extends State<ReportesView>
     return Consumer<MetasController>(
       builder: (context, metasController, _) {
         return FutureBuilder<Map<String, dynamic>>(
-          future: _obtenerDatosMetaTurnoActual(metasController),
+          future: _obtenerDatosMetaDiaCompleto(metasController),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Column(
@@ -911,7 +911,7 @@ class _ReportesViewState extends State<ReportesView>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Sin meta definida para este turno',
+                    'Sin meta definida para este día',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14.sp,
@@ -930,10 +930,14 @@ class _ReportesViewState extends State<ReportesView>
               );
             }
 
-            final data = snapshot.data!;
-            final metaPasajeros = data['meta'] as double?;
-            final pasajerosActuales = data['pasajeros'] as int;
-            final turnoLabel = data['turnoLabel'] as String;
+          final data = snapshot.data!;
+          final manana = data['manana'] as Map<String, dynamic>;
+          final tarde = data['tarde'] as Map<String, dynamic>;
+
+          Widget buildMetaRow(Map<String, dynamic> metaData) {
+            final metaPasajeros = metaData['meta'] as double?;
+            final pasajerosActuales = metaData['pasajeros'] as int;
+            final turnoLabel = metaData['turnoLabel'] as String;
 
             if (metaPasajeros == null || metaPasajeros == 0) {
               return Column(
@@ -959,10 +963,7 @@ class _ReportesViewState extends State<ReportesView>
               );
             }
 
-            final progreso = (pasajerosActuales / metaPasajeros).clamp(
-              0.0,
-              1.0,
-            );
+            final progreso = (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0);
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1032,21 +1033,55 @@ class _ReportesViewState extends State<ReportesView>
                 ),
               ],
             );
-          },
-        );
-      },
-    );
-  }
+          }
 
-  Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildMetaRow(manana),
+              SizedBox(height: 24.h),
+              buildMetaRow(tarde),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+  // Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
+  //   MetasController controller,
+  // ) async {
+  //   final turno = Formatters.getTurnoActual();
+  //   final meta = await controller.obtenerMetaSemanaActualTurnoActual();
+  //   final pasajeros = await controller
+  //       .obtenerSumaPasajerosSemanaActualTurnoActual();
+  //   final turnoLabel = turno.label; // Reutiliza la extensión
+  //   return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
+  // }
+
+    Future<Map<String, dynamic>> _obtenerDatosMetaDiaCompleto(
     MetasController controller,
   ) async {
-    final turno = Formatters.getTurnoActual();
-    final meta = await controller.obtenerMetaSemanaActualTurnoActual();
-    final pasajeros = await controller
-        .obtenerSumaPasajerosSemanaActualTurnoActual();
-    final turnoLabel = turno.label; // Reutiliza la extensión
-    return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
+    // Obtiene meta y pasajeros para ambos turnos
+    final metaManana = await controller.obtenerMetaSemanaActual(TurnoType.manana);
+    final metaTarde = await controller.obtenerMetaSemanaActual(TurnoType.tarde);
+
+    final pasajerosManana = await controller.obtenerSumaPasajerosSemanaActualTurno(TurnoType.manana);
+    final pasajerosTarde = await controller.obtenerSumaPasajerosSemanaActualTurno(TurnoType.tarde);
+
+    return {
+      'manana': {
+        'meta': metaManana,
+        'pasajeros': pasajerosManana,
+        'turnoLabel': TurnoType.manana.label,
+      },
+      'tarde': {
+        'meta': metaTarde,
+        'pasajeros': pasajerosTarde,
+        'turnoLabel': TurnoType.tarde.label,
+      },
+    };
   }
 
   Widget _buildGastosSemanal() {
