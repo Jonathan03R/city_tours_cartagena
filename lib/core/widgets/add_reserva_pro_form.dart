@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/configuracion.dart';
@@ -7,12 +9,11 @@ import 'package:citytourscartagena/core/utils/parsers/text_parser.dart';
 import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:math' as math;
-import 'error_dialogs.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/agencias_controller.dart';
 import '../controller/reservas_controller.dart';
+import 'error_dialogs.dart';
 
 class AddReservaProForm extends StatefulWidget {
   final TurnoType? turno;
@@ -228,6 +229,7 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       turno: turno,
       ticket: _parsedData!['ticket'] as String? ?? '',
       habitacion: _parsedData!['habitacion'] as String? ?? '',
+      hora: _selectedTime,
     );
 
     try {

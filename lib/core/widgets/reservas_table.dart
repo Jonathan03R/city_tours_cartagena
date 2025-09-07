@@ -41,7 +41,7 @@ class _ReservasTableState extends State<ReservasTable> {
   final Map<String, DateTime> _fechaValues = {};
   final Map<String, String> _agenciaValues = {};
   late ReservasController _controller;
-  
+
   final ScrollController _scrollController = ScrollController();
   // removed unused GlobalKey _dataTableKey
   bool _retryAttempted = false;
@@ -70,22 +70,27 @@ class _ReservasTableState extends State<ReservasTable> {
 
   void _scrollToNotificatedReserva() {
     if (widget.reservaIdNotificada == null) return;
-    
+
     final reservaIndex = widget.reservas.indexWhere(
       (ra) => ra.reserva.id == widget.reservaIdNotificada,
     );
-    
-  if (reservaIndex != -1) {
-      debugPrint('[v0] Haciendo scroll a reserva notificada en índice: $reservaIndex');
-      
+
+    if (reservaIndex != -1) {
+      debugPrint(
+        '[v0] Haciendo scroll a reserva notificada en índice: $reservaIndex',
+      );
+
       const double rowHeight = 56.0; // Altura más precisa de cada fila
       const double headerHeight = 48.0; // Altura del header
       final double targetPosition = headerHeight + (rowHeight * reservaIndex);
-      
+
       // Asegurarse de que el ScrollController esté adjunto antes de usarlo.
       if (_scrollController.hasClients) {
-        final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-        final double finalPosition = targetPosition > maxScrollExtent ? maxScrollExtent : targetPosition;
+        final double maxScrollExtent =
+            _scrollController.position.maxScrollExtent;
+        final double finalPosition = targetPosition > maxScrollExtent
+            ? maxScrollExtent
+            : targetPosition;
 
         _scrollController.animateTo(
           finalPosition,
@@ -93,24 +98,31 @@ class _ReservasTableState extends State<ReservasTable> {
           curve: Curves.easeInOutCubic,
         );
       } else {
-        debugPrint('[v0] ScrollController no está adjunto aún, reintentando en next frame');
+        debugPrint(
+          '[v0] ScrollController no está adjunto aún, reintentando en next frame',
+        );
         // Reintentar después de un frame corto
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           if (_scrollController.hasClients) {
-            final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-            final double finalPosition = targetPosition > maxScrollExtent ? maxScrollExtent : targetPosition;
+            final double maxScrollExtent =
+                _scrollController.position.maxScrollExtent;
+            final double finalPosition = targetPosition > maxScrollExtent
+                ? maxScrollExtent
+                : targetPosition;
             _scrollController.animateTo(
               finalPosition,
               duration: const Duration(milliseconds: 800),
               curve: Curves.easeInOutCubic,
             );
           } else {
-            debugPrint('[v0] Reintento: ScrollController aún no adjunto. Omitiendo animación.');
+            debugPrint(
+              '[v0] Reintento: ScrollController aún no adjunto. Omitiendo animación.',
+            );
           }
         });
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -123,7 +135,7 @@ class _ReservasTableState extends State<ReservasTable> {
             ),
             duration: const Duration(seconds: 4),
             backgroundColor: Colors.orange.shade700,
-              behavior: SnackBarBehavior.fixed,
+            behavior: SnackBarBehavior.fixed,
             action: SnackBarAction(
               label: 'OK',
               textColor: Colors.white,
@@ -135,7 +147,9 @@ class _ReservasTableState extends State<ReservasTable> {
         );
       }
     } else {
-      debugPrint('[v0] Reserva notificada no encontrada en la lista actual — intentaremos nuevamente');
+      debugPrint(
+        '[v0] Reserva notificada no encontrada en la lista actual — intentaremos nuevamente',
+      );
 
       // Intento único de reintento para dar tiempo a que el controlador cargue los datos
       // antes de mostrar el SnackBar de "no encontrada".
@@ -143,35 +157,47 @@ class _ReservasTableState extends State<ReservasTable> {
         _retryAttempted = true;
         Future.delayed(const Duration(milliseconds: 700), () {
           if (!mounted) return;
-          final retryIndex = widget.reservas.indexWhere((ra) => ra.reserva.id == widget.reservaIdNotificada);
+          final retryIndex = widget.reservas.indexWhere(
+            (ra) => ra.reserva.id == widget.reservaIdNotificada,
+          );
           if (retryIndex != -1) {
             // Si ahora aparece, hacer scroll hacia ella
             const double rowHeight = 56.0;
             const double headerHeight = 48.0;
-            final double targetPosition = headerHeight + (rowHeight * retryIndex);
+            final double targetPosition =
+                headerHeight + (rowHeight * retryIndex);
             if (_scrollController.hasClients) {
-              final double maxScrollExtent = _scrollController.position.maxScrollExtent;
-              final double finalPosition = targetPosition > maxScrollExtent ? maxScrollExtent : targetPosition;
+              final double maxScrollExtent =
+                  _scrollController.position.maxScrollExtent;
+              final double finalPosition = targetPosition > maxScrollExtent
+                  ? maxScrollExtent
+                  : targetPosition;
               _scrollController.animateTo(
                 finalPosition,
                 duration: const Duration(milliseconds: 600),
                 curve: Curves.easeInOutCubic,
               );
             } else {
-              debugPrint('[v0] Retry: ScrollController aún no adjunto en retry');
+              debugPrint(
+                '[v0] Retry: ScrollController aún no adjunto en retry',
+              );
             }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
                   children: [
-                    Icon(Icons.notifications_active, color: Colors.white, size: 20),
+                    Icon(
+                      Icons.notifications_active,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     SizedBox(width: 8),
                     Text('Reserva de la notificación encontrada y resaltada'),
                   ],
                 ),
                 duration: const Duration(seconds: 4),
                 backgroundColor: Colors.orange.shade700,
-                  behavior: SnackBarBehavior.fixed,
+                behavior: SnackBarBehavior.fixed,
               ),
             );
             return;
@@ -194,7 +220,7 @@ class _ReservasTableState extends State<ReservasTable> {
               ),
               duration: Duration(seconds: 5),
               backgroundColor: Colors.amber.shade300,
-                behavior: SnackBarBehavior.fixed,
+              behavior: SnackBarBehavior.fixed,
               action: SnackBarAction(
                 label: 'Limpiar filtros',
                 textColor: Colors.black87,
@@ -394,10 +420,10 @@ class _ReservasTableState extends State<ReservasTable> {
         widget.currentFilter == DateFilterType.lastWeek;
     // Determinar si mostrar columna Turno según filtro
     final showTurnoColumn = widget.turno == null;
-  // Construir las columnas dinámicamente
-  // IMPORTANTE: El orden de columnas debe coincidir con el orden de DataCell en cada fila:
-  // Sel, Acción, [Turno], Número, Hotel, Nombre, [Fecha], Pax, Saldo,
-  // Observaciones, Agencia, Ticket, N° HB, Estatus, [Deuda], [Editar]
+    // Construir las columnas dinámicamente
+    // IMPORTANTE: El orden de columnas debe coincidir con el orden de DataCell en cada fila:
+    // Sel, Acción, [Turno], Número, Hotel, Nombre, [Fecha], Pax, Saldo,
+    // Observaciones, Agencia, Ticket, N° HB, Estatus, [Deuda], [Editar]
     final List<DataColumn> columns = [
       // Nueva columna de selección
       DataColumn(
@@ -426,11 +452,13 @@ class _ReservasTableState extends State<ReservasTable> {
       ),
 
       DataColumn(label: Text('Acción')),
-  if (showTurnoColumn) const DataColumn(label: Text('Turno')),
-  // "Número" hace referencia al teléfono del cliente
-  const DataColumn(label: Text('Número')),
+      if (showTurnoColumn) const DataColumn(label: Text('Turno')),
+      // "Número" hace referencia al teléfono del cliente
+      const DataColumn(label: Text('Número')),
       const DataColumn(label: Text('Hotel')),
       const DataColumn(label: Text('Nombre')),
+      if (widget.turno == TurnoType.privado)
+        const DataColumn(label: Text('Hora')),
       if (showFechaColumn) const DataColumn(label: Text('Fecha')),
       const DataColumn(label: Text('Pax')),
       const DataColumn(label: Text('Saldo')),
@@ -503,6 +531,9 @@ class _ReservasTableState extends State<ReservasTable> {
                     )
                   else
                     const DataCell(Text('')),
+                  if (widget.turno == TurnoType.privado) 
+                    const DataCell(Text('')),
+
                   if (showFechaColumn)
                     DataCell(
                       Row(
@@ -860,6 +891,11 @@ class _ReservasTableState extends State<ReservasTable> {
       ),
     ];
 
+    if (widget.turno == TurnoType.privado) {
+      cells.add(
+        DataCell(Text(r.hora != null ? r.hora!.format(context) : 'Sin hora')),
+      );
+    }
     // Añadir la celda de Fecha condicionalmente
     //
     if (showFechaColumn) {
@@ -997,7 +1033,7 @@ class _ReservasTableState extends State<ReservasTable> {
           isDense: true,
         ),
       ),
-  if (authController.hasPermission(Permission.ver_deuda_reservas))
+      if (authController.hasPermission(Permission.ver_deuda_reservas))
         DataCell(
           GestureDetector(
             onTap: authController.hasPermission(Permission.toggle_paid_status)

@@ -232,7 +232,6 @@ class FirestoreService {
       rethrow;
     }
   }
-
   /// Actualiza una reserva existente.
   /// @param id El ID de la reserva a actualizar.
   /// @param reserva La reserva con los nuevos datos.
