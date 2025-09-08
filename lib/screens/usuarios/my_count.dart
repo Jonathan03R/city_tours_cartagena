@@ -57,7 +57,7 @@ class _MiCuentaTabState extends State<MiCuentaTab> {
       SnackBar(
         content: Text(message, style: TextStyle(color: Colors.white)),
         backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
+  behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(16.r),
         duration: const Duration(seconds: 3),
