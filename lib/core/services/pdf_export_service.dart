@@ -789,26 +789,33 @@ class PdfExportService {
       final filePath = '${directory.path}/$fileName';
       final file = File(filePath);
       await file.writeAsBytes(pdfBytes);
-      if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      // if (context != null && context.mounted) {
+        // ScaffoldMessenger.of(context!).showSnackBar(
+        //   SnackBar(
+        //     content: Row(
+        //       children: [
+        //         const Icon(Icons.check_circle, color: Colors.white),
+        //         const SizedBox(width: 8),
+        //         Expanded(child: Text('PDF guardado en Descargas: $fileName')),
+        //       ],
+        //     ),
+        //     backgroundColor: Colors.green,
+        //     duration: const Duration(seconds: 4),
+        //     action: SnackBarAction(
+        //       label: 'OK',
+        //       textColor: Colors.white,
+        //       onPressed: () {},
+        //     ),
+        //   ),
+        // );
+        ScaffoldMessenger.of(context!).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(child: Text('PDF guardado en Descargas: $fileName')),
-              ],
-            ),
+            content: Text('PDF guardado en Descargas'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
           ),
         );
-      }
+      // }
       debugPrint('✅ PDF guardado exitosamente en: $filePath');
     } catch (e) {
       debugPrint('❌ Error guardando PDF: $e');

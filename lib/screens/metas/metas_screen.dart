@@ -69,7 +69,7 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
             ],
           ),
           backgroundColor: const Color(0xFF1E3A8A),
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.fixed,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
       );
@@ -84,7 +84,7 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
             ],
           ),
           backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.fixed,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
       );
@@ -691,7 +691,7 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
             ],
           ),
           backgroundColor: const Color(0xFF1E3A8A),
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.fixed,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
       );
@@ -706,7 +706,7 @@ class _MetasScreenState extends State<MetasScreen> with TickerProviderStateMixin
             ],
           ),
           backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.fixed,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
       );

@@ -40,7 +40,7 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
       SnackBar(
         content: Text(message, style: const TextStyle(color: _white)),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
-        behavior: SnackBarBehavior.floating,
+  behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
         ),

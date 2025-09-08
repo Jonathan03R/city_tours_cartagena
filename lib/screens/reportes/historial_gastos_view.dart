@@ -469,7 +469,7 @@ class _HistorialGastosViewState extends State<HistorialGastosView>
         SnackBar(
           content: Text('Gasto eliminado exitosamente'),
           backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.fixed,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),
@@ -480,7 +480,7 @@ class _HistorialGastosViewState extends State<HistorialGastosView>
         SnackBar(
           content: Text('Error al eliminar gasto'),
           backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.fixed,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),
