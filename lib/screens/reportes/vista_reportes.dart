@@ -71,7 +71,8 @@ class _ReportesViewState extends State<ReportesView>
     //   _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
     // }
   _weeklyFiltrosController.seleccionarPeriodo(FiltroPeriodo.semana);
-    _weeklyFiltrosController.seleccionarSemana(DateTime.now());
+  _weeklyFiltrosController.seleccionarSemana(DateTime.now());
+  _weeklyFiltrosController.seleccionarTurno(TurnoType.tarde); // Cambio para que sea predeterminado sapo :v
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final gastosController = Provider.of<GastosController>(context, listen: false);
       gastosController.cargarTodosLosGastos();
