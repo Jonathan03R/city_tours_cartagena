@@ -67,12 +67,14 @@ class _ReportesViewState extends State<ReportesView>
 
     // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
+    _filtrosController.seleccionarTurno(TurnoType.tarde);
     // final now = DateTime.now();
     // for (int i = 0; i < 4; i++) {
     //   _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
     // }
     _weeklyFiltrosController.seleccionarPeriodo(FiltroPeriodo.semana);
     _weeklyFiltrosController.seleccionarSemana(DateTime.now());
+    _weeklyFiltrosController.seleccionarTurno(TurnoType.tarde);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final gastosController = Provider.of<GastosController>(
         context,
