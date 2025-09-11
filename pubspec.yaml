@@ -71,6 +71,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   syncfusion_flutter_charts: ^30.2.6+1
   month_picker_dialog: ^6.5.0
+  flip_card: ^0.7.0
   # flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:

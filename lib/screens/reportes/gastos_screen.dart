@@ -295,7 +295,7 @@ class _ModernGastosScreenState extends State<ModernGastosScreen> {
                                     SnackBar(
                                       content: Text('Gasto agregado exitosamente'),
                                       backgroundColor: AppColors.success,
-                                      behavior: SnackBarBehavior.floating,
+                                      behavior: SnackBarBehavior.fixed,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12.r),
                                       ),
@@ -306,7 +306,7 @@ class _ModernGastosScreenState extends State<ModernGastosScreen> {
                                     SnackBar(
                                       content: Text('Error al agregar gasto'),
                                       backgroundColor: AppColors.error,
-                                      behavior: SnackBarBehavior.floating,
+                                      behavior: SnackBarBehavior.fixed,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12.r),
                                       ),
@@ -320,7 +320,7 @@ class _ModernGastosScreenState extends State<ModernGastosScreen> {
                                   SnackBar(
                                     content: Text('Por favor, completa todos los campos'),
                                     backgroundColor: AppColors.warning,
-                                    behavior: SnackBarBehavior.floating,
+                                    behavior: SnackBarBehavior.fixed,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12.r),
                                     ),

@@ -17,6 +17,7 @@ import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_sema
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart'
     show TurnoSelectorWidget;
+import 'package:flip_card/flip_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -36,7 +37,7 @@ class _ReportesViewState extends State<ReportesView>
   late Animation<Offset> _slideAnimation;
 
   late FiltroFlexibleController _filtrosController;
-  late FiltroFlexibleController _weeklyFiltrosController; 
+  late FiltroFlexibleController _weeklyFiltrosController;
   bool _gastosLoaded = false;
   @override
   void initState() {
@@ -62,18 +63,23 @@ class _ReportesViewState extends State<ReportesView>
     _fadeController.forward();
     _slideController.forward();
     _filtrosController = FiltroFlexibleController();
-     _weeklyFiltrosController = FiltroFlexibleController();
+    _weeklyFiltrosController = FiltroFlexibleController();
 
     // Selección predeterminada: filtro semana y las últimas 4 semanas (actual + 3 anteriores)
     _filtrosController.seleccionarPeriodo(FiltroPeriodo.semana);
+    _filtrosController.seleccionarTurno(TurnoType.tarde);
     // final now = DateTime.now();
     // for (int i = 0; i < 4; i++) {
     //   _filtrosController.agregarSemana(now.subtract(Duration(days: 7 * i)));
     // }
-  _weeklyFiltrosController.seleccionarPeriodo(FiltroPeriodo.semana);
+    _weeklyFiltrosController.seleccionarPeriodo(FiltroPeriodo.semana);
     _weeklyFiltrosController.seleccionarSemana(DateTime.now());
+    _weeklyFiltrosController.seleccionarTurno(TurnoType.tarde);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final gastosController = Provider.of<GastosController>(context, listen: false);
+      final gastosController = Provider.of<GastosController>(
+        context,
+        listen: false,
+      );
       gastosController.cargarTodosLosGastos();
     });
   }
@@ -369,161 +375,170 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ],
                 ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(10.r),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.success, Color(0xFF34D399)],
-                        ),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Icon(
-                        Icons.calendar_view_week_rounded,
-                        color: Colors.white,
-                        size: 20.sp,
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Text(
-                      'Análisis Semanal',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    // ComboBox de Turno SOLO para los gráficos semanales
-                    Container(
-                    width: 120.w,
-                    padding: EdgeInsets.symmetric(horizontal: 8.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundWhite,
-                      borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(
-                        color: AppColors.textLight.withOpacity(0.3),
-                        width: 1.w,
-                      ),
-                    ),
-                    child: DropdownButton<TurnoType?>(
-                      value: _weeklyFiltrosController.turnoSeleccionado,
-                      isExpanded: true,
-                      underline: SizedBox(),
-                      icon: Icon(
-                        Icons.keyboard_arrow_down,
-                        color: AppColors.textSecondary,
-                      ),
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      items: [
-                        DropdownMenuItem<TurnoType?>(
-                          value: null,
-                          child: Text('Todos'),
-                        ),
-                        ...TurnoType.values.map((tt) {
-                          return DropdownMenuItem<TurnoType?>(
-                            value: tt,
-                            child: Text(tt.label),
-                          );
-                        }).toList(),
-                      ],
-                      onChanged: (tt) {
-                        filtrosController.seleccionarTurno(tt); // <--- SIN setState
-                      },
-                    ),
-                  ),
-                    SizedBox(width: 8.w),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.accentBlue, AppColors.lightBlue],
-                        ),
-                        borderRadius: BorderRadius.circular(10.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accentBlue.withOpacity(0.3),
-                            blurRadius: 8.r,
-                            offset: Offset(0, 4.h),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.r),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.success, Color(0xFF34D399)],
+                            ),
+                            borderRadius: BorderRadius.circular(12.r),
                           ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(10.r),
-                          onTap: () async {
-                            final now = DateTime.now();
-                            final fechaSeleccionada = await showDatePicker(
-                              context: context,
-                              initialDate: now,
-                              firstDate: DateTime(now.year - 5),
-                              lastDate: DateTime(now.year + 5),
-                              builder: (context, child) {
-                                return Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: ColorScheme.light(
-                                      primary: AppColors.primaryNightBlue,
-                                      onPrimary: Colors.white,
-                                      surface: AppColors.backgroundWhite,
-                                      onSurface: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  child: child!,
-                                );
-                              },
-                            );
-
-                            if (fechaSeleccionada != null) {
-                              _weeklyFiltrosController.seleccionarSemana(
-                                fechaSeleccionada,
-                              );
-                            }
-                          },
-                           child: authRole.hasPermission(Permission.ver_selector_fecha)
-                              ?   Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w,
-                                  vertical: 8.h,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.date_range_rounded,
-                                      color: Colors.white,
-                                      size: 16.sp,
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      'Seleccionar',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ) : SizedBox.shrink(),
+                          child: Icon(
+                            Icons.calendar_view_week_rounded,
+                            color: Colors.white,
+                            size: 20.sp,
+                          ),
                         ),
-                      ),
+                        SizedBox(width: 12.w),
+                        Text(
+                          'Análisis Semanal',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        // ComboBox de Turno SOLO para los gráficos semanales
+                        Container(
+                          width: 120.w,
+                          padding: EdgeInsets.symmetric(horizontal: 8.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundWhite,
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(
+                              color: AppColors.textLight.withOpacity(0.3),
+                              width: 1.w,
+                            ),
+                          ),
+                          child: DropdownButton<TurnoType?>(
+                            value: _weeklyFiltrosController.turnoSeleccionado,
+                            isExpanded: true,
+                            underline: SizedBox(),
+                            icon: Icon(
+                              Icons.keyboard_arrow_down,
+                              color: AppColors.textSecondary,
+                            ),
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            items: [
+                              DropdownMenuItem<TurnoType?>(
+                                value: null,
+                                child: Text('Todos'),
+                              ),
+                              ...TurnoType.values.map((tt) {
+                                return DropdownMenuItem<TurnoType?>(
+                                  value: tt,
+                                  child: Text(tt.label),
+                                );
+                              }).toList(),
+                            ],
+                            onChanged: (tt) {
+                              filtrosController.seleccionarTurno(
+                                tt,
+                              ); // <--- SIN setState
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.accentBlue,
+                                AppColors.lightBlue,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accentBlue.withOpacity(0.3),
+                                blurRadius: 8.r,
+                                offset: Offset(0, 4.h),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10.r),
+                              onTap: () async {
+                                final now = DateTime.now();
+                                final fechaSeleccionada = await showDatePicker(
+                                  context: context,
+                                  initialDate: now,
+                                  firstDate: DateTime(now.year - 5),
+                                  lastDate: DateTime(now.year + 5),
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: ColorScheme.light(
+                                          primary: AppColors.primaryNightBlue,
+                                          onPrimary: Colors.white,
+                                          surface: AppColors.backgroundWhite,
+                                          onSurface: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+
+                                if (fechaSeleccionada != null) {
+                                  _weeklyFiltrosController.seleccionarSemana(
+                                    fechaSeleccionada,
+                                  );
+                                }
+                              },
+                              child:
+                                  authRole.hasPermission(
+                                    Permission.ver_selector_fecha,
+                                  )
+                                  ? Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12.w,
+                                        vertical: 8.h,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.date_range_rounded,
+                                            color: Colors.white,
+                                            size: 16.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Text(
+                                            'Seleccionar',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          );
+              );
             },
           ),
           SizedBox(height: 20.h),
@@ -720,9 +735,11 @@ class _ReportesViewState extends State<ReportesView>
   Widget _buildNavigationCards() {
     final authRole = context.watch<AuthController>();
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (authRole.hasPermission(Permission.ver_cards_metas))
-          Expanded(
+          Flexible(
+            fit: FlexFit.loose,
             child: _buildNavigationCard(
               title: 'Metas Actuales',
               subtitle: 'Progreso de esta semana',
@@ -743,17 +760,18 @@ class _ReportesViewState extends State<ReportesView>
                 );
               },
               child: ChangeNotifierProvider(
-                // Agrega Provider aquí
                 create: (_) => MetasController(),
                 child: _buildMetaProgress(),
               ),
-              authRole: authRole, 
+              authRole: authRole,
             ),
           ),
-        if (authRole.hasPermission(Permission.ver_cards_metas) && authRole.hasPermission(Permission.ver_cards_gastos))
+        if (authRole.hasPermission(Permission.ver_cards_metas) &&
+            authRole.hasPermission(Permission.ver_cards_gastos))
           SizedBox(width: 16.w),
         if (authRole.hasPermission(Permission.ver_cards_gastos))
-          Expanded(
+          Flexible(
+            fit: FlexFit.loose,
             child: _buildNavigationCard(
               title: 'Gastos Actuales',
               subtitle: 'En pesos colombianos',
@@ -772,10 +790,9 @@ class _ReportesViewState extends State<ReportesView>
                     ),
                   ),
                 );
-                
               },
               child: _buildGastosSemanal(),
-              authRole: authRole, 
+              authRole: authRole,
             ),
           ),
       ],
@@ -789,9 +806,10 @@ class _ReportesViewState extends State<ReportesView>
     required Gradient gradient,
     required VoidCallback onTap,
     required Widget child,
-    required AuthController authRole, 
+    required AuthController authRole,
   }) {
     return Container(
+      height: 300.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
@@ -812,14 +830,12 @@ class _ReportesViewState extends State<ReportesView>
             }
           },
           child: Container(
-            height: 240.h, // Mantener fijo para igualdad
             padding: EdgeInsets.all(15.w),
             decoration: BoxDecoration(
               color: AppColors.backgroundWhite,
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: SingleChildScrollView(
-              // Scroll abarca title, subtitle y child
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -853,7 +869,7 @@ class _ReportesViewState extends State<ReportesView>
                             color: AppColors.textSecondary,
                             size: 16.sp,
                           ),
-                        )
+                        ),
                     ],
                   ),
                   SizedBox(height: 15.h),
@@ -886,167 +902,196 @@ class _ReportesViewState extends State<ReportesView>
   }
 
   Widget _buildMetaProgress() {
-    return Consumer<MetasController>(
-      builder: (context, metasController, _) {
-        return FutureBuilder<Map<String, dynamic>>(
-          future: _obtenerDatosMetaTurnoActual(metasController),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Cargando progreso...',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              );
-            }
-            if (snapshot.hasError || !snapshot.hasData) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Sin meta definida para este turno',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Container(
-                    height: 8.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            final data = snapshot.data!;
-            final metaPasajeros = data['meta'] as double?;
-            final pasajerosActuales = data['pasajeros'] as int;
-            final turnoLabel = data['turnoLabel'] as String;
-
-            if (metaPasajeros == null || metaPasajeros == 0) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Sin meta para $turnoLabel',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Container(
-                    height: 8.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            final progreso = (pasajerosActuales / metaPasajeros).clamp(
-              0.0,
-              1.0,
+  return Consumer<MetasController>(
+    builder: (context, metasController, _) {
+      return FutureBuilder<Map<String, dynamic>>(
+        future: _obtenerDatosMetaDiaCompleto(metasController),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: Text(
+                'Cargando progreso...',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             );
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(
+              child: Text(
+                'Sin meta definida para este día',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '$pasajerosActuales',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      '/ $metaPasajeros',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Turno: $turnoLabel',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
+          final data = snapshot.data!;
+          final principal = data['principal'] as Map<String, dynamic>;
+          final secundaria = data['secundaria'] as Map<String, dynamic>;
+
+          Widget buildMetaCard(Map<String, dynamic> metaData, bool isPrimary) {
+            final metaPasajeros = metaData['meta'] as double?;
+            final pasajerosActuales = metaData['pasajeros'] as int;
+            final turnoLabel = metaData['turnoLabel'] as String;
+
+            final progreso = metaPasajeros != null && metaPasajeros > 0
+                ? (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0)
+                : 0.0;
+
+            return Container(
+              padding: EdgeInsets.all(16.r),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundWhite,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryNightBlue.withOpacity(0.1),
+                    blurRadius: 10.r,
+                    offset: Offset(0, 4.h),
                   ),
-                ),
-                SizedBox(height: 12.h),
-                Stack(
-                  children: [
-                    Container(
-                      height: 8.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPrimary ? 'Meta Principal' : 'Meta Secundaria',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
                     ),
-                    FractionallySizedBox(
-                      widthFactor: progreso,
-                      child: Container(
+                  ),
+                  SizedBox(height: 8.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '$pasajerosActuales',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        '/ $metaPasajeros',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Turno: $turnoLabel',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Stack(
+                    children: [
+                      Container(
                         height: 8.h,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
-                          ),
+                          color: AppColors.textSecondary.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  '${(progreso * 100).toInt()}% completado',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
+                      FractionallySizedBox(
+                        widthFactor: progreso,
+                        child: Container(
+                          height: 8.h,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+                            ),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  SizedBox(height: 8.h),
+                  Text(
+                    '${(progreso * 100).toInt()}% completado',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             );
-          },
-        );
-      },
-    );
-  }
+          }
 
-  Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
+          return FlipCard(
+            direction: FlipDirection.HORIZONTAL, // Desliza de derecha a izquierda
+            front: buildMetaCard(principal, true), // Meta principal
+            back: buildMetaCard(secundaria, false), // Meta secundaria
+          );
+        },
+      );
+    },
+  );
+}
+
+  // Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
+  //   MetasController controller,
+  // ) async {
+  //   final turno = Formatters.getTurnoActual();
+  //   final meta = await controller.obtenerMetaSemanaActualTurnoActual();
+  //   final pasajeros = await controller
+  //       .obtenerSumaPasajerosSemanaActualTurnoActual();
+  //   final turnoLabel = turno.label; // Reutiliza la extensión
+  //   return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
+  // }
+
+  Future<Map<String, dynamic>> _obtenerDatosMetaDiaCompleto(
     MetasController controller,
   ) async {
-    final turno = Formatters.getTurnoActual();
-    final meta = await controller.obtenerMetaSemanaActualTurnoActual();
-    final pasajeros = await controller
-        .obtenerSumaPasajerosSemanaActualTurnoActual();
-    final turnoLabel = turno.label; // Reutiliza la extensión
-    return {'meta': meta, 'pasajeros': pasajeros, 'turnoLabel': turnoLabel};
+    // Determina el turno actual
+    final turnoActual = Formatters.getTurnoActual();
+    final turnoSecundario = turnoActual == TurnoType.manana
+        ? TurnoType.tarde
+        : TurnoType.manana;
+
+    // Obtiene meta y pasajeros para ambos turnos
+    final metaPrincipal = await controller.obtenerMetaSemanaActual(turnoActual);
+    final metaSecundaria = await controller.obtenerMetaSemanaActual(
+      turnoSecundario,
+    );
+
+    final pasajerosPrincipal = await controller
+        .obtenerSumaPasajerosSemanaActualTurno(turnoActual);
+    final pasajerosSecundarios = await controller
+        .obtenerSumaPasajerosSemanaActualTurno(turnoSecundario);
+
+    return {
+      'principal': {
+        'meta': metaPrincipal,
+        'pasajeros': pasajerosPrincipal,
+        'turnoLabel': turnoActual.label,
+      },
+      'secundaria': {
+        'meta': metaSecundaria,
+        'pasajeros': pasajerosSecundarios,
+        'turnoLabel': turnoSecundario.label,
+      },
+    };
   }
 
   Widget _buildGastosSemanal() {

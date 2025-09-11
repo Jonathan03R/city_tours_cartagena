@@ -133,14 +133,19 @@ class MetasController extends ChangeNotifier {
     return await _metasService.obtenerTodasMetas();
   }
 
-  Future<int> obtenerSumaPasajerosSemanaActualTurnoActual() async {
+//   Future<int> obtenerSumaPasajerosSemanaActualTurnoActual() async {
+//   final fechaHoy = DateTime.now();
+//   final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
+//   final turno = Formatters.getTurnoActual().name; // O pásalo como String si tu servicio lo pide
+//   // Si quieres todos los turnos, pásalo sin turno: reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end)
+//   return await _reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end, turno: turno);
+// }
+  
+Future<int> obtenerSumaPasajerosSemanaActualTurno(TurnoType turno) async {
   final fechaHoy = DateTime.now();
   final rango = _finanzasService.obtenerRangoPorFecha(fechaHoy, FiltroPeriodo.semana);
-  final turno = Formatters.getTurnoActual().name; // O pásalo como String si tu servicio lo pide
-  // Si quieres todos los turnos, pásalo sin turno: reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end)
-  return await _reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end, turno: turno);
+  return await _reservasService.obtenerSumaPasajerosPorRango(rango.start, rango.end, turno: turno.name);
 }
-  
 
   /// Obtiene la meta activa para la semana actual usando el turno actual (mañana o tarde).
   Future<double?> obtenerMetaSemanaActualTurnoActual() async {

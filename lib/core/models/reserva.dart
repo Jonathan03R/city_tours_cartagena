@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 enum EstadoReserva { pendiente, pagada, cancelada }
 
@@ -21,6 +22,7 @@ class Reserva {
   final String? ticket; // es el id de los tickets asociados a la reserva (opcional)
   final String? habitacion; // numero de habitación asociado a la reserva (opcional)
   final String? estatusReserva; // estado de la reserva (opcional)
+  final TimeOfDay? hora;
 
 
   Reserva({
@@ -41,6 +43,7 @@ class Reserva {
     this.ticket,
     this.habitacion,
     this.estatusReserva,
+    this.hora,
   });
   
   double get ganancia {
@@ -72,6 +75,12 @@ class Reserva {
       ticket: data['tickets'] != null ? data['tickets'] as String : null,
       habitacion: data['habitacion'] != null ? data['habitacion'] as String : null,
       estatusReserva: data['estatusReserva'] as String? ?? '',
+      hora: data['hora'] != null 
+          ? TimeOfDay(
+              hour: (data['hora']['hour'] as int?) ?? 0,
+              minute: (data['hora']['minute'] as int?) ?? 0,
+            ) 
+          : null,
     );
   }
 
@@ -101,7 +110,9 @@ class Reserva {
       'turno': turno?.toString().split('.').last, // Convertir TurnoType a String
       'tickets': ticket, // id de ticket (opcional)
       'habitacion': habitacion, // numero de habitación (opcional)
-      'estatusReserva': estatusReserva, // estado de la reserva (opcional)
+      'estatusReserva': estatusReserva,
+      if (hora != null)
+        'hora': {'hour': hora!.hour, 'minute': hora!.minute},
     };
   }
 
@@ -149,6 +160,7 @@ class Reserva {
     String? ticket, // Cambiado de tickets a ticket
     String? habitacion,
     String? estatusReserva,
+    TimeOfDay? hora,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -167,6 +179,7 @@ class Reserva {
       ticket: ticket ?? this.ticket, // Cambiado de tickets a ticket
       habitacion: habitacion ?? this.habitacion,
       estatusReserva: estatusReserva ?? this.estatusReserva,
+      hora: hora ?? this.hora,
     );
   }
 }

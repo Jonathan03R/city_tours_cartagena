@@ -134,7 +134,8 @@ class ReportesController extends ChangeNotifier {
     TurnoType? turno,
   }) {
     final List<ChartCategoryData> resultado = [];
-
+    final hoy = DateTime.now();
+    final lunesActual = hoy.subtract(Duration(days: hoy.weekday - 1));
     for (int i = 0; i < rangos.length; i++) {
       final rango = rangos[i];
       final valor = _finanzasService.calcularPasajerosEnRango(
@@ -143,12 +144,15 @@ class ReportesController extends ChangeNotifier {
         rango.end,
         turno: turno,
       );
-
-      final label = 'Semana ${i + 1} ';
-
+      String label;
+      if (rango.start.year == lunesActual.year && rango.start.month == lunesActual.month && rango.start.day == lunesActual.day) {
+        label = 'Semana Actual';
+      } else {
+        label = '${rango.start.day.toString().padLeft(2, '0')}/${rango.start.month.toString().padLeft(2, '0')} - '
+                '${rango.end.day.toString().padLeft(2, '0')}/${rango.end.month.toString().padLeft(2, '0')}';
+      }
       resultado.add(ChartCategoryData(label, valor));
     }
-
     return resultado;
   }
   

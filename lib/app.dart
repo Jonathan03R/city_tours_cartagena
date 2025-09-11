@@ -95,7 +95,7 @@ class MyApp extends StatelessWidget {
                 headingRowHeight: 44.h,
               ),
               snackBarTheme: SnackBarThemeData(
-                  behavior: SnackBarBehavior.floating,
+                  behavior: SnackBarBehavior.fixed,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
