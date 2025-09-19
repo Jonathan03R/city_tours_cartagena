@@ -72,6 +72,9 @@ dependencies:
   syncfusion_flutter_charts: ^30.2.6+1
   month_picker_dialog: ^6.5.0
   flip_card: ^0.7.0
+  supabase_flutter: ^2.10.0
+  flutter_dotenv: ^6.0.0
+  jwt_decoder: ^2.0.1
   # flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
@@ -87,6 +90,8 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   test: ^1.26.2
+  mockito: ^5.5.0
+  build_runner: ^2.7.1
 
 flutter_launcher_icons:
   android: true
@@ -110,6 +115,7 @@ flutter:
     - assets/data/datos.json
     - assets/images/logo.png
     - assets/images/iconWasap.png
+    - .env
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

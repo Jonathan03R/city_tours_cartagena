@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/app.dart';
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
+import 'package:citytourscartagena/core/controller/auth/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
@@ -13,8 +14,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Plugin para mostrar notificaciones locales
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -31,10 +34,36 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
   );
 }
 
+Future<void> probarConexion() async {
+  final client = Supabase.instance.client;
+
+  try {
+    final response = await client
+        .from('tipos_documentos')
+        .select()
+        .limit(1)
+        .single();
+
+    debugPrint('✅ Conexión exitosa, datos: $response');
+  } catch (e) {
+    debugPrint('❌ Error de conexión: $e');
+  }
+}
+
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await dotenv.load(fileName: ".env");
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  probarConexion();
 
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
@@ -52,6 +81,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
         ChangeNotifierProvider(create: (_) => ReportesController()),
+        ChangeNotifierProvider(create: (_) => AuthSupabaseController()),
       ],
       child: const MyApp(),
     ),
