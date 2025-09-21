@@ -5,9 +5,11 @@ import 'package:citytourscartagena/core/controller/auth/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/gastos_controller.dart';
+import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
+import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
@@ -112,6 +114,7 @@ class _MainOperadorScreenState extends State<MainOperadorScreen> {
 
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => OperadoresController(Provider.of<AuthSupabaseController>(context, listen: false))),
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
@@ -178,14 +181,30 @@ class _MainOperadorScreenState extends State<MainOperadorScreen> {
                     ),
                   ),
                 )
-              : Text(
-                  'CITY TOURS CLIMATIZADO',
-                  style: TextStyle(
-                    color: Color(0xFF06142F),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
-                    letterSpacing: 1.0,
-                  ),
+              : Consumer<OperadoresController>(
+                  builder: (context, controller, child) => FutureBuilder<Operadores?>(
+                    future: controller.obtenerOperador(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return const Text('Error al cargar');
+                      } else if (!snapshot.hasData || snapshot.data == null) {
+                        return const Text('Operador no encontrado');
+                      } else {
+                        final operador = snapshot.data!;
+                        return Text(
+                          operador.nombre,
+                          style: TextStyle(
+                            color: const Color(0xFF06142F),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
+                            letterSpacing: 1.0,
+                          ),
+                        );
+                      }
+                    }
+                  )
                 ),
           centerTitle: true,
           actions: [
