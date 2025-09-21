@@ -1,15 +1,87 @@
-import 'package:citytourscartagena/core/models/auth/usuarios.dart';
+import 'dart:async';
+
+import 'package:citytourscartagena/core/models/perfil/perfil_usuario.dart';
+import 'package:citytourscartagena/core/models/perfil/usuario.dart';
 import 'package:citytourscartagena/core/services/auth/auth_services.dart';
 import 'package:citytourscartagena/core/services/usuarios/usuarios_services.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthSupabaseController extends ChangeNotifier {
   final AuthSupabaseService _authService = AuthSupabaseService();
   final UsuariosService _usuariosService = UsuariosService();
 
   Usuario? usuario;
+  Perfil? perfilUsuario;
   bool isLoading = false;
   String? error;
+
+  RealtimeChannel? _userChannel;
+  StreamSubscription<AuthState>? _authSub;
+
+  bool get isAuthenticated => usuario != null;
+
+  AuthSupabaseController() {
+    _listenAuthChanges();
+  }
+
+  void _listenAuthChanges() {
+    final client = Supabase.instance.client;
+    _authSub = client.auth.onAuthStateChange.listen((data) {
+      final session = data.session;
+      if (session == null) {
+        usuario = null;
+        _disposeUserChannel();
+        notifyListeners();
+      } else {
+        final uid = session.user.id;
+        _listenUserChanges(uid);
+      }
+    });
+  }
+
+  void _listenUserChanges(String uid) {
+    final client = Supabase.instance.client;
+    _disposeUserChannel();
+
+    _userChannel = client
+        .channel('user-changes-$uid')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'usuarios',
+          // USAR named args aquí:
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: uid,
+          ),
+          callback: (payload) {
+            final newData = payload.newRecord;
+            // si fila borrada o activo == false -> cerrar sesión
+            if (newData['activo'] == false) {
+              client.auth.signOut();
+            } else {
+              // opcional: actualizar modelo local
+              usuario = Usuario.fromMap(newData);
+              notifyListeners();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  void _disposeUserChannel() {
+    _userChannel?.unsubscribe();
+    _userChannel = null;
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    _disposeUserChannel();
+    super.dispose();
+  }
 
   Future<void> register({
     required String nombre,
@@ -25,22 +97,14 @@ class AuthSupabaseController extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    Usuario? authUser;
-
     try {
-      debugPrint('Intentando registrar usuario en Supabase Auth...');
-      authUser = await _authService.register(
+      final uid = await _authService.register(
         email: email,
         password: password,
-        nombre: nombre,
       );
-
-      if (authUser == null) {
-        throw Exception('No se pudo crear el usuario en Supabase Auth');
+      if (uid == null) {
+        throw Exception('No se pudo crear el usuario');
       }
-
-      debugPrint('Usuario creado en Supabase Auth: ${authUser.toMap()}');
-
       try {
         debugPrint('Intentando registrar usuario en la base de datos...');
         await _usuariosService.crearUsuario(
@@ -48,20 +112,15 @@ class AuthSupabaseController extends ChangeNotifier {
           apellido: apellido,
           email: email,
           alias: alias,
-          passwordEncriptado: authUser.id,
+          passwordEncriptado: uid,
           rol: rol,
           tipoUsuario: tipoUsuario,
           codigoRelacion: codigoRelacion,
         );
-
-        usuario = authUser;
-        debugPrint('Usuario registrado exitosamente en la base de datos.');
+        
       } catch (dbError) {
-        debugPrint('Error al registrar usuario en la base de datos: $dbError');
-
-        // Rollback seguro
         try {
-          await _authService.deleteUser(authUser.id);
+          await _authService.deleteUser(uid);
           debugPrint('Rollback exitoso: usuario eliminado de Auth');
         } catch (rollbackError) {
           debugPrint(
@@ -81,7 +140,7 @@ class AuthSupabaseController extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> login({
+  Future<Perfil?> login({
     required String email,
     required String password,
   }) async {
@@ -100,36 +159,41 @@ class AuthSupabaseController extends ChangeNotifier {
         throw Exception('No se pudo extraer el UID del token.');
       }
 
-      final perfil = await _usuariosService.obtenerPerfil(uid);
+      final perfil = await _usuariosService.obtenerPerfilModelo(uid);
       if (perfil == null) {
         throw Exception(
           'No estás autorizado. Usuario no encontrado o inactivo.',
         );
       }
-
-      try {
-        final usuarioMap = perfil['usuario'] as Map<String, dynamic>?;
-        final dynamic rawId = usuarioMap != null
-            ? usuarioMap['usuario_codigo']
-            : null;
-        final int? usuarioCodigo = rawId is int
-            ? rawId
-            : int.tryParse('$rawId');
-        if (usuarioCodigo != null) {
-          await _usuariosService.actualizarUltimoIngreso(usuarioCodigo);
-        } else {
-          debugPrint(
-            'No se pudo obtener usuario_codigo para actualizar ultimo ingreso: $rawId',
-          );
-        }
-      } catch (e) {
-        debugPrint('Error al actualizar ultimo ingreso: $e');
-      }
+      perfilUsuario = perfil;
+      usuario = perfil.usuario;
+      notifyListeners();
+      final usuarioCodigo = perfil.usuario.codigo;
+      await _usuariosService.actualizarUltimoIngreso(usuarioCodigo);
+    
       return perfil;
     } catch (e) {
       debugPrint('Error en el inicio de sesión: $e');
       error = e.toString();
       return null;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> logout() async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _authService.logout();
+      usuario = null;
+      _disposeUserChannel();
+      notifyListeners();
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
     } finally {
       isLoading = false;
       notifyListeners();

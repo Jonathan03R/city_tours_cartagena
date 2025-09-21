@@ -1,27 +1,17 @@
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../models/auth/usuarios.dart';
-
 class AuthSupabaseService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  Future<Usuario?> register({
+  Future<String?> register({
     required String email,
     required String password,
-    String? nombre,
   }) async {
     final res = await _client.auth.signUp(email: email, password: password);
     final user = res.user;
     if (user == null) return null;
-    final nuevoUsuario = Usuario(
-      id: user.id,
-      email: email,
-      nombre: nombre,
-      roles: ['user'], 
-      activo: true,
-    );
-    return nuevoUsuario;
+    return user.id;
   }
 
   Future<void> deleteUser(String userId) async {
@@ -37,8 +27,15 @@ class AuthSupabaseService {
     required String email,
     required String password,
   }) async {
-    final res = await _client.auth.signInWithPassword(email: email, password: password);
+    final res = await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
     return res.session?.accessToken;
+  }
+
+  Future<void> logout() async {
+    await _client.auth.signOut();
   }
 
   String? getUidFromToken(String token) {
