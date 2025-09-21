@@ -1,3 +1,6 @@
+import 'package:citytourscartagena/core/models/perfil/perfil_usuario.dart';
+import 'package:citytourscartagena/core/models/perfil/persona.dart';
+import 'package:citytourscartagena/core/models/perfil/usuario.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,18 +29,16 @@ class UsuariosService {
     };
 
     final res = await _client.rpc('fn_crear_usuario', params: params);
-
-    // Manejo robusto: res puede venir como PostgrestResponse, List, Map o incluso int.
     dynamic payload;
     try {
-      // intenta leer .error/.data si existen (PostgrestResponse)
       final maybeError = (res as dynamic).error;
       if (maybeError != null) {
-        throw Exception('Error en la respuesta de Supabase: ${maybeError.message ?? maybeError}');
+        throw Exception(
+          'Error en la respuesta de Supabase: ${maybeError.message ?? maybeError}',
+        );
       }
       payload = (res as dynamic).data ?? res;
     } catch (_) {
-      // res no tiene .error/.data, usamos directamente
       payload = res;
     }
 
@@ -63,10 +64,10 @@ class UsuariosService {
     }
 
     if (idUsuario == null) {
-      throw Exception('Error: no se pudo extraer el ID del usuario (respuesta: $payload)');
+      throw Exception(
+        'Error: no se pudo extraer el ID del usuario (respuesta: $payload)',
+      );
     }
-
-    debugPrint('Usuario creado con ID: $idUsuario');
   }
 
   Future<Map<String, dynamic>?> getUsuario(int usuarioCodigo) async {
@@ -100,7 +101,10 @@ class UsuariosService {
     return Map<String, dynamic>.from(res as Map);
   }
 
-  Future<Map<String, dynamic>?> getEntidad(String tipoUsuario, int usuarioCodigo) async {
+  Future<Map<String, dynamic>?> getEntidad(
+    String tipoUsuario,
+    int usuarioCodigo,
+  ) async {
     if (tipoUsuario == 'operador') {
       final operadorRel = await _client
           .from('usuarios_operadores')
@@ -137,41 +141,39 @@ class UsuariosService {
     return null;
   }
 
-  Future<Map<String, dynamic>?> obtenerPerfil(dynamic usuarioIdentificador) async {
-    // usuarioIdentificador puede ser int (usuario_codigo) o String (auth UID guardado en usuario_password_encriptado)
+  Future<Map<String, dynamic>?> obtenerPerfil({
+    required String usuarioIdentificador,
+  }) async {
+    // usuarioIdentificador es el String (auth UID guardado en usuario_password_encriptado)
     Map<String, dynamic>? usuario;
 
-    if (usuarioIdentificador is String) {
-      final res = await _client
-          .from('usuarios')
-          .select()
-          .eq('usuario_password_encriptado', usuarioIdentificador)
-          .eq('usuario_activo', true)
-          .maybeSingle();
-      if (res == null) return null;
-      usuario = Map<String, dynamic>.from(res as Map);
-    } else if (usuarioIdentificador is int) {
-      usuario = await getUsuario(usuarioIdentificador);
-      if (usuario == null) return null;
-    } else {
-      return null;
-    }
+    final res = await _client
+        .from('usuarios')
+        .select()
+        .eq('usuario_password_encriptado', usuarioIdentificador)
+        .eq('usuario_activo', true)
+        .maybeSingle();
 
-    final personaCodigo = usuario['persona_codigo'] is int ? usuario['persona_codigo'] as int : int.tryParse('${usuario['persona_codigo']}');
-    final rolCodigo = usuario['rol_codigo'] is int ? usuario['rol_codigo'] as int : int.tryParse('${usuario['rol_codigo']}');
-    final tipoUsuario = usuario['tipo_usuario'] as String?;
-    final usuarioCodigo = usuario['usuario_codigo'] is int ? usuario['usuario_codigo'] as int : int.tryParse('${usuario['usuario_codigo']}');
+    if (res == null) return null;
+    usuario = Map<String, dynamic>.from(res as Map);
+    final personaCodigo = usuario['persona_codigo'];
+    final rolCodigo = usuario['rol_codigo'];
+    final tipoUsuario = usuario['tipo_usuario'];
+    final usuarioCodigo = usuario['usuario_codigo'];
 
-    final persona = personaCodigo != null ? await getPersona(personaCodigo) : null;
-    final rol = rolCodigo != null ? await getRol(rolCodigo) : null;
-    final entidad = (tipoUsuario != null && usuarioCodigo != null) ? await getEntidad(tipoUsuario, usuarioCodigo) : null;
-
-    return {
+    final persona = await getPersona(personaCodigo!);
+    final rol = await getRol(rolCodigo!);
+    final entidad = await getEntidad(tipoUsuario, usuarioCodigo!);
+    final perfilCompleto = {
       'usuario': usuario,
       'persona': persona,
       'rol': rol,
       'entidad': entidad,
     };
+
+    debugPrint('todo el objeto del perfil es: ${perfilCompleto.toString()}');
+
+    return perfilCompleto;
   }
 
   Future<bool> actualizarUltimoIngreso(int usuarioCodigo) async {
@@ -195,5 +197,24 @@ class UsuariosService {
       debugPrint('Error actualizando usuario_ultimo_ingreso: $e');
       return false;
     }
+  }
+
+  Future<Perfil?> obtenerPerfilModelo(String usuarioIdentificador) async {
+    final perfilRaw = await obtenerPerfil(
+      usuarioIdentificador: usuarioIdentificador,
+    );
+    if (perfilRaw == null) return null;
+
+    final usuarioMap = perfilRaw['usuario'] as Map<String, dynamic>;
+    final personaMap = perfilRaw['persona'] as Map<String, dynamic>?;
+    final entidadMap = perfilRaw['entidad'] as Map<String, dynamic>?;
+
+    Perfil(
+      usuario: Usuario.fromMap(usuarioMap),
+      persona: personaMap != null ? Persona.fromMap(personaMap) : null,
+      entidad: entidadMap,
+      rol: perfilRaw['rol'] as Map<String, dynamic>?,
+    );
+    return Perfil.fromMap(perfilRaw);
   }
 }

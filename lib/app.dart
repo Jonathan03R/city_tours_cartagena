@@ -1,6 +1,6 @@
+import 'package:citytourscartagena/core/middleware/auth_gate.dart';
 import 'package:citytourscartagena/core/models/usuarios.dart';
 import 'package:citytourscartagena/core/widgets/offline_banner.dart';
-import 'package:citytourscartagena/screens/auth/logeo/login.dart';
 import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -102,7 +102,8 @@ class MyApp extends StatelessWidget {
                 ),
             ),
             // home: const AuthGate(),
-            home: const LoginScreen(),
+            // home: const LoginScreen(),
+            home: const AuthGate(),
             //home: const RegistroScreen(),
             debugShowCheckedModeBanner: false,
             builder: (context, child) {
