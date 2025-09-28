@@ -1,7 +1,7 @@
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
-import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
+import 'package:citytourscartagena/screens/agencias/widget/reserva_prueba.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -40,8 +40,11 @@ class _AgenciasSeccionState extends State<AgenciasSeccion> {
   void _navigateToAgenciaReservas(int codigoAgencia) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ReservasView(codigoAgencia: codigoAgencia),
+        builder: (_) => ReservaDetalles(codigoAgencia: codigoAgencia)
       ),
+      // MaterialPageRoute(
+      //   builder: (_) => ReservasView(codigoAgencia: codigoAgencia),
+      // ),
     );
   }
 

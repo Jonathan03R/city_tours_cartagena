@@ -50,7 +50,6 @@ class AuthSupabaseController extends ChangeNotifier {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'usuarios',
-          // USAR named args aquí:
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
             column: 'id',
@@ -58,11 +57,9 @@ class AuthSupabaseController extends ChangeNotifier {
           ),
           callback: (payload) {
             final newData = payload.newRecord;
-            // si fila borrada o activo == false -> cerrar sesión
             if (newData['activo'] == false) {
               client.auth.signOut();
             } else {
-              // opcional: actualizar modelo local
               usuario = Usuario.fromMap(newData);
               notifyListeners();
             }
