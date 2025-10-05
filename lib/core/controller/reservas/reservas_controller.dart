@@ -95,25 +95,43 @@ class ControladorDeltaReservas extends ChangeNotifier {
     return paginaActual > 1 ? paginaActual - 1 : 1;
   }
 
-  Future<int> contarReservas({required int operadorId, int? agenciaId}) async {
+  Future<int> contarReservas({
+    required int operadorId,
+    int? agenciaId,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    int? tipoServicioCodigo,
+    int? estadoCodigo,
+  }) async {
     return await _servicio.contarReservas(
       operadorId: operadorId,
       agenciaId: agenciaId,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      tipoServicioCodigo: tipoServicioCodigo,
+      estadoCodigo: estadoCodigo,
     );
   }
-
-
 
   Future<List<ReservaResumen>> obtenerReservasPaginadas({
     required int operadorId,
     int? agenciaId,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    int? tipoServicioCodigo,
+    int? estadoCodigo,
     required int pagina,
     int tamanoPagina = 10,
   }) async {
     final offset = (pagina - 1) * tamanoPagina;
+
     final reservas = await _servicio.obtenerResumenReservasPaginado(
       operadorId: operadorId,
       agenciaId: agenciaId,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      tipoServicioCodigo: tipoServicioCodigo,
+      estadoCodigo: estadoCodigo,
       limit: tamanoPagina,
       offset: offset,
     );

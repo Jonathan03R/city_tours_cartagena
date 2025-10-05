@@ -1,9 +1,11 @@
+import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
-import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
+import 'package:citytourscartagena/core/models/servicios/servicio.dart';
+import 'package:citytourscartagena/core/services/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/screens/agencias/widget/control_precios_widget.dart';
@@ -32,7 +34,7 @@ class ReservaVista extends StatefulWidget {
 class _ReservaVistaState extends State<ReservaVista> {
   DateFilterType _selectedFilter = DateFilterType.today;
   DateTime? _customDate;
-  TurnoType? _selectedTurno;
+  int? _selectedTurno;
   EstadoReserva? _selectedEstado;
   bool _isTableView = true;
   String? _currentReservaIdNotificada;
@@ -48,9 +50,13 @@ class _ReservaVistaState extends State<ReservaVista> {
   List<PrecioServicio>? _preciosCargados;
   bool _loadingPrecios = false;
 
+  late ServiciosController _serviciosController;
+
   @override
   void initState() {
     super.initState();
+    _serviciosController = ServiciosController(ServiciosService());
+    _serviciosController.cargarTiposServicios(1); // operadorId
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarReservas();
       _loadPreciosIfNeeded();
@@ -95,13 +101,68 @@ class _ReservaVistaState extends State<ReservaVista> {
       context,
       listen: false,
     );
+
+    // Calcular fechas solo cuando el usuario selecciona una fecha específica
+    DateTime? fechaInicio;
+    DateTime? fechaFin;
+    final now = DateTime.now();
+    switch (_selectedFilter) {
+      case DateFilterType.today:
+        fechaInicio = DateTime(now.year, now.month, now.day);
+        fechaFin = fechaInicio;
+        break;
+      case DateFilterType.yesterday:
+        fechaInicio = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 1));
+        fechaFin = fechaInicio;
+        break;
+      case DateFilterType.tomorrow:
+        fechaInicio = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).add(const Duration(days: 1));
+        fechaFin = fechaInicio;
+        break;
+      case DateFilterType.lastWeek:
+        fechaFin = DateTime(now.year, now.month, now.day);
+        fechaInicio = fechaFin.subtract(const Duration(days: 7));
+        break;
+      case DateFilterType.custom:
+        if (_customDate != null) {
+          fechaInicio = DateTime(
+            _customDate!.year,
+            _customDate!.month,
+            _customDate!.day,
+          );
+          fechaFin = fechaInicio;
+        }
+        break;
+      case DateFilterType.all:
+        break;
+    }
+
+    // debugPrint(
+    //   'Filtro seleccionado: $_selectedFilter, fechaInicio: $fechaInicio, fechaFin: $fechaFin',
+    // );
+
     _totalReservas = await controller.contarReservas(
       operadorId: 1,
       agenciaId: widget.codigoAgencia,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      tipoServicioCodigo: _selectedTurno,
     );
+
     final reservas = await controller.obtenerReservasPaginadas(
       operadorId: 1,
       agenciaId: widget.codigoAgencia,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      tipoServicioCodigo: _selectedTurno,
       pagina: _paginaActual,
       tamanoPagina: 10,
     );
@@ -159,7 +220,7 @@ class _ReservaVistaState extends State<ReservaVista> {
       builder: (context, snapshot) {
         String titulo = nombreAgencia ?? 'Reservas';
         final reservas = snapshot.data ?? [];
-        if (reservas.isNotEmpty) {
+        if (reservas.isNotEmpty && widget.codigoAgencia != null) {
           titulo = "Reservas de ${reservas.first.agenciaNombre}";
         } else if (snapshot.connectionState == ConnectionState.waiting) {
           titulo = "Cargando reservas...";
@@ -292,13 +353,19 @@ class _ReservaVistaState extends State<ReservaVista> {
                     setState(() {
                       _selectedFilter = filter;
                       _customDate = date;
-                      if (turno != null) _selectedTurno = turno;
+                      _paginaActual = 1; // Resetear página al cambiar filtro
                     });
+                    _cargarReservas(); // Cargar reservas en tiempo real al cambiar filtro
                   },
                   selectedTurno: _selectedTurno,
                   onTurnoChanged: (turno) {
-                    setState(() => _selectedTurno = turno);
+                    setState(() {
+                      _selectedTurno = turno;
+                      _paginaActual = 1; // Resetear página al cambiar turno
+                    });
+                    _cargarReservas(); // Cargar reservas en tiempo real al cambiar turno
                   },
+                  tiposServicios: _serviciosController.tiposServicios,
                   selectedEstado: _selectedEstado,
                   onEstadoChanged: (estado) {
                     setState(() => _selectedEstado = estado);
@@ -393,7 +460,12 @@ class _ReservaVistaState extends State<ReservaVista> {
                           ),
                         )
                         .origen,
-                    filtroTurno: _selectedTurno?.name,
+                    filtroTurno: _selectedTurno != null 
+                        ? _serviciosController.tiposServicios.firstWhere(
+                            (t) => t.codigo == _selectedTurno,
+                            orElse: () => TipoServicio(codigo: -1, descripcion: 'Desconocido'),
+                          ).descripcion
+                        : null,
                     puedeEditarPrecios: false,
                   ),
                 SizedBox(

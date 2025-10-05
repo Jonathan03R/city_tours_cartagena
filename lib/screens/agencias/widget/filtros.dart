@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
+import 'package:citytourscartagena/core/models/servicios/servicio.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:flutter/material.dart';
@@ -13,9 +14,10 @@ class FiltrosView extends StatefulWidget {
   final DateTime? customDate;
   final Function(DateFilterType, DateTime?, {TurnoType? turno}) onFilterChanged;
   
-  // Filtros de turno
-  final TurnoType? selectedTurno;
-  final ValueChanged<TurnoType?> onTurnoChanged;
+  // Filtros de turno (ahora tipos de servicios)
+  final int? selectedTurno;
+  final ValueChanged<int?> onTurnoChanged;
+  final List<TipoServicio> tiposServicios;
   
   // Filtros de estado
   final EstadoReserva? selectedEstado;
@@ -30,6 +32,7 @@ class FiltrosView extends StatefulWidget {
     required this.onFilterChanged,
     this.selectedTurno,
     required this.onTurnoChanged,
+    required this.tiposServicios,
     this.selectedEstado,
     required this.onEstadoChanged,
     this.initiallyExpanded = false,
@@ -184,8 +187,12 @@ class _FiltrosViewState extends State<FiltrosView>
     
     // Indicador de turno
     if (widget.selectedTurno != null) {
+      final tipo = widget.tiposServicios.firstWhere(
+        (t) => t.codigo == widget.selectedTurno,
+        orElse: () => TipoServicio(codigo: -1, descripcion: 'Desconocido'),
+      );
       indicators.add(_buildFilterChip(
-        widget.selectedTurno!.label,
+        tipo.descripcion,
         Colors.orange.shade600,
         Icons.access_time,
       ));
@@ -369,7 +376,12 @@ class _FiltrosViewState extends State<FiltrosView>
                         ),
                       ),
                       Text(
-                        widget.selectedTurno?.label ?? 'Todos los turnos',
+                        widget.selectedTurno != null 
+                            ? widget.tiposServicios.firstWhere(
+                                (t) => t.codigo == widget.selectedTurno,
+                                orElse: () => TipoServicio(codigo: -1, descripcion: 'Desconocido'),
+                              ).descripcion
+                            : 'Todos los turnos',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
@@ -683,7 +695,11 @@ class _FiltrosViewState extends State<FiltrosView>
     List<String> activeFilters = [];
     
     if (widget.selectedTurno != null) {
-      activeFilters.add(widget.selectedTurno!.label);
+      final tipo = widget.tiposServicios.firstWhere(
+        (t) => t.codigo == widget.selectedTurno,
+        orElse: () => TipoServicio(codigo: -1, descripcion: 'Desconocido'),
+      );
+      activeFilters.add(tipo.descripcion);
     }
     
     if (widget.selectedEstado != null) {
@@ -765,7 +781,7 @@ class _FiltrosViewState extends State<FiltrosView>
             SizedBox(height: 20.h),
             
             Text(
-              'Seleccionar Turno',
+              'Seleccionar Servicio',
               style: TextStyle(
                 fontSize: 20.sp,
                 fontWeight: FontWeight.bold,
@@ -774,22 +790,22 @@ class _FiltrosViewState extends State<FiltrosView>
             ),
             SizedBox(height: 20.h),
             
-            ...TurnoType.values.map((turno) => _buildBottomSheetOption(
-              icon: turno == TurnoType.manana ? Icons.wb_sunny : Icons.wb_twilight,
-              title: turno.label,
-              subtitle: turno == TurnoType.manana ? 'Horario matutino' : 'Horario vespertino',
-              isSelected: widget.selectedTurno == turno,
-              color: turno == TurnoType.manana ? Colors.orange : Colors.blue,
+            ...widget.tiposServicios.map((tipo) => _buildBottomSheetOption(
+              icon: Icons.schedule,
+              title: tipo.descripcion,
+              subtitle: 'Tipo de servicio',
+              isSelected: widget.selectedTurno == tipo.codigo,
+              color: Colors.blue,
               onTap: () {
                 Navigator.pop(context);
-                widget.onTurnoChanged(turno);
+                widget.onTurnoChanged(tipo.codigo);
               },
             )),
             
             _buildBottomSheetOption(
               icon: Icons.clear,
               title: 'Quitar filtro',
-              subtitle: 'Mostrar todos los turnos',
+              subtitle: 'Mostrar todos los servicios',
               isSelected: false,
               color: Colors.grey,
               onTap: () {

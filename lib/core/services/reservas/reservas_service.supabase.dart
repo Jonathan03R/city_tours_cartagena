@@ -58,8 +58,18 @@ class ReservasSupabaseService {
         .map((maps) => maps.map((e) => e).toList());
   }
 
-  Future<int> contarReservas({required int operadorId, int? agenciaId}) async {
+  Future<int> contarReservas({
+    required int operadorId,
+    int? agenciaId,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    int? tipoServicioCodigo,
+    int? estadoCodigo,
+  }) async {
     try {
+      debugPrint(
+        'Contando reservas con params: operadorId: $operadorId, agenciaId: $agenciaId, fechaInicio: $fechaInicio, fechaFin: $fechaFin, tipoServicioCodigo: $tipoServicioCodigo, estadoCodigo: $estadoCodigo',
+      );
       var consulta = _client
           .from('reservas')
           .select('reserva_codigo')
@@ -69,8 +79,21 @@ class ReservasSupabaseService {
       if (agenciaId != null) {
         consulta = consulta.eq('agencia_codigo', agenciaId);
       }
+      if (fechaInicio != null) {
+        consulta = consulta.gte('reserva_fecha', fechaInicio.toIso8601String());
+      }
+      if (fechaFin != null) {
+        consulta = consulta.lte('reserva_fecha', fechaFin.toIso8601String());
+      }
+      if (tipoServicioCodigo != null) {
+        consulta = consulta.eq('tipo_servicio_codigo', tipoServicioCodigo);
+      }
+      if (estadoCodigo != null) {
+        consulta = consulta.eq('estado_codigo', estadoCodigo);
+      }
 
       final respuesta = await consulta;
+      debugPrint('Número de reservas contadas: ${(respuesta as List).length}');
       return (respuesta as List).length;
     } catch (e, s) {
       debugPrint('contarReservas error: $e\n$s');
@@ -83,19 +106,32 @@ class ReservasSupabaseService {
     required int limit,
     required int offset,
     int? agenciaId,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    int? tipoServicioCodigo,
+    int? estadoCodigo,
   }) async {
     try {
+      final params = {
+        'p_operador_codigo': operadorId,
+        if (agenciaId != null) 'p_agencia_codigo': agenciaId,
+        if (fechaInicio != null)
+          'p_fecha_inicio': fechaInicio.toIso8601String(),
+        if (fechaFin != null) 'p_fecha_fin': fechaFin.toIso8601String(),
+        if (tipoServicioCodigo != null)
+          'p_tipo_servicio_codigo': tipoServicioCodigo,
+        if (estadoCodigo != null) 'p_estado_codigo': estadoCodigo,
+        'p_limit': limit,
+        'p_offset': offset,
+      };
+      debugPrint('RPC params: $params');
       final response = await _client.rpc(
         'obtener_resumen_reservas',
-        params: {
-          'p_operador_codigo': operadorId,
-          if (agenciaId != null) 'p_agencia_codigo': agenciaId,
-          'p_limit': limit,
-          'p_offset': offset,
-        },
+        params: params,
       );
 
       final data = response as List;
+      debugPrint('Data length from RPC: ${data.length}');
       return data
           .map((e) => ReservaResumen.fromJson(e as Map<String, dynamic>))
           .toList();

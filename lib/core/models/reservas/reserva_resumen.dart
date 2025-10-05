@@ -36,7 +36,7 @@ class ReservaResumen {
       reservaCodigo: json['reserva_codigo'] as int,
       tipoServicioDescripcion: json['tipo_servicio_descripcion'] as String,
       reservaPuntoEncuentro: json['reserva_punto_encuentro'] as String,
-      reservaRepresentante: json['reserva_representante'] as String,
+      reservaRepresentante: json['reserva_representante'] as String? ?? 'sin representante', 
       reservaFecha: DateTime.parse(json['reserva_fecha'] as String),
       reservaPasajeros: json['reserva_pasajeros'] as int,
       observaciones: json['observaciones'] as String?,
