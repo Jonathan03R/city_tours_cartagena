@@ -88,6 +88,9 @@ class TablaReservasWidget extends StatelessWidget {
         label: Text('Código', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
+        label: Text('Contactos', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      const DataColumn(
         label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
@@ -156,7 +159,7 @@ class TablaReservasWidget extends StatelessWidget {
                 rows: [
                   // Filas de datos
                   ...listaReservas.map(
-                    (reserva) => _construirFilaDatos(reserva),
+                    (reserva) => _construirFilaDatos(context, reserva),
                   ),
                   // Fila de totales
                   _construirFilaTotales(),
@@ -170,12 +173,21 @@ class TablaReservasWidget extends StatelessWidget {
   }
 
   // Método para construir cada fila de datos
-  DataRow _construirFilaDatos(ReservaResumen reserva) {
+  DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva) {
     final List<DataCell> celdas = [
       DataCell(
         Text(
           reserva.reservaCodigo.toString(),
           style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+      ),
+      DataCell(
+        InkWell(
+          onTap: () => _mostrarSelectorContactos(context, reserva.contactos),
+          child: Icon(
+            Icons.contact_phone,
+            color: reserva.contactos.isNotEmpty ? Colors.green : Colors.grey,
+          ),
         ),
       ),
       DataCell(
@@ -259,6 +271,54 @@ class TablaReservasWidget extends StatelessWidget {
     return DataRow(cells: celdas);
   }
 
+  // Método para mostrar selector de contactos
+  void _mostrarSelectorContactos(BuildContext context, List<Map<String, dynamic>> contactos) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Seleccionar Contacto'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: contactos.length,
+              itemBuilder: (context, index) {
+                final contacto = contactos[index];
+                final telefono = contacto['contacto'] as String? ?? '';
+                final tipo = contacto['tipo_contacto_codigo'] as int? ?? 0;
+                final tipoTexto = tipo == 1 ? 'WhatsApp' : 'Otro';
+                return ListTile(
+                  leading: Icon(
+                    tipo == 1 ? Icons.message : Icons.phone,
+                    color: tipo == 1 ? Colors.green : Colors.blue,
+                  ),
+                  title: Text('Teléfono: $telefono'),
+                  subtitle: Text('Tipo: $tipoTexto'),
+                  onTap: () {
+                    // Aquí puedes agregar lógica para abrir WhatsApp o llamar
+                    // Por ejemplo: launchUrl(Uri.parse('https://wa.me/$telefono'));
+                    Navigator.of(context).pop();
+                    // Mostrar un snackbar o algo para confirmar
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Seleccionado: $telefono ($tipoTexto)')),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // Método para construir la fila de totales
   DataRow _construirFilaTotales() {
     final totalPasajeros = _calcularTotalPasajeros();
@@ -267,6 +327,7 @@ class TablaReservasWidget extends StatelessWidget {
 
     final List<DataCell> celdasTotales = [
       const DataCell(Text('')), // Código
+      const DataCell(Text('')), // Contactos
       const DataCell(Text('')), // Servicio
       const DataCell(Text('')), // Punto Encuentro
       DataCell(

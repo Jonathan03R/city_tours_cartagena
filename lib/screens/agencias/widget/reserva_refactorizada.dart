@@ -560,15 +560,9 @@ class _ReservaVistaState extends State<ReservaVista> {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (reservas.isEmpty) {
-      return const Center(child: Text('No hay reservas disponibles'));
-    }
     return ValueListenableBuilder<List<ReservaResumen>>(
       valueListenable: _reservasPaginadas,
       builder: (context, listaReservas, _) {
-        if (listaReservas.isEmpty) {
-          return const Center(child: Text('No hay reservas disponibles'));
-        }
         return TablaReservasWidget(
           listaReservas: listaReservas,
           mostrarColumnaFecha: true,
