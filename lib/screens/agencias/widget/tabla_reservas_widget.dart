@@ -2,7 +2,7 @@ import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class TablaReservasWidget extends StatelessWidget {
+class TablaReservasWidget extends StatefulWidget {
   final List<ReservaResumen> listaReservas;
   final bool mostrarColumnaFecha;
   final bool mostrarColumnaObservaciones;
@@ -14,9 +14,17 @@ class TablaReservasWidget extends StatelessWidget {
     this.mostrarColumnaObservaciones = true,
   });
 
+  @override
+  State<TablaReservasWidget> createState() => _TablaReservasWidgetState();
+}
+
+class _TablaReservasWidgetState extends State<TablaReservasWidget> {
+  final Set<int> _selectedRows = {};
+
   // Método para calcular el total de pasajeros
   int _calcularTotalPasajeros() {
-    return listaReservas.fold<int>(
+    final reservas = _selectedRows.isEmpty ? widget.listaReservas : _selectedRows.map((i) => widget.listaReservas[i]).toList();
+    return reservas.fold<int>(
       0,
       (suma, reserva) => suma + reserva.reservaPasajeros,
     );
@@ -24,7 +32,8 @@ class TablaReservasWidget extends StatelessWidget {
 
   // Método para calcular el total de saldos
   double _calcularTotalSaldos() {
-    return listaReservas.fold<double>(
+    final reservas = _selectedRows.isEmpty ? widget.listaReservas : _selectedRows.map((i) => widget.listaReservas[i]).toList();
+    return reservas.fold<double>(
       0.0,
       (suma, reserva) => suma + reserva.saldo,
     );
@@ -32,7 +41,8 @@ class TablaReservasWidget extends StatelessWidget {
 
   // Método para calcular el total de deudas
   double _calcularTotalDeudas() {
-    return listaReservas.fold<double>(
+    final reservas = _selectedRows.isEmpty ? widget.listaReservas : _selectedRows.map((i) => widget.listaReservas[i]).toList();
+    return reservas.where((reserva) => reserva.estadoNombre.toLowerCase() == 'pendiente').fold<double>(
       0.0,
       (suma, reserva) => suma + reserva.deuda,
     );
@@ -66,7 +76,7 @@ class TablaReservasWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (listaReservas.isEmpty) {
+    if (widget.listaReservas.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -105,7 +115,7 @@ class TablaReservasWidget extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      if (mostrarColumnaFecha)
+      if (widget.mostrarColumnaFecha)
         const DataColumn(
           label: Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
@@ -133,7 +143,7 @@ class TablaReservasWidget extends StatelessWidget {
       const DataColumn(
         label: Text('Deuda', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      if (mostrarColumnaObservaciones)
+      if (widget.mostrarColumnaObservaciones)
         const DataColumn(
           label: Text(
             'Observaciones',
@@ -150,6 +160,7 @@ class TablaReservasWidget extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
               child: DataTable(
+                showCheckboxColumn: true,
                 columnSpacing: 12.w,
                 horizontalMargin: 16.w,
                 headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
@@ -158,8 +169,8 @@ class TablaReservasWidget extends StatelessWidget {
                 columns: columnas,
                 rows: [
                   // Filas de datos
-                  ...listaReservas.map(
-                    (reserva) => _construirFilaDatos(context, reserva),
+                  ...widget.listaReservas.asMap().entries.map(
+                    (entry) => _construirFilaDatos(context, entry.value, entry.key),
                   ),
                   // Fila de totales
                   _construirFilaTotales(),
@@ -173,7 +184,7 @@ class TablaReservasWidget extends StatelessWidget {
   }
 
   // Método para construir cada fila de datos
-  DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva) {
+  DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva, int index) {
     final List<DataCell> celdas = [
       DataCell(
         Text(
@@ -199,7 +210,7 @@ class TablaReservasWidget extends StatelessWidget {
       DataCell(
         Text(reserva.reservaRepresentante, overflow: TextOverflow.ellipsis),
       ),
-      if (mostrarColumnaFecha)
+      if (widget.mostrarColumnaFecha)
         DataCell(Text(_formatearFecha(reserva.reservaFecha))),
       DataCell(
         Container(
@@ -257,7 +268,7 @@ class TablaReservasWidget extends StatelessWidget {
           ),
         ),
       ),
-      if (mostrarColumnaObservaciones)
+      if (widget.mostrarColumnaObservaciones)
         DataCell(
           reserva.observaciones != null && reserva.observaciones!.isNotEmpty
               ? Tooltip(
@@ -268,7 +279,19 @@ class TablaReservasWidget extends StatelessWidget {
         ),
     ];
 
-    return DataRow(cells: celdas);
+    return DataRow(
+      selected: _selectedRows.contains(index),
+      onSelectChanged: (selected) {
+        setState(() {
+          if (selected ?? false) {
+            _selectedRows.add(index);
+          } else {
+            _selectedRows.remove(index);
+          }
+        });
+      },
+      cells: celdas,
+    );
   }
 
   // Método para mostrar selector de contactos
@@ -343,7 +366,7 @@ class TablaReservasWidget extends StatelessWidget {
           ),
         ),
       ),
-      if (mostrarColumnaFecha) const DataCell(Text('')), // Fecha
+      if (widget.mostrarColumnaFecha) const DataCell(Text('')), // Fecha
       DataCell(
         Container(
           padding: const EdgeInsets.all(8),
@@ -395,7 +418,7 @@ class TablaReservasWidget extends StatelessWidget {
           ),
         ),
       ),
-      if (mostrarColumnaObservaciones)
+      if (widget.mostrarColumnaObservaciones)
         const DataCell(Text('')), // Observaciones
     ];
 
