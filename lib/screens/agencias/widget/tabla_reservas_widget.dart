@@ -1,17 +1,21 @@
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:vibration/vibration.dart';
 
 class TablaReservasWidget extends StatefulWidget {
   final List<ReservaResumen> listaReservas;
   final bool mostrarColumnaFecha;
   final bool mostrarColumnaObservaciones;
+  final VoidCallback? onToggleStatus; // Callback para alternar estado
 
   const TablaReservasWidget({
     super.key,
     required this.listaReservas,
     this.mostrarColumnaFecha = true,
     this.mostrarColumnaObservaciones = true,
+    this.onToggleStatus,
   });
 
   @override
@@ -20,6 +24,7 @@ class TablaReservasWidget extends StatefulWidget {
 
 class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   final Set<int> _selectedRows = {};
+  bool _isSelectionMode = false; // Nuevo: Modo de selección múltiple
 
   // Método para calcular el total de pasajeros
   int _calcularTotalPasajeros() {
@@ -48,16 +53,6 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
     );
   }
 
-  // Método para formatear moneda
-  String _formatearMoneda(double cantidad) {
-    return '\$${cantidad.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
-  }
-
-  // Método para formatear fecha
-  String _formatearFecha(DateTime fecha) {
-    return '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
-  }
-
   // Método para obtener color según el prefijo
   Color _obtenerColorEstado(String colorPrefijo) {
     switch (colorPrefijo.toLowerCase()) {
@@ -71,6 +66,39 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
         return Colors.orange;
       default:
         return Colors.grey;
+    }
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedRows.clear(); // Limpiar selección al salir del modo
+      }
+    });
+  }
+
+  void _handleLongPress(int index) {
+    if (!_isSelectionMode) {
+      setState(() {
+        _isSelectionMode = true;
+        _selectedRows.add(index);
+      });
+      if (Vibration.hasVibrator() != null) {
+        Vibration.vibrate(duration: 50); // Vibrar al activar selección múltiple
+      }
+    }
+  }
+
+  void _handleRowTap(int index) {
+    if (_isSelectionMode) {
+      setState(() {
+        if (_selectedRows.contains(index)) {
+          _selectedRows.remove(index);
+        } else {
+          _selectedRows.add(index);
+        }
+      });
     }
   }
 
@@ -95,13 +123,10 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
     // Construir columnas dinámicamente
     final List<DataColumn> columnas = [
       const DataColumn(
-        label: Text('Código', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
         label: Text('Contactos', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      const DataColumn(
-        label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
         label: Text(
@@ -123,6 +148,16 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
         label: Text('Pasajeros', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
+        label: Text('Saldo', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      if (widget.mostrarColumnaObservaciones)
+        const DataColumn(
+          label: Text(
+            'Observaciones',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      const DataColumn(
         label: Text('Agencia', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
@@ -135,32 +170,36 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
         ),
       ),
       const DataColumn(
-        label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      const DataColumn(
-        label: Text('Saldo', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: Text('Color', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       const DataColumn(
         label: Text('Deuda', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      if (widget.mostrarColumnaObservaciones)
-        const DataColumn(
-          label: Text(
-            'Observaciones',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
     ];
 
     return Column(
       children: [
+        if (_isSelectionMode)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${_selectedRows.length} seleccionadas'),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _toggleSelectionMode,
+                ),
+              ],
+            ),
+          ),
         // Tabla principal
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
               child: DataTable(
-                showCheckboxColumn: true,
+                showCheckboxColumn: _isSelectionMode,
                 columnSpacing: 12.w,
                 horizontalMargin: 16.w,
                 headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
@@ -187,9 +226,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva, int index) {
     final List<DataCell> celdas = [
       DataCell(
-        Text(
-          reserva.reservaCodigo.toString(),
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        GestureDetector(
+          onLongPress: () => _handleLongPress(index),
+          child: Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
         ),
       ),
       DataCell(
@@ -202,16 +241,13 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
         ),
       ),
       DataCell(
-        Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
-      ),
-      DataCell(
         Text(reserva.reservaPuntoEncuentro, overflow: TextOverflow.ellipsis),
       ),
       DataCell(
         Text(reserva.reservaRepresentante, overflow: TextOverflow.ellipsis),
       ),
       if (widget.mostrarColumnaFecha)
-        DataCell(Text(_formatearFecha(reserva.reservaFecha))),
+        DataCell(Text(Formatters.formatDate(reserva.reservaFecha))),
       DataCell(
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -225,45 +261,11 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
           ),
         ),
       ),
-      DataCell(Text(reserva.agenciaNombre, overflow: TextOverflow.ellipsis)),
-      DataCell(Text(reserva.numeroTickete ?? 'N/A')),
-      DataCell(Text(reserva.numeroHabitacion ?? 'N/A')),
-      DataCell(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _obtenerColorEstado(reserva.colorPrefijo).withOpacity(0.2),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: _obtenerColorEstado(reserva.colorPrefijo),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            reserva.estadoNombre,
-            style: TextStyle(
-              color: _obtenerColorEstado(reserva.colorPrefijo),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
       DataCell(
         Text(
-          _formatearMoneda(reserva.saldo),
+          Formatters.formatCurrency(reserva.saldo),
           style: TextStyle(
             color: reserva.saldo > 0 ? Colors.green.shade700 : Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-      DataCell(
-        Text(
-          _formatearMoneda(reserva.deuda),
-          style: TextStyle(
-            color: reserva.deuda > 0
-                ? Colors.red.shade700
-                : Colors.green.shade700,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -277,19 +279,73 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                 )
               : const Icon(Icons.note_outlined, color: Colors.grey, size: 20),
         ),
+      DataCell(Text(reserva.agenciaNombre, overflow: TextOverflow.ellipsis)),
+      DataCell(Text(reserva.numeroTickete ?? 'N/A')),
+      DataCell(Text(reserva.numeroHabitacion ?? 'N/A')),
+      DataCell(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: _obtenerColorEstado(reserva.colorPrefijo).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            reserva.colorPrefijo,
+            style: TextStyle(
+              color: _obtenerColorEstado(reserva.colorPrefijo),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      DataCell(
+        GestureDetector(
+          onTap: widget.onToggleStatus != null
+              ? () async {
+                  // Lógica para alternar estado, similar a ReservasTable
+                  // Aquí se puede implementar el toggle usando el callback o lógica directa
+                  // Por ahora, placeholder
+                  widget.onToggleStatus?.call();
+                }
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: reserva.estadoNombre.toLowerCase() == 'pagada'
+                    ? Colors.green
+                    : (reserva.deuda > 0 ? Colors.red : Colors.transparent),
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            alignment: Alignment.center,
+            child: reserva.estadoNombre.toLowerCase() == 'pagada'
+                ? const Text(
+                    'Pagado',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  )
+                : Text(
+                    Formatters.formatCurrency(reserva.deuda),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: reserva.deuda > 0
+                          ? Colors.red.shade700
+                          : Colors.green.shade700,
+                    ),
+                  ),
+          ),
+        ),
+      ),
     ];
 
     return DataRow(
       selected: _selectedRows.contains(index),
-      onSelectChanged: (selected) {
-        setState(() {
-          if (selected ?? false) {
-            _selectedRows.add(index);
-          } else {
-            _selectedRows.remove(index);
-          }
-        });
-      },
+      onSelectChanged: _isSelectionMode
+          ? (selected) => _handleRowTap(index)
+          : null,
       cells: celdas,
     );
   }
@@ -349,9 +405,8 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
     final totalDeudas = _calcularTotalDeudas();
 
     final List<DataCell> celdasTotales = [
-      const DataCell(Text('')), // Código
-      const DataCell(Text('')), // Contactos
       const DataCell(Text('')), // Servicio
+      const DataCell(Text('')), // Contactos
       const DataCell(Text('')), // Punto Encuentro
       DataCell(
         Container(
@@ -365,7 +420,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ),
-      ),
+      ), // Representante
       if (widget.mostrarColumnaFecha) const DataCell(Text('')), // Fecha
       DataCell(
         Container(
@@ -379,11 +434,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ),
-      ),
-      const DataCell(Text('')), // Agencia
-      const DataCell(Text('')), // Ticket
-      const DataCell(Text('')), // Habitación
-      const DataCell(Text('')), // Estado
+      ), // Pasajeros
       DataCell(
         Container(
           padding: const EdgeInsets.all(8),
@@ -392,7 +443,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            _formatearMoneda(totalSaldos),
+            Formatters.formatCurrency(totalSaldos),
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
@@ -400,7 +451,12 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
             ),
           ),
         ),
-      ),
+      ), // Saldo
+      if (widget.mostrarColumnaObservaciones) const DataCell(Text('')), // Observaciones
+      const DataCell(Text('')), // Agencia
+      const DataCell(Text('')), // Ticket
+      const DataCell(Text('')), // Habitación
+      const DataCell(Text('')), // Color
       DataCell(
         Container(
           padding: const EdgeInsets.all(8),
@@ -409,7 +465,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            _formatearMoneda(totalDeudas),
+            Formatters.formatCurrency(totalDeudas),
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
@@ -417,9 +473,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
             ),
           ),
         ),
-      ),
-      if (widget.mostrarColumnaObservaciones)
-        const DataCell(Text('')), // Observaciones
+      ), // Deuda
     ];
 
     return DataRow(
