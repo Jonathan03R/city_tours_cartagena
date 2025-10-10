@@ -1,11 +1,10 @@
 import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
-import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
-import 'package:citytourscartagena/core/services/servicios/servicios_service.dart';
+import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/screens/agencias/widget/control_precios_widget.dart';
@@ -35,7 +34,7 @@ class _ReservaVistaState extends State<ReservaVista> {
   DateFilterType _selectedFilter = DateFilterType.today;
   DateTime? _customDate;
   int? _selectedTurno;
-  EstadoReserva? _selectedEstado;
+  int? _selectedEstadoCodigo;
   bool _isTableView = true;
   String? _currentReservaIdNotificada;
 
@@ -57,6 +56,7 @@ class _ReservaVistaState extends State<ReservaVista> {
     super.initState();
     _serviciosController = ServiciosController(ServiciosService());
     _serviciosController.cargarTiposServicios(1); // operadorId
+    _serviciosController.cargarEstadosReservas();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarReservas();
       _loadPreciosIfNeeded();
@@ -155,6 +155,7 @@ class _ReservaVistaState extends State<ReservaVista> {
       fechaInicio: fechaInicio,
       fechaFin: fechaFin,
       tipoServicioCodigo: _selectedTurno,
+      estadoCodigo: _selectedEstadoCodigo,
     );
 
     final reservas = await controller.obtenerReservasPaginadas(
@@ -163,6 +164,7 @@ class _ReservaVistaState extends State<ReservaVista> {
       fechaInicio: fechaInicio,
       fechaFin: fechaFin,
       tipoServicioCodigo: _selectedTurno,
+      estadoCodigo: _selectedEstadoCodigo,
       pagina: _paginaActual,
       tamanoPagina: 10,
     );
@@ -170,16 +172,6 @@ class _ReservaVistaState extends State<ReservaVista> {
     _reservasPaginadas.value = reservas;
   }
 
-  // @Deprecated('Ya no se utiliza.')
-  // void _iniciarEscuchaReservas() {
-  //   if (widget.codigoAgencia != null) {
-  //     final controller = Provider.of<ControladorDeltaReservas>(
-  //       context,
-  //       listen: false,
-  //     );
-  //     controller.escucharReservas(widget.codigoAgencia!, 1);
-  //   }
-  // }
 
   void _clearNotificatedReserva() {
     if (_currentReservaIdNotificada != null && mounted) {
@@ -366,10 +358,15 @@ class _ReservaVistaState extends State<ReservaVista> {
                     _cargarReservas(); // Cargar reservas en tiempo real al cambiar turno
                   },
                   tiposServicios: _serviciosController.tiposServicios,
-                  selectedEstado: _selectedEstado,
-                  onEstadoChanged: (estado) {
-                    setState(() => _selectedEstado = estado);
+                  selectedEstadoCodigo: _selectedEstadoCodigo,
+                  onEstadoChanged: (codigo) {
+                    setState(() {
+                      _selectedEstadoCodigo = codigo;
+                      _paginaActual = 1; // Resetear página al cambiar estado
+                    });
+                    _cargarReservas(); // Cargar reservas en tiempo real al cambiar estado
                   },
+                  estadosReservas: _serviciosController.estadosReservas,
                 ),
                 if (widget.codigoAgencia != null)
                   FutureBuilder<AgenciaSupabase?>(

@@ -1,16 +1,22 @@
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
-import 'package:citytourscartagena/core/services/servicios/servicios_service.dart';
+import 'package:citytourscartagena/core/services/filtros/estado_reserva/estados_reserva.dart';
+import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:flutter/material.dart';
 
 class ServiciosController extends ChangeNotifier {
   final ServiciosService _servicio;
+  final EstadosReservaService _estadosService = EstadosReservaService();
   List<TipoServicio> _tiposServicios = [];
+  List<Map<String, dynamic>> _estadosReservas = [];
   bool _isLoading = false;
+  bool _isLoadingEstados = false;
 
   ServiciosController(this._servicio);
 
   List<TipoServicio> get tiposServicios => _tiposServicios;
+  List<Map<String, dynamic>> get estadosReservas => _estadosReservas;
   bool get isLoading => _isLoading;
+  bool get isLoadingEstados => _isLoadingEstados;
 
   Future<void> cargarTiposServicios(int operadorCodigo) async {
     _isLoading = true;
@@ -67,6 +73,20 @@ class ServiciosController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error actualizando tipo de servicio: $e');
       return null;
+    }
+  }
+
+  Future<void> cargarEstadosReservas() async {
+    _isLoadingEstados = true;
+    notifyListeners();
+    try {
+      _estadosReservas = await _estadosService.obtenerEstadosReservas();
+    } catch (e) {
+      debugPrint('Error cargando estados de reservas: $e');
+      _estadosReservas = [];
+    } finally {
+      _isLoadingEstados = false;
+      notifyListeners();
     }
   }
 }
