@@ -557,12 +557,17 @@ class _ReservaVistaState extends State<ReservaVista> {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return const Center(child: CircularProgressIndicator());
     }
+    // Mostrar columna de fecha solo si no es filtro específico de fecha
+    final mostrarFecha = _selectedFilter != DateFilterType.today && _selectedFilter != DateFilterType.custom;
+    // Mostrar columna de servicio solo si no está filtrando por turno específico
+    final mostrarServicio = _selectedTurno == null;
     return ValueListenableBuilder<List<ReservaResumen>>(
       valueListenable: _reservasPaginadas,
       builder: (context, listaReservas, _) {
         return TablaReservasWidget(
           listaReservas: listaReservas,
-          mostrarColumnaFecha: true,
+          mostrarColumnaFecha: mostrarFecha,
+          mostrarColumnaServicio: mostrarServicio,
           mostrarColumnaObservaciones: true,
         );
       },

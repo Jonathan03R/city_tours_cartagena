@@ -7,6 +7,7 @@ import 'package:vibration/vibration.dart';
 class TablaReservasWidget extends StatefulWidget {
   final List<ReservaResumen> listaReservas;
   final bool mostrarColumnaFecha;
+  final bool mostrarColumnaServicio;
   final bool mostrarColumnaObservaciones;
   final VoidCallback? onToggleStatus; // Callback para alternar estado
 
@@ -14,6 +15,7 @@ class TablaReservasWidget extends StatefulWidget {
     super.key,
     required this.listaReservas,
     this.mostrarColumnaFecha = true,
+    this.mostrarColumnaServicio = true,
     this.mostrarColumnaObservaciones = true,
     this.onToggleStatus,
   });
@@ -122,9 +124,10 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
 
     // Construir columnas dinámicamente
     final List<DataColumn> columnas = [
-      const DataColumn(
-        label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
+      if (widget.mostrarColumnaServicio)
+        const DataColumn(
+          label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
       const DataColumn(
         label: Text('Contactos', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -225,12 +228,13 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   // Método para construir cada fila de datos
   DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva, int index) {
     final List<DataCell> celdas = [
-      DataCell(
-        GestureDetector(
-          onLongPress: () => _handleLongPress(index),
-          child: Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
+      if (widget.mostrarColumnaServicio)
+        DataCell(
+          GestureDetector(
+            onLongPress: () => _handleLongPress(index),
+            child: Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
+          ),
         ),
-      ),
       DataCell(
         InkWell(
           onTap: () => _mostrarSelectorContactos(context, reserva.contactos),
@@ -405,7 +409,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
     final totalDeudas = _calcularTotalDeudas();
 
     final List<DataCell> celdasTotales = [
-      const DataCell(Text('')), // Servicio
+      if (widget.mostrarColumnaServicio) const DataCell(Text('')), // Servicio
       const DataCell(Text('')), // Contactos
       const DataCell(Text('')), // Punto Encuentro
       DataCell(
