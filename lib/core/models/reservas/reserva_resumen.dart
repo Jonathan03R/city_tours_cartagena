@@ -13,6 +13,7 @@ class ReservaResumen {
   final String colorPrefijo;
   final double saldo;
   final double deuda;
+  final List<Map<String, dynamic>> contactos;
 
   ReservaResumen({
     required this.reservaCodigo,
@@ -29,6 +30,7 @@ class ReservaResumen {
     required this.colorPrefijo,
     required this.saldo,
     required this.deuda,
+    required this.contactos,
   });
 
   factory ReservaResumen.fromJson(Map<String, dynamic> json) {
@@ -36,7 +38,7 @@ class ReservaResumen {
       reservaCodigo: json['reserva_codigo'] as int,
       tipoServicioDescripcion: json['tipo_servicio_descripcion'] as String,
       reservaPuntoEncuentro: json['reserva_punto_encuentro'] as String,
-      reservaRepresentante: json['reserva_representante'] as String,
+      reservaRepresentante: json['reserva_representante'] as String? ?? 'sin representante', 
       reservaFecha: DateTime.parse(json['reserva_fecha'] as String),
       reservaPasajeros: json['reserva_pasajeros'] as int,
       observaciones: json['observaciones'] as String?,
@@ -47,6 +49,7 @@ class ReservaResumen {
       colorPrefijo: json['color_prefijo'] as String,
       saldo: double.tryParse(json['saldo'].toString()) ?? 0,
       deuda: double.tryParse(json['deuda'].toString()) ?? 0,
+      contactos: (json['contactos'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [],
     );
   }
 }

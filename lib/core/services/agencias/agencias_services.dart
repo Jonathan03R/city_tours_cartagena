@@ -48,4 +48,71 @@ class AgenciasService {
 
     return await Future.wait(futures);
   }
+
+  Future<AgenciaSupabase?> obtenerAgenciaPorId(int agenciaId) async {
+    try {
+      final response = await _client
+          .from('agencias')
+          .select()
+          .eq('agencia_codigo', agenciaId)
+          .single();
+
+      if (response.isEmpty) {
+        debugPrint('Agencia no encontrada para el ID $agenciaId');
+        return null;
+      }
+
+      return AgenciaSupabase.fromMap(response);
+    } catch (e, s) {
+      debugPrint('Error al obtener agencia por ID $agenciaId: $e\n$s');
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerPreciosServiciosAgencia({
+    required int operadorCodigo,
+    required int agenciaCodigo,
+  }) async {
+    final response = await _client
+        .from('servicio_precios_agencias')
+        .select(
+          'servicio_agencias_codigo, servicio_agencias_precio, tipos_servicios(tipo_servicio_descripcion)',
+        )
+        .eq('operador_codigo', operadorCodigo)
+        .eq('agencia_codigo', agenciaCodigo)
+        .eq('tipos_servicios.tipo_servicio_activo', true);
+
+    return (response as List)
+        .map(
+          (item) => {
+            'codigo': item['servicio_agencias_codigo'],
+            'precio': item['servicio_agencias_precio'],
+            'descripcion':
+                item['tipos_servicios']?['tipo_servicio_descripcion'],
+          },
+        )
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerPreciosServiciosOperador({
+    required int operadorCodigo,
+  }) async {
+    final response = await _client
+        .from('servicios_precios')
+        .select(
+          'servicio_precio_codigo, precio, tipos_servicios(tipo_servicio_descripcion)',
+        )
+        .eq('tipos_servicios.operador_codigo', operadorCodigo);
+
+    return (response as List)
+        .map(
+          (item) => {
+            'codigo': item['servicio_precio_codigo'],
+            'precio': item['precio'],
+            'descripcion':
+                item['tipos_servicios']?['tipo_servicio_descripcion'],
+          },
+        )
+        .toList();
+  }
 }

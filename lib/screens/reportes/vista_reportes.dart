@@ -3,18 +3,19 @@ import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/metas_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
+import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/models/reserva_con_agencia.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/screens/agencias/widget/reserva_refactorizada.dart';
 import 'package:citytourscartagena/screens/metas/metas_screen.dart';
 import 'package:citytourscartagena/screens/reportes/gastos_screen.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/filtros_flexibles.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_comparacion.dart';
 import 'package:citytourscartagena/screens/reportes/widget_reportes/grafico_semanal.dart';
-import 'package:citytourscartagena/screens/reservas/reservas_view.dart';
 import 'package:citytourscartagena/screens/reservas/turno_selector.dart'
     show TurnoSelectorWidget;
 import 'package:flip_card/flip_card.dart';
@@ -136,13 +137,15 @@ class _ReportesViewState extends State<ReportesView>
                             _buildNavigationCards(),
                             TurnoSelectorWidget(
                               onTurnoSelected: (turno) {
-                                // Aquí puedes manejar la lógica cuando se selecciona un turno
+                                final delta = context
+                                    .read<ControladorDeltaReservas>();
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => ReservasView(
-                                      turno: turno,
-                                      onBack: () => Navigator.of(context).pop(),
-                                    ),
+                                    builder: (_) =>
+                                        ChangeNotifierProvider.value(
+                                          value: delta,
+                                          child: ReservaVista(),
+                                        ),
                                   ),
                                 );
                               },
@@ -902,152 +905,156 @@ class _ReportesViewState extends State<ReportesView>
   }
 
   Widget _buildMetaProgress() {
-  return Consumer<MetasController>(
-    builder: (context, metasController, _) {
-      return FutureBuilder<Map<String, dynamic>>(
-        future: _obtenerDatosMetaDiaCompleto(metasController),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: Text(
-                'Cargando progreso...',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
+    return Consumer<MetasController>(
+      builder: (context, metasController, _) {
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _obtenerDatosMetaDiaCompleto(metasController),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: Text(
+                  'Cargando progreso...',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            );
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Text(
-                'Sin meta definida para este día',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
+              );
+            }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return Center(
+                child: Text(
+                  'Sin meta definida para este día',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            );
-          }
+              );
+            }
 
-          final data = snapshot.data!;
-          final principal = data['principal'] as Map<String, dynamic>;
-          final secundaria = data['secundaria'] as Map<String, dynamic>;
+            final data = snapshot.data!;
+            final principal = data['principal'] as Map<String, dynamic>;
+            final secundaria = data['secundaria'] as Map<String, dynamic>;
 
-          Widget buildMetaCard(Map<String, dynamic> metaData, bool isPrimary) {
-            final metaPasajeros = metaData['meta'] as double?;
-            final pasajerosActuales = metaData['pasajeros'] as int;
-            final turnoLabel = metaData['turnoLabel'] as String;
+            Widget buildMetaCard(
+              Map<String, dynamic> metaData,
+              bool isPrimary,
+            ) {
+              final metaPasajeros = metaData['meta'] as double?;
+              final pasajerosActuales = metaData['pasajeros'] as int;
+              final turnoLabel = metaData['turnoLabel'] as String;
 
-            final progreso = metaPasajeros != null && metaPasajeros > 0
-                ? (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0)
-                : 0.0;
+              final progreso = metaPasajeros != null && metaPasajeros > 0
+                  ? (pasajerosActuales / metaPasajeros).clamp(0.0, 1.0)
+                  : 0.0;
 
-            return Container(
-              padding: EdgeInsets.all(16.r),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundWhite,
-                borderRadius: BorderRadius.circular(16.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryNightBlue.withOpacity(0.1),
-                    blurRadius: 10.r,
-                    offset: Offset(0, 4.h),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isPrimary ? 'Meta Principal' : 'Meta Secundaria',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
+              return Container(
+                padding: EdgeInsets.all(16.r),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundWhite,
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryNightBlue.withOpacity(0.1),
+                      blurRadius: 10.r,
+                      offset: Offset(0, 4.h),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '$pasajerosActuales',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 24.sp,
-                          fontWeight: FontWeight.w800,
-                        ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPrimary ? 'Meta Principal' : 'Meta Secundaria',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
                       ),
-                      Text(
-                        '/ $metaPasajeros',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Turno: $turnoLabel',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Stack(
-                    children: [
-                      Container(
-                        height: 8.h,
-                        decoration: BoxDecoration(
-                          color: AppColors.textSecondary.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4.r),
+                    SizedBox(height: 8.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$pasajerosActuales',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
+                        Text(
+                          '/ $metaPasajeros',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Turno: $turnoLabel',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
                       ),
-                      FractionallySizedBox(
-                        widthFactor: progreso,
-                        child: Container(
+                    ),
+                    SizedBox(height: 12.h),
+                    Stack(
+                      children: [
+                        Container(
                           height: 8.h,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
-                            ),
+                            color: AppColors.textSecondary.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(4.r),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    '${(progreso * 100).toInt()}% completado',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
+                        FractionallySizedBox(
+                          widthFactor: progreso,
+                          child: Container(
+                            height: 8.h,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)],
+                              ),
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
+                    SizedBox(height: 8.h),
+                    Text(
+                      '${(progreso * 100).toInt()}% completado',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          return FlipCard(
-            direction: FlipDirection.HORIZONTAL, // Desliza de derecha a izquierda
-            front: buildMetaCard(principal, true), // Meta principal
-            back: buildMetaCard(secundaria, false), // Meta secundaria
-          );
-        },
-      );
-    },
-  );
-}
+            return FlipCard(
+              direction:
+                  FlipDirection.HORIZONTAL, // Desliza de derecha a izquierda
+              front: buildMetaCard(principal, true), // Meta principal
+              back: buildMetaCard(secundaria, false), // Meta secundaria
+            );
+          },
+        );
+      },
+    );
+  }
 
   // Future<Map<String, dynamic>> _obtenerDatosMetaTurnoActual(
   //   MetasController controller,

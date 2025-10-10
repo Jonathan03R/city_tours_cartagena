@@ -7,10 +7,12 @@ import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
+import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
+import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
@@ -23,6 +25,7 @@ import 'package:citytourscartagena/screens/usuarios/tabar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainOperadorScreen extends StatefulWidget {
   const MainOperadorScreen({super.key});
@@ -37,9 +40,7 @@ class _MainOperadorScreenState extends State<MainOperadorScreen> {
   StreamSubscription<List<AgenciaConReservas>>? _agenciasPreloadSubscription;
   int _currentIndex = 0;
   String _searchTerm = '';
-Future<List<AgenciaSupabase>>? _agenciasFuture;
-
-
+  Future<List<AgenciaSupabase>>? _agenciasFuture;
 
   @override
   void initState() {
@@ -49,7 +50,6 @@ Future<List<AgenciaSupabase>>? _agenciasFuture;
       _startGlobalImagePreloading(context);
     });
   }
-
 
   @override
   void dispose() {
@@ -103,7 +103,6 @@ Future<List<AgenciaSupabase>>? _agenciasFuture;
     // ),
     //     const UsuariosScreen(),
     //   ];
-   
 
     // Navegación específica para usuarios operadores
     final navItems = <BottomNavigationBarItem>[
@@ -125,11 +124,23 @@ Future<List<AgenciaSupabase>>? _agenciasFuture;
 
     return MultiProvider(
       providers: [
+        // ChangeNotifierProvider(
+        //   create: (_) => OperadoresController(
+        //     Provider.of<AuthSupabaseController>(context, listen: false),
+        //   ),
+        // ),
+        // usar el context del `create` para leer otros providers
         ChangeNotifierProvider(
-          create: (_) => OperadoresController(
-            Provider.of<AuthSupabaseController>(context, listen: false),
+          create: (context) => OperadoresController(
+            context.read<AuthSupabaseController>(),
           ),
         ),
+        ChangeNotifierProvider(
+          create: (context) => ControladorDeltaReservas(
+            servicio: ReservasSupabaseService(Supabase.instance.client),
+          ),
+        ),
+
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
@@ -154,8 +165,7 @@ Future<List<AgenciaSupabase>>? _agenciasFuture;
           ),
           const UsuariosScreen(),
         ];
-        return
-        Scaffold(
+        return Scaffold(
           key: _scaffoldKey,
           appBar: AppBar(
             leading: IconButton(
