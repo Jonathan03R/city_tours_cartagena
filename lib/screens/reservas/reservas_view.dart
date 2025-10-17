@@ -29,6 +29,7 @@ class ReservasView extends StatefulWidget {
   final VoidCallback? onBack;
   final bool isAgencyUser;
   final DateTime? customDate;
+  final int codigoAgencia;
 
   final String? reservaIdNotificada; // nuevo
   // final bool forceShowAll; // nuevo
@@ -41,6 +42,7 @@ class ReservasView extends StatefulWidget {
     this.isAgencyUser = false,
     this.reservaIdNotificada,
     this.customDate,
+    this.codigoAgencia = 0,
     // this.forceShowAll = false,
   });
 

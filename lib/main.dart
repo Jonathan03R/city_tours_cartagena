@@ -13,8 +13,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Plugin para mostrar notificaciones locales
 // top-level
@@ -33,15 +35,44 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
   // );
 }
 
+Future<void> probarConexion() async {
+  final client = Supabase.instance.client;
+
+  try {
+    final response = await client
+        .from('tipos_documentos') // tu tabla de prueba
+        .select()
+        .limit(1)
+        .single();
+
+    debugPrint('✅ Conexión exitosa, datos: $response');
+  } catch (e) {
+    debugPrint('❌ Error de conexión: $e');
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // // 🔹 Inicializa Supabase
+  await dotenv.load(fileName: ".env");
 
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+  // await Supabase.initialize(
+  //   url: 'https://yaliitvsddsdx.supabase.co',
+  //   anonKey:
+  //       'eyJhbGciOiJIUzI1NiIssdsdljshFOtiaJKjG5NkfKD017Q085HBTqaf2VE5wijY',
+  // );
+
+  probarConexion();
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
     await NotificationHandler.initialize();
-  }  // Ejecutar la app
+  } // Ejecutar la app
   runApp(
     MultiProvider(
       providers: [
