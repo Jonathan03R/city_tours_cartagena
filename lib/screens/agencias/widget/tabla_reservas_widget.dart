@@ -7,15 +7,19 @@ import 'package:vibration/vibration.dart';
 class TablaReservasWidget extends StatefulWidget {
   final List<ReservaResumen> listaReservas;
   final bool mostrarColumnaFecha;
+  final bool mostrarColumnaServicio;
   final bool mostrarColumnaObservaciones;
   final VoidCallback? onToggleStatus; // Callback para alternar estado
+  final Future<void> Function(ReservaResumen reserva, String observaciones)? onActualizarObservaciones;
 
   const TablaReservasWidget({
     super.key,
     required this.listaReservas,
     this.mostrarColumnaFecha = true,
+    this.mostrarColumnaServicio = true,
     this.mostrarColumnaObservaciones = true,
     this.onToggleStatus,
+    this.onActualizarObservaciones,
   });
 
   @override
@@ -122,9 +126,10 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
 
     // Construir columnas dinámicamente
     final List<DataColumn> columnas = [
-      const DataColumn(
-        label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
+      if (widget.mostrarColumnaServicio)
+        const DataColumn(
+          label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
       const DataColumn(
         label: Text('Contactos', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -225,12 +230,13 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   // Método para construir cada fila de datos
   DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva, int index) {
     final List<DataCell> celdas = [
-      DataCell(
-        GestureDetector(
-          onLongPress: () => _handleLongPress(index),
-          child: Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
+      if (widget.mostrarColumnaServicio)
+        DataCell(
+          GestureDetector(
+            onLongPress: () => _handleLongPress(index),
+            child: Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
+          ),
         ),
-      ),
       DataCell(
         InkWell(
           onTap: () => _mostrarSelectorContactos(context, reserva.contactos),
@@ -272,12 +278,136 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
       ),
       if (widget.mostrarColumnaObservaciones)
         DataCell(
-          reserva.observaciones != null && reserva.observaciones!.isNotEmpty
-              ? Tooltip(
-                  message: reserva.observaciones!,
-                  child: const Icon(Icons.note, color: Colors.blue, size: 20),
-                )
-              : const Icon(Icons.note_outlined, color: Colors.grey, size: 20),
+          InkWell(
+            onTap: () {
+              bool isEditing = false;
+              final TextEditingController controller = TextEditingController(text: reserva.observaciones ?? '');
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return StatefulBuilder(
+                    builder: (context, setState) {
+                      return Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.8,
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    isEditing ? Icons.edit : Icons.note_alt,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isEditing ? 'Editar Observaciones' : 'Observaciones',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (!isEditing)
+                                Container(
+                                  constraints: const BoxConstraints(maxHeight: 200),
+                                  child: SingleChildScrollView(
+                                    child: Text(
+                                      reserva.observaciones?.isNotEmpty == true
+                                          ? reserva.observaciones!
+                                          : 'No hay observaciones.',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                )
+                              else
+                                TextField(
+                                  controller: controller,
+                                  maxLines: 5,
+                                  maxLength: 500,
+                                  decoration: InputDecoration(
+                                    hintText: 'Ingrese observaciones (opcional)',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.grey.shade50,
+                                  ),
+                                  autofocus: true,
+                                ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (!isEditing)
+                                    ElevatedButton.icon(
+                                      onPressed: () => setState(() => isEditing = true),
+                                      icon: const Icon(Icons.edit),
+                                      label: const Text('Editar'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    )
+                                  else ...[
+                                    TextButton(
+                                      onPressed: () => setState(() => isEditing = false),
+                                      child: const Text('Cancelar Edición'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        setState(() => isEditing = false); // Cambiar a vista mientras guarda
+                                        try {
+                                          await widget.onActualizarObservaciones?.call(reserva, controller.text.trim());
+                                          Navigator.of(context).pop();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Observaciones actualizadas correctamente'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error al actualizar: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                          setState(() => isEditing = true); // Volver a edición si falla
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Guardar'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+            child: reserva.observaciones != null && reserva.observaciones!.isNotEmpty
+                ? Tooltip(
+                    message: reserva.observaciones!,
+                    child: const Icon(Icons.note, color: Colors.blue, size: 20),
+                  )
+                : const Icon(Icons.note_outlined, color: Colors.grey, size: 20),
+          ),
         ),
       DataCell(Text(reserva.agenciaNombre, overflow: TextOverflow.ellipsis)),
       DataCell(Text(reserva.numeroTickete ?? 'N/A')),
@@ -405,7 +535,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
     final totalDeudas = _calcularTotalDeudas();
 
     final List<DataCell> celdasTotales = [
-      const DataCell(Text('')), // Servicio
+      if (widget.mostrarColumnaServicio) const DataCell(Text('')), // Servicio
       const DataCell(Text('')), // Contactos
       const DataCell(Text('')), // Punto Encuentro
       DataCell(

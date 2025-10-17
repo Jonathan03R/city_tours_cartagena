@@ -1,5 +1,4 @@
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
-import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
@@ -20,8 +19,9 @@ class FiltrosView extends StatefulWidget {
   final List<TipoServicio> tiposServicios;
   
   // Filtros de estado
-  final EstadoReserva? selectedEstado;
-  final ValueChanged<EstadoReserva?> onEstadoChanged;
+  final int? selectedEstadoCodigo;
+  final ValueChanged<int?> onEstadoChanged;
+  final List<Map<String, dynamic>> estadosReservas;
   // Control del acordeón: expandido inicial
   final bool initiallyExpanded;
 
@@ -33,8 +33,9 @@ class FiltrosView extends StatefulWidget {
     this.selectedTurno,
     required this.onTurnoChanged,
     required this.tiposServicios,
-    this.selectedEstado,
+    this.selectedEstadoCodigo,
     required this.onEstadoChanged,
+    required this.estadosReservas,
     this.initiallyExpanded = false,
   });
 
@@ -199,15 +200,15 @@ class _FiltrosViewState extends State<FiltrosView>
     }
     
     // Indicador de estado
-    if (widget.selectedEstado != null) {
+    if (widget.selectedEstadoCodigo != null) {
+      final estado = widget.estadosReservas.firstWhere(
+        (e) => e['estado_codigo'] == widget.selectedEstadoCodigo,
+        orElse: () => {'estado_nombre': 'Desconocido'},
+      );
       indicators.add(_buildFilterChip(
-        widget.selectedEstado == EstadoReserva.pendiente ? 'Pendientes' : 'Pagadas',
-        widget.selectedEstado == EstadoReserva.pendiente 
-            ? Colors.orange.shade600 
-            : Colors.green.shade600,
-        widget.selectedEstado == EstadoReserva.pendiente 
-            ? Icons.pending_actions 
-            : Icons.check_circle,
+        estado['estado_nombre'],
+        _getEstadoColor(widget.selectedEstadoCodigo),
+        _getEstadoIcon(widget.selectedEstadoCodigo),
       ));
     }
     
@@ -409,17 +410,13 @@ class _FiltrosViewState extends State<FiltrosView>
   Widget _buildEstadoSelector() {
     return Container(
       decoration: BoxDecoration(
-        color: widget.selectedEstado != null 
-            ? (widget.selectedEstado == EstadoReserva.pendiente 
-                ? Colors.orange.shade50 
-                : Colors.green.shade50)
+        color: widget.selectedEstadoCodigo != null 
+            ? _getEstadoColor(widget.selectedEstadoCodigo).withOpacity(0.1) 
             : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: widget.selectedEstado != null 
-              ? (widget.selectedEstado == EstadoReserva.pendiente 
-                  ? Colors.orange.shade200 
-                  : Colors.green.shade200)
+          color: widget.selectedEstadoCodigo != null 
+              ? _getEstadoColor(widget.selectedEstadoCodigo).withOpacity(0.3)
               : Colors.grey.shade200,
         ),
       ),
@@ -433,15 +430,11 @@ class _FiltrosViewState extends State<FiltrosView>
             child: Row(
               children: [
                 Icon(
-                  widget.selectedEstado == EstadoReserva.pendiente 
-                      ? Icons.pending_actions
-                      : widget.selectedEstado == EstadoReserva.pagada
-                          ? Icons.check_circle
-                          : Icons.filter_alt,
-                  color: widget.selectedEstado != null 
-                      ? (widget.selectedEstado == EstadoReserva.pendiente 
-                          ? Colors.orange.shade600 
-                          : Colors.green.shade600)
+                  widget.selectedEstadoCodigo != null 
+                      ? _getEstadoIcon(widget.selectedEstadoCodigo)
+                      : Icons.filter_alt,
+                  color: widget.selectedEstadoCodigo != null 
+                      ? _getEstadoColor(widget.selectedEstadoCodigo)
                       : Colors.grey.shade600,
                   size: 20.sp,
                 ),
@@ -459,18 +452,17 @@ class _FiltrosViewState extends State<FiltrosView>
                         ),
                       ),
                       Text(
-                        widget.selectedEstado == EstadoReserva.pendiente 
-                            ? 'Pendientes'
-                            : widget.selectedEstado == EstadoReserva.pagada
-                                ? 'Pagadas'
-                                : 'Todos los estados',
+                        widget.selectedEstadoCodigo != null 
+                            ? widget.estadosReservas.firstWhere(
+                                (e) => e['estado_codigo'] == widget.selectedEstadoCodigo,
+                                orElse: () => {'estado_nombre': 'Desconocido'},
+                              )['estado_nombre']
+                            : 'Todos los estados',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
-                          color: widget.selectedEstado != null 
-                              ? (widget.selectedEstado == EstadoReserva.pendiente 
-                                  ? Colors.orange.shade700 
-                                  : Colors.green.shade700)
+                          color: widget.selectedEstadoCodigo != null 
+                              ? _getEstadoColor(widget.selectedEstadoCodigo)
                               : Colors.grey.shade700,
                         ),
                       ),
@@ -702,8 +694,12 @@ class _FiltrosViewState extends State<FiltrosView>
       activeFilters.add(tipo.descripcion);
     }
     
-    if (widget.selectedEstado != null) {
-      activeFilters.add(widget.selectedEstado == EstadoReserva.pendiente ? 'Pendientes' : 'Pagadas');
+    if (widget.selectedEstadoCodigo != null) {
+      final estado = widget.estadosReservas.firstWhere(
+        (e) => e['estado_codigo'] == widget.selectedEstadoCodigo,
+        orElse: () => {'estado_nombre': 'Desconocido'},
+      );
+      activeFilters.add(estado['estado_nombre']);
     }
     
     if (widget.selectedFilter != DateFilterType.today && widget.selectedFilter != DateFilterType.all) {
@@ -858,37 +854,21 @@ class _FiltrosViewState extends State<FiltrosView>
             ),
             SizedBox(height: 20.h),
             
-            _buildBottomSheetOption(
-              icon: Icons.pending_actions,
-              title: 'Pendientes',
-              subtitle: 'Reservas sin pagar',
-              isSelected: widget.selectedEstado == EstadoReserva.pendiente,
-              color: Colors.orange,
+            ...widget.estadosReservas.map((estado) => _buildBottomSheetOption(
+              icon: _getEstadoIcon(estado['estado_codigo']),
+              title: estado['estado_nombre'],
+              subtitle: 'Estado de reserva',
+              isSelected: widget.selectedEstadoCodigo == estado['estado_codigo'],
+              color: _getEstadoColor(estado['estado_codigo']),
               onTap: () {
                 Navigator.pop(context);
                 widget.onEstadoChanged(
-                  widget.selectedEstado == EstadoReserva.pendiente 
+                  widget.selectedEstadoCodigo == estado['estado_codigo'] 
                       ? null 
-                      : EstadoReserva.pendiente,
+                      : estado['estado_codigo'],
                 );
               },
-            ),
-            
-            _buildBottomSheetOption(
-              icon: Icons.check_circle,
-              title: 'Pagadas',
-              subtitle: 'Reservas completadas',
-              isSelected: widget.selectedEstado == EstadoReserva.pagada,
-              color: Colors.green,
-              onTap: () {
-                Navigator.pop(context);
-                widget.onEstadoChanged(
-                  widget.selectedEstado == EstadoReserva.pagada 
-                      ? null 
-                      : EstadoReserva.pagada,
-                );
-              },
-            ),
+            )),
             
             _buildBottomSheetOption(
               icon: Icons.clear,
@@ -984,6 +964,24 @@ class _FiltrosViewState extends State<FiltrosView>
     
     if (pickedDate != null) {
       widget.onFilterChanged(DateFilterType.custom, pickedDate, turno: null);
+    }
+  }
+
+  Color _getEstadoColor(int? codigo) {
+    switch (codigo) {
+      case 1: return Colors.orange.shade600;
+      case 2: return Colors.green.shade600;
+      case 3: return Colors.red.shade600;
+      default: return Colors.grey.shade600;
+    }
+  }
+
+  IconData _getEstadoIcon(int? codigo) {
+    switch (codigo) {
+      case 1: return Icons.pending_actions;
+      case 2: return Icons.check_circle;
+      case 3: return Icons.cancel;
+      default: return Icons.filter_alt;
     }
   }
 }
