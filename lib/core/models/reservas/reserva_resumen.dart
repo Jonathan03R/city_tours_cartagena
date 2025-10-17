@@ -41,7 +41,7 @@ class ReservaResumen {
       reservaRepresentante: json['reserva_representante'] as String? ?? 'sin representante', 
       reservaFecha: DateTime.parse(json['reserva_fecha'] as String),
       reservaPasajeros: json['reserva_pasajeros'] as int,
-      observaciones: json['observaciones'] as String?,
+      observaciones: json['reserva_observaciones'] as String?,
       agenciaNombre: json['agencia_nombre'] as String,
       numeroTickete: json['numero_tickete'] as String?,
       numeroHabitacion: json['numero_habitacion'] as String?,
@@ -50,6 +50,42 @@ class ReservaResumen {
       saldo: double.tryParse(json['saldo'].toString()) ?? 0,
       deuda: double.tryParse(json['deuda'].toString()) ?? 0,
       contactos: (json['contactos'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [],
+    );
+  }
+
+  ReservaResumen copyWith({
+    int? reservaCodigo,
+    String? tipoServicioDescripcion,
+    String? reservaPuntoEncuentro,
+    String? reservaRepresentante,
+    DateTime? reservaFecha,
+    int? reservaPasajeros,
+    String? observaciones,
+    String? agenciaNombre,
+    String? numeroTickete,
+    String? numeroHabitacion,
+    String? estadoNombre,
+    String? colorPrefijo,
+    double? saldo,
+    double? deuda,
+    List<Map<String, dynamic>>? contactos,
+  }) {
+    return ReservaResumen(
+      reservaCodigo: reservaCodigo ?? this.reservaCodigo,
+      tipoServicioDescripcion: tipoServicioDescripcion ?? this.tipoServicioDescripcion,
+      reservaPuntoEncuentro: reservaPuntoEncuentro ?? this.reservaPuntoEncuentro,
+      reservaRepresentante: reservaRepresentante ?? this.reservaRepresentante,
+      reservaFecha: reservaFecha ?? this.reservaFecha,
+      reservaPasajeros: reservaPasajeros ?? this.reservaPasajeros,
+      observaciones: observaciones ?? this.observaciones,
+      agenciaNombre: agenciaNombre ?? this.agenciaNombre,
+      numeroTickete: numeroTickete ?? this.numeroTickete,
+      numeroHabitacion: numeroHabitacion ?? this.numeroHabitacion,
+      estadoNombre: estadoNombre ?? this.estadoNombre,
+      colorPrefijo: colorPrefijo ?? this.colorPrefijo,
+      saldo: saldo ?? this.saldo,
+      deuda: deuda ?? this.deuda,
+      contactos: contactos ?? this.contactos,
     );
   }
 }

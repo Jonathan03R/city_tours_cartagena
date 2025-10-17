@@ -143,4 +143,31 @@ class ReservasSupabaseService {
       throw Exception('Error inesperado al obtener reservas: ${e.toString()}');
     }
   }
+
+  Future<Map<String, dynamic>> actualizarObservacionesReserva({
+    required int reservaId,
+    required String observaciones,
+    required int usuarioId,
+  }) async {
+    final ahora = DateTime.now().toIso8601String();
+
+    try {
+      final result = await _client
+          .from('reservas')
+          .update({
+            'reserva_observaciones': observaciones,
+            'reserva_fecha_actualizacion': ahora,
+            'reserva_actualizado_por': usuarioId,
+          })
+          .eq('reserva_codigo', reservaId)
+          .select()
+          .single();
+      return result;
+    } on PostgrestException catch (e) {
+      throw Exception('Error al actualizar observaciones: ${e.message}');
+    } catch (e, s) {
+      debugPrint('actualizarObservacionesReserva error: $e\n$s');
+      throw Exception('No se pudo actualizar observaciones: ${e.toString()}');
+    }
+  }
 }

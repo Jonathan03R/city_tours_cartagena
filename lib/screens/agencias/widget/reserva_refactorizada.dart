@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
@@ -569,6 +570,22 @@ class _ReservaVistaState extends State<ReservaVista> {
           mostrarColumnaFecha: mostrarFecha,
           mostrarColumnaServicio: mostrarServicio,
           mostrarColumnaObservaciones: true,
+          onActualizarObservaciones: (reserva, obs) async {
+            final controller = Provider.of<ControladorDeltaReservas>(context, listen: false);
+            final authController = Provider.of<AuthController>(context, listen: false);
+            await controller.actualizarObservaciones(
+              reservaId: reserva.reservaCodigo,
+              observaciones: obs,
+              usuarioId: authController.appUser?.id as int? ?? 1,
+            );
+            // Actualizar la lista local para reflejar el cambio en tiempo real
+            final reservasActuales = _reservasPaginadas.value;
+            final index = reservasActuales.indexWhere((r) => r.reservaCodigo == reserva.reservaCodigo);
+            if (index != -1) {
+              reservasActuales[index] = reservasActuales[index].copyWith(observaciones: obs);
+              _reservasPaginadas.value = List.from(reservasActuales);
+            }
+          },
         );
       },
     );
