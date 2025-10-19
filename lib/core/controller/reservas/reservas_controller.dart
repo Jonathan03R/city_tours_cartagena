@@ -4,11 +4,13 @@ import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
+import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
 import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
 import 'package:flutter/material.dart';
 
 class ControladorDeltaReservas extends ChangeNotifier {
   final ReservasSupabaseService _servicio;
+  final PagosService _pagosService;
   final AgenciasService agenciasService = AgenciasService();
   final Duration debounceDuracion;
 
@@ -23,8 +25,10 @@ class ControladorDeltaReservas extends ChangeNotifier {
 
   ControladorDeltaReservas({
     required ReservasSupabaseService servicio,
+    required PagosService pagosService,
     Duration? debounce,
   }) : _servicio = servicio,
+       _pagosService = pagosService,
        debounceDuracion = debounce ?? const Duration(milliseconds: 350);
 
   // Inicia la escucha de cambios en la tabla reservas
@@ -152,6 +156,27 @@ class ControladorDeltaReservas extends ChangeNotifier {
       observaciones: observaciones,
       usuarioId: usuarioId,
     );
+  }
+
+  Future<double> procesarPago({
+    required ReservaResumen reserva,
+    int? pagadoPor,
+  }) async {
+    if (reserva.estadoNombre.toLowerCase() == 'pendiente') {
+      // Pagar reserva
+      return await _pagosService.pagarReserva(
+        reservaCodigo: reserva.reservaCodigo,
+        tipoPagoCodigo: 1, // Siempre 1
+        pagadoPor: pagadoPor,
+      );
+    } else if (reserva.estadoNombre.toLowerCase() == 'pagada') {
+      // Revertir pago
+      return await _pagosService.revertirPago(
+        reservaCodigo: reserva.reservaCodigo,
+      );
+    } else {
+      throw Exception('Estado de reserva no válido para procesar pago: ${reserva.estadoNombre}');
+    }
   }
 
   bool _listasIguales(List<ReservaResumen> a, List<ReservaResumen> b) {

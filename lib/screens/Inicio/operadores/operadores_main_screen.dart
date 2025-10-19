@@ -13,6 +13,7 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
 import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
+import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
@@ -138,6 +139,7 @@ class _MainOperadorScreenState extends State<MainOperadorScreen> {
         ChangeNotifierProvider(
           create: (context) => ControladorDeltaReservas(
             servicio: ReservasSupabaseService(Supabase.instance.client),
+            pagosService: PagosService(Supabase.instance.client),
           ),
         ),
 

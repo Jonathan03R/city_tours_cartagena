@@ -11,6 +11,7 @@ class TablaReservasWidget extends StatefulWidget {
   final bool mostrarColumnaObservaciones;
   final VoidCallback? onToggleStatus; // Callback para alternar estado
   final Future<void> Function(ReservaResumen reserva, String observaciones)? onActualizarObservaciones;
+  final Future<double> Function(ReservaResumen reserva)? onProcesarPago;
 
   const TablaReservasWidget({
     super.key,
@@ -20,6 +21,7 @@ class TablaReservasWidget extends StatefulWidget {
     this.mostrarColumnaObservaciones = true,
     this.onToggleStatus,
     this.onActualizarObservaciones,
+    this.onProcesarPago,
   });
 
   @override
@@ -430,14 +432,63 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
       ),
       DataCell(
         GestureDetector(
-          onTap: widget.onToggleStatus != null
+          onTap: widget.onProcesarPago != null
               ? () async {
-                  // Lógica para alternar estado, similar a ReservasTable
-                  // Aquí se puede implementar el toggle usando el callback o lógica directa
-                  // Por ahora, placeholder
-                  widget.onToggleStatus?.call();
+                  final isPendiente = reserva.estadoNombre.toLowerCase() == 'pendiente';
+                  final accion = isPendiente ? 'pagar' : 'revertir el pago de';
+                  final titulo = isPendiente ? 'Confirmar Pago' : 'Confirmar Reversión';
+                  final mensaje = '¿Estás seguro de que quieres $accion la reserva ${reserva.reservaCodigo}?';
+
+                  final confirmar = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text(titulo),
+                        content: Text(mensaje),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancelar'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isPendiente ? Colors.green : Colors.orange,
+                            ),
+                            child: Text(isPendiente ? 'Pagar' : 'Revertir'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmar == true) {
+                    try {
+                      final result = await widget.onProcesarPago!(reserva);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Pago procesado: ${result.toStringAsFixed(2)}'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error al procesar pago: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 }
-              : null,
+              : widget.onToggleStatus != null
+                  ? () async {
+                      // Lógica para alternar estado, similar a ReservasTable
+                      // Aquí se puede implementar el toggle usando el callback o lógica directa
+                      // Por ahora, placeholder
+                      widget.onToggleStatus?.call();
+                    }
+                  : null,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(

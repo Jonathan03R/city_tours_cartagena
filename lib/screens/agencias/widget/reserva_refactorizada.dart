@@ -586,6 +586,17 @@ class _ReservaVistaState extends State<ReservaVista> {
               _reservasPaginadas.value = List.from(reservasActuales);
             }
           },
+          onProcesarPago: (reserva) async {
+            final controller = Provider.of<ControladorDeltaReservas>(context, listen: false);
+            final authController = Provider.of<AuthController>(context, listen: false);
+            final result = await controller.procesarPago(
+              reserva: reserva,
+              pagadoPor: authController.appUser?.id as int?,
+            );
+            // Recargar las reservas para actualizar el estado
+            await _cargarReservas();
+            return result;
+          },
         );
       },
     );
