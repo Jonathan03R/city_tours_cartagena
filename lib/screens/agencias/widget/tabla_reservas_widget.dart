@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/models/colores/color_model.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,10 @@ class TablaReservasWidget extends StatefulWidget {
   final VoidCallback? onToggleStatus; // Callback para alternar estado
   final Future<void> Function(ReservaResumen reserva, String observaciones)? onActualizarObservaciones;
   final Future<double> Function(ReservaResumen reserva)? onProcesarPago;
+  final Future<List<ColorModel>> Function()? onObtenerColores;
+  final Future<void> Function(int reservaId, int colorCodigo, int usuarioId)? onActualizarColor;
+  final VoidCallback? onReload;
+  final int? usuarioId;
 
   const TablaReservasWidget({
     super.key,
@@ -22,6 +27,10 @@ class TablaReservasWidget extends StatefulWidget {
     this.onToggleStatus,
     this.onActualizarObservaciones,
     this.onProcesarPago,
+    this.onObtenerColores,
+    this.onActualizarColor,
+    this.onReload,
+    this.usuarioId,
   });
 
   @override
@@ -61,6 +70,13 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
 
   // Método para obtener color según el prefijo
   Color _obtenerColorEstado(String colorPrefijo) {
+    if (colorPrefijo.startsWith('#')) {
+      try {
+        return Color(int.parse(colorPrefijo.replaceFirst('#', '0xFF')));
+      } catch (e) {
+        return Colors.grey;
+      }
+    }
     switch (colorPrefijo.toLowerCase()) {
       case 'verde':
         return Colors.green;
@@ -415,17 +431,33 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
       DataCell(Text(reserva.numeroTickete ?? 'N/A')),
       DataCell(Text(reserva.numeroHabitacion ?? 'N/A')),
       DataCell(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _obtenerColorEstado(reserva.colorPrefijo).withOpacity(0.2),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            reserva.colorPrefijo,
-            style: TextStyle(
-              color: _obtenerColorEstado(reserva.colorPrefijo),
-              fontWeight: FontWeight.bold,
+        InkWell(
+          onTap: () => _mostrarSelectorColores(context, reserva),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400, width: 1),
+              borderRadius: BorderRadius.circular(6),
+              color: Colors.grey.shade50,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  reserva.colorNombre,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ],
             ),
           ),
         ),
@@ -524,6 +556,7 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
 
     return DataRow(
       selected: _selectedRows.contains(index),
+      color: WidgetStateProperty.all(_obtenerColorEstado(reserva.colorPrefijo).withOpacity(0.2)),
       onSelectChanged: _isSelectionMode
           ? (selected) => _handleRowTap(index)
           : null,
@@ -577,6 +610,109 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
         );
       },
     );
+  }
+
+  // Método para mostrar selector de colores
+  void _mostrarSelectorColores(BuildContext context, ReservaResumen reserva) async {
+    if (widget.onObtenerColores == null || widget.onActualizarColor == null) return;
+
+    try {
+      final colores = await widget.onObtenerColores!();
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.palette, color: Colors.blue),
+                const SizedBox(width: 8),
+                const Text('Seleccionar Color'),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: colores.map((color) {
+                  return InkWell(
+                    onTap: () async {
+                      try {
+                        await widget.onActualizarColor!(reserva.reservaCodigo, color.codigo, widget.usuarioId ?? 1);
+                        Navigator.of(context).pop();
+                        widget.onReload?.call();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Color actualizado correctamente'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al actualizar color: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 80,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _obtenerColorEstado(color.prefijo).withOpacity(0.1),
+                        border: Border.all(
+                          color: _obtenerColorEstado(color.prefijo),
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: _obtenerColorEstado(color.prefijo),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.black12, width: 1),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            color.nombre,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar colores: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // Método para construir la fila de totales

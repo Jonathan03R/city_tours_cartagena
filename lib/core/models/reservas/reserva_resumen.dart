@@ -11,6 +11,7 @@ class ReservaResumen {
   final String? numeroHabitacion;
   final String estadoNombre;
   final String colorPrefijo;
+  final String colorNombre;
   final double saldo;
   final double deuda;
   final List<Map<String, dynamic>> contactos;
@@ -28,6 +29,7 @@ class ReservaResumen {
     this.numeroHabitacion,
     required this.estadoNombre,
     required this.colorPrefijo,
+    required this.colorNombre,
     required this.saldo,
     required this.deuda,
     required this.contactos,
@@ -47,6 +49,7 @@ class ReservaResumen {
       numeroHabitacion: json['numero_habitacion'] as String?,
       estadoNombre: json['estado_nombre'] as String,
       colorPrefijo: json['color_prefijo'] as String,
+      colorNombre: json['color_nombre'] as String,
       saldo: double.tryParse(json['saldo'].toString()) ?? 0,
       deuda: double.tryParse(json['deuda'].toString()) ?? 0,
       contactos: (json['contactos'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [],
@@ -66,6 +69,7 @@ class ReservaResumen {
     String? numeroHabitacion,
     String? estadoNombre,
     String? colorPrefijo,
+    String? colorNombre,
     double? saldo,
     double? deuda,
     List<Map<String, dynamic>>? contactos,
@@ -83,6 +87,7 @@ class ReservaResumen {
       numeroHabitacion: numeroHabitacion ?? this.numeroHabitacion,
       estadoNombre: estadoNombre ?? this.estadoNombre,
       colorPrefijo: colorPrefijo ?? this.colorPrefijo,
+      colorNombre: colorNombre ?? this.colorNombre,
       saldo: saldo ?? this.saldo,
       deuda: deuda ?? this.deuda,
       contactos: contactos ?? this.contactos,

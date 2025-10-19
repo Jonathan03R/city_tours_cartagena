@@ -597,6 +597,10 @@ class _ReservaVistaState extends State<ReservaVista> {
             await _cargarReservas();
             return result;
           },
+          onObtenerColores: () => Provider.of<ControladorDeltaReservas>(context, listen: false).obtenerColores(),
+          onActualizarColor: (reservaId, colorCodigo, usuarioId) => Provider.of<ControladorDeltaReservas>(context, listen: false).actualizarColorReserva(reservaId: reservaId, colorCodigo: colorCodigo, usuarioId: usuarioId),
+          onReload: () => _cargarReservas(),
+          usuarioId: Provider.of<AuthController>(context, listen: false).appUser?.id as int?,
         );
       },
     );

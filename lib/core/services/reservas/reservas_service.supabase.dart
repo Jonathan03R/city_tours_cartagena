@@ -170,4 +170,31 @@ class ReservasSupabaseService {
       throw Exception('No se pudo actualizar observaciones: ${e.toString()}');
     }
   }
+
+  Future<Map<String, dynamic>> actualizarColorReserva({
+    required int reservaId,
+    required int colorCodigo,
+    required int usuarioId,
+  }) async {
+    final ahora = DateTime.now().toIso8601String();
+
+    try {
+      final result = await _client
+          .from('reservas')
+          .update({
+            'color_codigo': colorCodigo,
+            'reserva_fecha_actualizacion': ahora,
+            'reserva_actualizado_por': usuarioId,
+          })
+          .eq('reserva_codigo', reservaId)
+          .select()
+          .single();
+      return result;
+    } on PostgrestException catch (e) {
+      throw Exception('Error al actualizar color: ${e.message}');
+    } catch (e, s) {
+      debugPrint('actualizarColorReserva error: $e\n$s');
+      throw Exception('No se pudo actualizar color: ${e.toString()}');
+    }
+  }
 }
