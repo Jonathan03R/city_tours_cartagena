@@ -1,9 +1,13 @@
+import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/colores/color_model.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:vibration/vibration.dart';
+
+import '../editar_reserva_screen.dart';
 
 class TablaReservasWidget extends StatefulWidget {
   final List<ReservaResumen> listaReservas;
@@ -11,10 +15,12 @@ class TablaReservasWidget extends StatefulWidget {
   final bool mostrarColumnaServicio;
   final bool mostrarColumnaObservaciones;
   final VoidCallback? onToggleStatus; // Callback para alternar estado
-  final Future<void> Function(ReservaResumen reserva, String observaciones)? onActualizarObservaciones;
+  final Future<void> Function(ReservaResumen reserva, String observaciones)?
+  onActualizarObservaciones;
   final Future<double> Function(ReservaResumen reserva)? onProcesarPago;
   final Future<List<ColorModel>> Function()? onObtenerColores;
-  final Future<void> Function(int reservaId, int colorCodigo, int usuarioId)? onActualizarColor;
+  final Future<void> Function(int reservaId, int colorCodigo, int usuarioId)?
+  onActualizarColor;
   final VoidCallback? onReload;
   final int? usuarioId;
 
@@ -43,7 +49,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
 
   // Método para calcular el total de pasajeros
   int _calcularTotalPasajeros() {
-    final reservas = _selectedRows.isEmpty ? widget.listaReservas : _selectedRows.map((i) => widget.listaReservas[i]).toList();
+    final reservas = _selectedRows.isEmpty
+        ? widget.listaReservas
+        : _selectedRows.map((i) => widget.listaReservas[i]).toList();
     return reservas.fold<int>(
       0,
       (suma, reserva) => suma + reserva.reservaPasajeros,
@@ -52,20 +60,20 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
 
   // Método para calcular el total de saldos
   double _calcularTotalSaldos() {
-    final reservas = _selectedRows.isEmpty ? widget.listaReservas : _selectedRows.map((i) => widget.listaReservas[i]).toList();
-    return reservas.fold<double>(
-      0.0,
-      (suma, reserva) => suma + reserva.saldo,
-    );
+    final reservas = _selectedRows.isEmpty
+        ? widget.listaReservas
+        : _selectedRows.map((i) => widget.listaReservas[i]).toList();
+    return reservas.fold<double>(0.0, (suma, reserva) => suma + reserva.saldo);
   }
 
   // Método para calcular el total de deudas
   double _calcularTotalDeudas() {
-    final reservas = _selectedRows.isEmpty ? widget.listaReservas : _selectedRows.map((i) => widget.listaReservas[i]).toList();
-    return reservas.where((reserva) => reserva.estadoNombre.toLowerCase() == 'pendiente').fold<double>(
-      0.0,
-      (suma, reserva) => suma + reserva.deuda,
-    );
+    final reservas = _selectedRows.isEmpty
+        ? widget.listaReservas
+        : _selectedRows.map((i) => widget.listaReservas[i]).toList();
+    return reservas
+        .where((reserva) => reserva.estadoNombre.toLowerCase() == 'pendiente')
+        .fold<double>(0.0, (suma, reserva) => suma + reserva.deuda);
   }
 
   // Método para obtener color según el prefijo
@@ -146,7 +154,10 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
     final List<DataColumn> columnas = [
       if (widget.mostrarColumnaServicio)
         const DataColumn(
-          label: Text('Servicio', style: TextStyle(fontWeight: FontWeight.bold)),
+          label: Text(
+            'Servicio',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       const DataColumn(
         label: Text('Contactos', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -198,6 +209,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
       const DataColumn(
         label: Text('Deuda', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
+      const DataColumn(
+        label: Text('Editar', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
     ];
 
     return Column(
@@ -232,7 +246,8 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                 rows: [
                   // Filas de datos
                   ...widget.listaReservas.asMap().entries.map(
-                    (entry) => _construirFilaDatos(context, entry.value, entry.key),
+                    (entry) =>
+                        _construirFilaDatos(context, entry.value, entry.key),
                   ),
                   // Fila de totales
                   _construirFilaTotales(),
@@ -246,13 +261,20 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   }
 
   // Método para construir cada fila de datos
-  DataRow _construirFilaDatos(BuildContext context, ReservaResumen reserva, int index) {
+  DataRow _construirFilaDatos(
+    BuildContext context,
+    ReservaResumen reserva,
+    int index,
+  ) {
     final List<DataCell> celdas = [
       if (widget.mostrarColumnaServicio)
         DataCell(
           GestureDetector(
             onLongPress: () => _handleLongPress(index),
-            child: Text(reserva.tipoServicioDescripcion, overflow: TextOverflow.ellipsis),
+            child: Text(
+              reserva.tipoServicioDescripcion,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
       DataCell(
@@ -299,7 +321,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
           InkWell(
             onTap: () {
               bool isEditing = false;
-              final TextEditingController controller = TextEditingController(text: reserva.observaciones ?? '');
+              final TextEditingController controller = TextEditingController(
+                text: reserva.observaciones ?? '',
+              );
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
@@ -323,7 +347,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    isEditing ? 'Editar Observaciones' : 'Observaciones',
+                                    isEditing
+                                        ? 'Editar Observaciones'
+                                        : 'Observaciones',
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -334,7 +360,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                               const SizedBox(height: 16),
                               if (!isEditing)
                                 Container(
-                                  constraints: const BoxConstraints(maxHeight: 200),
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 200,
+                                  ),
                                   child: SingleChildScrollView(
                                     child: Text(
                                       reserva.observaciones?.isNotEmpty == true
@@ -350,7 +378,8 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                                   maxLines: 5,
                                   maxLength: 500,
                                   decoration: InputDecoration(
-                                    hintText: 'Ingrese observaciones (opcional)',
+                                    hintText:
+                                        'Ingrese observaciones (opcional)',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -365,7 +394,8 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                                 children: [
                                   if (!isEditing)
                                     ElevatedButton.icon(
-                                      onPressed: () => setState(() => isEditing = true),
+                                      onPressed: () =>
+                                          setState(() => isEditing = true),
                                       icon: const Icon(Icons.edit),
                                       label: const Text('Editar'),
                                       style: ElevatedButton.styleFrom(
@@ -375,30 +405,47 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                                     )
                                   else ...[
                                     TextButton(
-                                      onPressed: () => setState(() => isEditing = false),
+                                      onPressed: () =>
+                                          setState(() => isEditing = false),
                                       child: const Text('Cancelar Edición'),
                                     ),
                                     const SizedBox(width: 8),
                                     ElevatedButton(
                                       onPressed: () async {
-                                        setState(() => isEditing = false); // Cambiar a vista mientras guarda
+                                        setState(
+                                          () => isEditing = false,
+                                        ); // Cambiar a vista mientras guarda
                                         try {
-                                          await widget.onActualizarObservaciones?.call(reserva, controller.text.trim());
+                                          await widget.onActualizarObservaciones
+                                              ?.call(
+                                                reserva,
+                                                controller.text.trim(),
+                                              );
                                           Navigator.of(context).pop();
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             const SnackBar(
-                                              content: Text('Observaciones actualizadas correctamente'),
+                                              content: Text(
+                                                'Observaciones actualizadas correctamente',
+                                              ),
                                               backgroundColor: Colors.green,
                                             ),
                                           );
                                         } catch (e) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
-                                              content: Text('Error al actualizar: $e'),
+                                              content: Text(
+                                                'Error al actualizar: $e',
+                                              ),
                                               backgroundColor: Colors.red,
                                             ),
                                           );
-                                          setState(() => isEditing = true); // Volver a edición si falla
+                                          setState(
+                                            () => isEditing = true,
+                                          ); // Volver a edición si falla
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -419,7 +466,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                 },
               );
             },
-            child: reserva.observaciones != null && reserva.observaciones!.isNotEmpty
+            child:
+                reserva.observaciones != null &&
+                    reserva.observaciones!.isNotEmpty
                 ? Tooltip(
                     message: reserva.observaciones!,
                     child: const Icon(Icons.note, color: Colors.blue, size: 20),
@@ -466,10 +515,14 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
         GestureDetector(
           onTap: widget.onProcesarPago != null
               ? () async {
-                  final isPendiente = reserva.estadoNombre.toLowerCase() == 'pendiente';
+                  final isPendiente =
+                      reserva.estadoNombre.toLowerCase() == 'pendiente';
                   final accion = isPendiente ? 'pagar' : 'revertir el pago de';
-                  final titulo = isPendiente ? 'Confirmar Pago' : 'Confirmar Reversión';
-                  final mensaje = '¿Estás seguro de que quieres $accion la reserva ${reserva.reservaCodigo}?';
+                  final titulo = isPendiente
+                      ? 'Confirmar Pago'
+                      : 'Confirmar Reversión';
+                  final mensaje =
+                      '¿Estás seguro de que quieres $accion la reserva ${reserva.reservaCodigo}?';
 
                   final confirmar = await showDialog<bool>(
                     context: context,
@@ -485,7 +538,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                           ElevatedButton(
                             onPressed: () => Navigator.of(context).pop(true),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isPendiente ? Colors.green : Colors.orange,
+                              backgroundColor: isPendiente
+                                  ? Colors.green
+                                  : Colors.orange,
                             ),
                             child: Text(isPendiente ? 'Pagar' : 'Revertir'),
                           ),
@@ -499,7 +554,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                       final result = await widget.onProcesarPago!(reserva);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Pago procesado: ${result.toStringAsFixed(2)}'),
+                          content: Text(
+                            'Pago procesado: ${result.toStringAsFixed(2)}',
+                          ),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -514,13 +571,13 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                   }
                 }
               : widget.onToggleStatus != null
-                  ? () async {
-                      // Lógica para alternar estado, similar a ReservasTable
-                      // Aquí se puede implementar el toggle usando el callback o lógica directa
-                      // Por ahora, placeholder
-                      widget.onToggleStatus?.call();
-                    }
-                  : null,
+              ? () async {
+                  // Lógica para alternar estado, similar a ReservasTable
+                  // Aquí se puede implementar el toggle usando el callback o lógica directa
+                  // Por ahora, placeholder
+                  widget.onToggleStatus?.call();
+                }
+              : null,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -552,11 +609,19 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
           ),
         ),
       ),
+      DataCell(
+        IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: () => _navegarAEditar(context, reserva),
+        ),
+      ),
     ];
 
     return DataRow(
       selected: _selectedRows.contains(index),
-      color: WidgetStateProperty.all(_obtenerColorEstado(reserva.colorPrefijo).withOpacity(0.2)),
+      color: WidgetStateProperty.all(
+        _obtenerColorEstado(reserva.colorPrefijo).withOpacity(0.2),
+      ),
       onSelectChanged: _isSelectionMode
           ? (selected) => _handleRowTap(index)
           : null,
@@ -565,7 +630,10 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   }
 
   // Método para mostrar selector de contactos
-  void _mostrarSelectorContactos(BuildContext context, List<Map<String, dynamic>> contactos) {
+  void _mostrarSelectorContactos(
+    BuildContext context,
+    List<Map<String, dynamic>> contactos,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -594,7 +662,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                     Navigator.of(context).pop();
                     // Mostrar un snackbar o algo para confirmar
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Seleccionado: $telefono ($tipoTexto)')),
+                      SnackBar(
+                        content: Text('Seleccionado: $telefono ($tipoTexto)'),
+                      ),
                     );
                   },
                 );
@@ -613,8 +683,12 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
   }
 
   // Método para mostrar selector de colores
-  void _mostrarSelectorColores(BuildContext context, ReservaResumen reserva) async {
-    if (widget.onObtenerColores == null || widget.onActualizarColor == null) return;
+  void _mostrarSelectorColores(
+    BuildContext context,
+    ReservaResumen reserva,
+  ) async {
+    if (widget.onObtenerColores == null || widget.onActualizarColor == null)
+      return;
 
     try {
       final colores = await widget.onObtenerColores!();
@@ -638,7 +712,11 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                   return InkWell(
                     onTap: () async {
                       try {
-                        await widget.onActualizarColor!(reserva.reservaCodigo, color.codigo, widget.usuarioId ?? 1);
+                        await widget.onActualizarColor!(
+                          reserva.reservaCodigo,
+                          color.codigo,
+                          widget.usuarioId ?? 1,
+                        );
                         Navigator.of(context).pop();
                         widget.onReload?.call();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -661,7 +739,9 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                       width: 80,
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _obtenerColorEstado(color.prefijo).withOpacity(0.1),
+                        color: _obtenerColorEstado(
+                          color.prefijo,
+                        ).withOpacity(0.1),
                         border: Border.all(
                           color: _obtenerColorEstado(color.prefijo),
                           width: 2,
@@ -677,7 +757,10 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                             decoration: BoxDecoration(
                               color: _obtenerColorEstado(color.prefijo),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.black12, width: 1),
+                              border: Border.all(
+                                color: Colors.black12,
+                                width: 1,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -769,7 +852,8 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
           ),
         ),
       ), // Saldo
-      if (widget.mostrarColumnaObservaciones) const DataCell(Text('')), // Observaciones
+      if (widget.mostrarColumnaObservaciones)
+        const DataCell(Text('')), // Observaciones
       const DataCell(Text('')), // Agencia
       const DataCell(Text('')), // Ticket
       const DataCell(Text('')), // Habitación
@@ -791,11 +875,29 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
           ),
         ),
       ), // Deuda
+      const DataCell(Text('')), // Editar
     ];
 
     return DataRow(
       color: WidgetStateProperty.all(Colors.grey.shade100),
       cells: celdasTotales,
     );
+  }
+
+  // Método para navegar a editar reserva
+  void _navegarAEditar(BuildContext context, ReservaResumen reserva) async {
+    final delta = context.read<ControladorDeltaReservas>();
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: delta,
+          child: EditarReservaScreen(reserva: reserva),
+        ),
+      ),
+    );
+    if (result == true) {
+      widget.onReload?.call(); // ¡Recarga la tabla!
+    }
   }
 }

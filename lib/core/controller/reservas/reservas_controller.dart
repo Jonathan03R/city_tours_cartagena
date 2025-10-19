@@ -200,6 +200,26 @@ class ControladorDeltaReservas extends ChangeNotifier {
     );
   }
 
+  Future<Map<String, dynamic>> actualizarReserva({
+    required int reservaId,
+    int? agenciaCodigo,
+    String? reservaFecha,
+    String? numeroTickete,
+    String? numeroHabitacion,
+    String? reservaPuntoEncuentro,
+    required int usuarioId,
+  }) async {
+    return await _servicio.actualizarReserva(
+      reservaId: reservaId,
+      agenciaCodigo: agenciaCodigo,
+      reservaFecha: reservaFecha,
+      numeroTickete: numeroTickete,
+      numeroHabitacion: numeroHabitacion,
+      reservaPuntoEncuentro: reservaPuntoEncuentro,
+      usuarioId: usuarioId,
+    );
+  }
+
   bool _listasIguales(List<ReservaResumen> a, List<ReservaResumen> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {

@@ -197,4 +197,42 @@ class ReservasSupabaseService {
       throw Exception('No se pudo actualizar color: ${e.toString()}');
     }
   }
+
+  Future<Map<String, dynamic>> actualizarReserva({
+    required int reservaId,
+    int? agenciaCodigo,
+    String? reservaFecha,
+    String? numeroTickete,
+    String? numeroHabitacion,
+    String? reservaPuntoEncuentro,
+    required int usuarioId,
+  }) async {
+    final ahora = DateTime.now().toIso8601String();
+
+    final updateData = <String, dynamic>{
+      'reserva_fecha_actualizacion': ahora,
+      'reserva_actualizado_por': usuarioId,
+    };
+
+    if (agenciaCodigo != null) updateData['agencia_codigo'] = agenciaCodigo;
+    if (reservaFecha != null) updateData['reserva_fecha'] = reservaFecha;
+    if (numeroTickete != null) updateData['numero_tickete'] = numeroTickete;
+    if (numeroHabitacion != null) updateData['numero_habitacion'] = numeroHabitacion;
+    if (reservaPuntoEncuentro != null) updateData['reserva_punto_encuentro'] = reservaPuntoEncuentro;
+
+    try {
+      final result = await _client
+          .from('reservas')
+          .update(updateData)
+          .eq('reserva_codigo', reservaId)
+          .select()
+          .single();
+      return result;
+    } on PostgrestException catch (e) {
+      throw Exception('Error al actualizar reserva: ${e.message}');
+    } catch (e, s) {
+      debugPrint('actualizarReserva error: $e\n$s');
+      throw Exception('No se pudo actualizar reserva: ${e.toString()}');
+    }
+  }
 }
