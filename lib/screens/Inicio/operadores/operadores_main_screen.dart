@@ -11,7 +11,6 @@ import 'package:citytourscartagena/core/controller/reservas/reservas_controller.
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
-import 'package:citytourscartagena/core/models/operadores/config_operadores.dart';
 import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
 import 'package:citytourscartagena/core/services/reservas/colores_service.dart';
 import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
@@ -20,6 +19,7 @@ import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.d
 import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
+import 'package:citytourscartagena/screens/Inicio/operadores/config_operadores.dart';
 import 'package:citytourscartagena/screens/agencias/agencias_secciond.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
 import 'package:citytourscartagena/screens/reportes/vista_reportes.dart';
