@@ -1,14 +1,19 @@
 import 'dart:async';
 
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
+import 'package:citytourscartagena/core/models/colores/color_model.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
+import 'package:citytourscartagena/core/services/reservas/colores_service.dart';
+import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
 import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
 import 'package:flutter/material.dart';
 
 class ControladorDeltaReservas extends ChangeNotifier {
   final ReservasSupabaseService _servicio;
+  final PagosService _pagosService;
+  final ColoresService _coloresService;
   final AgenciasService agenciasService = AgenciasService();
   final Duration debounceDuracion;
 
@@ -23,8 +28,12 @@ class ControladorDeltaReservas extends ChangeNotifier {
 
   ControladorDeltaReservas({
     required ReservasSupabaseService servicio,
+    required PagosService pagosService,
+    required ColoresService coloresService,
     Duration? debounce,
   }) : _servicio = servicio,
+       _pagosService = pagosService,
+       _coloresService = coloresService,
        debounceDuracion = debounce ?? const Duration(milliseconds: 350);
 
   // Inicia la escucha de cambios en la tabla reservas
@@ -150,6 +159,63 @@ class ControladorDeltaReservas extends ChangeNotifier {
     return await _servicio.actualizarObservacionesReserva(
       reservaId: reservaId,
       observaciones: observaciones,
+      usuarioId: usuarioId,
+    );
+  }
+
+  Future<double> procesarPago({
+    required ReservaResumen reserva,
+    int? pagadoPor,
+  }) async {
+    if (reserva.estadoNombre.toLowerCase() == 'pendiente') {
+      // Pagar reserva
+      return await _pagosService.pagarReserva(
+        reservaCodigo: reserva.reservaCodigo,
+        tipoPagoCodigo: 1, // Siempre 1
+        pagadoPor: pagadoPor,
+      );
+    } else if (reserva.estadoNombre.toLowerCase() == 'pagada') {
+      // Revertir pago
+      return await _pagosService.revertirPago(
+        reservaCodigo: reserva.reservaCodigo,
+      );
+    } else {
+      throw Exception('Estado de reserva no válido para procesar pago: ${reserva.estadoNombre}');
+    }
+  }
+
+  Future<List<ColorModel>> obtenerColores() async {
+    return await _coloresService.obtenerColores();
+  }
+
+  Future<Map<String, dynamic>> actualizarColorReserva({
+    required int reservaId,
+    required int colorCodigo,
+    required int usuarioId,
+  }) async {
+    return await _servicio.actualizarColorReserva(
+      reservaId: reservaId,
+      colorCodigo: colorCodigo,
+      usuarioId: usuarioId,
+    );
+  }
+
+  Future<Map<String, dynamic>> actualizarReserva({
+    required int reservaId,
+    int? agenciaCodigo,
+    String? reservaFecha,
+    String? numeroTickete,
+    String? numeroHabitacion,
+    String? reservaPuntoEncuentro,
+    required int usuarioId,
+  }) async {
+    return await _servicio.actualizarReserva(
+      reservaId: reservaId,
+      agenciaCodigo: agenciaCodigo,
+      reservaFecha: reservaFecha,
+      numeroTickete: numeroTickete,
+      numeroHabitacion: numeroHabitacion,
+      reservaPuntoEncuentro: reservaPuntoEncuentro,
       usuarioId: usuarioId,
     );
   }
