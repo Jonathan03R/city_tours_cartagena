@@ -11,17 +11,17 @@ import 'package:citytourscartagena/core/controller/reservas/reservas_controller.
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
+import 'package:citytourscartagena/core/models/operadores/config_operadores.dart';
 import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
-import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
-import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
 import 'package:citytourscartagena/core/services/reservas/colores_service.dart';
+import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
+import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/agencies_stats_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
 import 'package:citytourscartagena/screens/agencias/agencias_secciond.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
-import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reportes/vista_reportes.dart';
 import 'package:citytourscartagena/screens/usuarios/tabar.dart';
 import 'package:flutter/material.dart';
@@ -168,6 +168,7 @@ class _MainOperadorScreenState extends State<MainOperadorScreen> {
             searchTerm: _searchTerm,
           ),
           const UsuariosScreen(),
+          ConfigOperadoresScreems(controller: operadoresController),
         ];
         return Scaffold(
           key: _scaffoldKey,
@@ -298,7 +299,7 @@ class _MainOperadorScreenState extends State<MainOperadorScreen> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ConfigEmpresaView(),
+                      builder: (_) => ConfigOperadoresScreems(controller: operadoresController),
                     ),
                   );
                 },
