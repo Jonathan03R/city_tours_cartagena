@@ -74,3 +74,58 @@ class AgenciaSupabase {
     );
   }
 }
+
+class CrearAgenciaDTO {
+  final String nombre;
+  final String direccion;
+  final int? tipoDocumentoCodigo;
+  final String? beneficiario;
+  final int tipoEmpresaCodigo;
+  final String? logoUrl;
+  final int creadoPor;
+  final int operadorCodigo;
+  final String? ipOrigen;
+
+  CrearAgenciaDTO({
+    required this.nombre,
+    required this.direccion,
+    this.tipoDocumentoCodigo,
+    this.beneficiario,
+    required this.tipoEmpresaCodigo,
+    this.logoUrl,
+    required this.creadoPor,
+    required this.operadorCodigo,
+    this.ipOrigen,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'p_agencia_nombre': nombre,
+      'p_agencia_direccion': direccion,
+      'p_tipo_documento_codigo': tipoDocumentoCodigo,
+      'p_agencia_beneficiario': beneficiario,
+      'p_tipo_empresa_codigo': tipoEmpresaCodigo,
+      'p_agencia_logo_url': logoUrl,
+      'p_creado_por': creadoPor,
+      'p_operador_codigo': operadorCodigo,
+      'p_ip_origen': ipOrigen,
+    };
+  }
+
+  CrearAgenciaDTO copyWith({
+    String? logoUrl,
+    String? ipOrigen,
+  }) {
+    return CrearAgenciaDTO(
+      nombre: nombre,
+      direccion: direccion,
+      tipoDocumentoCodigo: tipoDocumentoCodigo,
+      beneficiario: beneficiario,
+      tipoEmpresaCodigo: tipoEmpresaCodigo,
+      logoUrl: logoUrl ?? this.logoUrl,
+      creadoPor: creadoPor,
+      operadorCodigo: operadorCodigo,
+      ipOrigen: ipOrigen ?? this.ipOrigen,
+    );
+  }
+}

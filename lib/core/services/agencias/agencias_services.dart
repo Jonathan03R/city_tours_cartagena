@@ -115,4 +115,20 @@ class AgenciasService {
         )
         .toList();
   }
+
+  Future<Map<String, dynamic>> crearAgenciaCompleta(
+    CrearAgenciaDTO request,
+  ) async {
+    final response = await _client.rpc(
+      'crear_agencia_completa',
+      params: request.toMap(),
+    );
+
+    // La función devuelve una tabla, así que response es una lista
+    if (response is List && response.isNotEmpty) {
+      return response[0] as Map<String, dynamic>;
+    } else {
+      throw Exception('Error al crear la agencia: respuesta inesperada');
+    }
+  }
 }
