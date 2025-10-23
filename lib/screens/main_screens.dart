@@ -15,7 +15,6 @@ import 'package:citytourscartagena/core/widgets/sidebar/debt_overview_section.da
 import 'package:citytourscartagena/core/widgets/sidebar/drawer_header_section.dart';
 import 'package:citytourscartagena/core/widgets/sidebar/logout_section.dart';
 import 'package:citytourscartagena/screens/agencias_view.dart';
-import 'package:citytourscartagena/screens/config_empresa_view.dart';
 import 'package:citytourscartagena/screens/reportes/vista_reportes.dart';
 import 'package:citytourscartagena/screens/servicios/servicio_view.dart';
 import 'package:citytourscartagena/screens/usuarios/tabar.dart';
@@ -299,11 +298,11 @@ class _MainScreenState extends State<MainScreen> {
               IconButton(
                 icon: const Icon(Icons.settings, color: Color(0xFF06142F)),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ConfigEmpresaView(),
-                    ),
-                  );
+                  // Navigator.of(context).push(
+                  //   MaterialPageRoute(
+                  //     builder: (_) => const ConfigEmpresaView(),
+                  //   ),
+                  // );
                 },
               ),
           ],

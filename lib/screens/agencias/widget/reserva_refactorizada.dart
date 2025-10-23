@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
+import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
@@ -10,14 +11,14 @@ import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/screens/agencias/widget/control_precios_widget.dart';
 import 'package:citytourscartagena/screens/agencias/widget/encabezado_agencia_widget.dart';
+import 'package:citytourscartagena/screens/agencias/widget/filtros.dart';
 import 'package:citytourscartagena/screens/agencias/widget/tabla_reservas_widget.dart';
+import 'package:citytourscartagena/screens/reservas/crear_reservas_form.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
-
-import 'filtros.dart';
 
 class ReservaVista extends StatefulWidget {
   final int? codigoAgencia;
@@ -87,6 +88,7 @@ class _ReservaVistaState extends State<ReservaVista> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarReservas();
       _loadPreciosIfNeeded();
+      context.read<OperadoresController>().obtenerAgenciasDeOperador();
     });
     if (widget.codigoAgencia != null) {
       _futureAgencia = Provider.of<ControladorDeltaReservas>(
@@ -569,6 +571,28 @@ class _ReservaVistaState extends State<ReservaVista> {
                 SpeedDialChild(
                   label: 'Agregar Reserva',
                   child: const Icon(Icons.add),
+/*
+                FloatingActionButton.extended(
+                  heroTag: "manual_btn",
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MultiProvider(
+                          providers: [
+                            ChangeNotifierProvider<ServiciosController>.value(
+                              value: _serviciosController,
+                            ),
+                            ChangeNotifierProvider<OperadoresController>.value(
+                              value: Provider.of<OperadoresController>(context, listen: false),
+                            ),
+                          ],
+                          child: const CrearReservasForm(),
+                        ),
+                      ),
+                    );
+                  },
+*/
                   backgroundColor: Colors.blue.shade600,
                   foregroundColor: Colors.white,
                   onTap: () {

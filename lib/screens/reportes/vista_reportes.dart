@@ -3,7 +3,6 @@ import 'package:citytourscartagena/core/controller/filters_controller.dart';
 import 'package:citytourscartagena/core/controller/gastos_controller.dart';
 import 'package:citytourscartagena/core/controller/metas_controller.dart';
 import 'package:citytourscartagena/core/controller/reportes_controller.dart';
-import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/enum/selecion_rango_fechas.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
@@ -137,15 +136,10 @@ class _ReportesViewState extends State<ReportesView>
                             _buildNavigationCards(),
                             TurnoSelectorWidget(
                               onTurnoSelected: (turno) {
-                                final delta = context
-                                    .read<ControladorDeltaReservas>();
+                                // usar addPostFrameCallback para obtener un contexto seguro
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        ChangeNotifierProvider.value(
-                                          value: delta,
-                                          child: ReservaVista(),
-                                        ),
+                                    builder: (_) => const ReservaVista(),
                                   ),
                                 );
                               },
