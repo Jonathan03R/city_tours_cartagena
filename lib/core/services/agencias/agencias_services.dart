@@ -132,7 +132,7 @@ class AgenciasService {
     }
   }
 
-  getContactoAgencia(int agenciaId) async {
+  Future<({bool hasContact, String? telefono, String? link})> getContactoAgencia(int agenciaId) async {
     // Llama a la función SQL que hiciste en Supabase
     final res = await _client.rpc(
       'get_agencia_contacto',
