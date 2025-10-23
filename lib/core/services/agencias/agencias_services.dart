@@ -130,9 +130,8 @@ class AgenciasService {
     } else {
       throw Exception('Error al crear la agencia: respuesta inesperada');
     }
-
   }
-  
+
   getContactoAgencia(int agenciaId) async {
     // Llama a la función SQL que hiciste en Supabase
     final res = await _client.rpc(
@@ -150,7 +149,5 @@ class AgenciasService {
       telefono: row['telefono'] as String?,
       link: row['link'] as String?,
     );
+  }
 }
-  
-  
-  
