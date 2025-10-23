@@ -23,11 +23,11 @@ class Agencia {
     // this.precioPorAsiento,
     this.precioPorAsientoTurnoManana,
     this.precioPorAsientoTurnoTarde,
-     this.tipoDocumento,
-     this.numeroDocumento,
-     this.nombreBeneficiario,
-     this.contactoAgencia,
-     this.linkContactoAgencia,
+    this.tipoDocumento,
+    this.numeroDocumento,
+    this.nombreBeneficiario,
+    this.contactoAgencia,
+    this.linkContactoAgencia,
   });
 
   // Añadir el método copyWith para facilitar la creación de nuevas instancias con ID
@@ -50,10 +50,12 @@ class Agencia {
       nombre: nombre ?? this.nombre,
       imagenUrl: imagenUrl ?? this.imagenUrl,
       eliminada: eliminada ?? this.eliminada,
-      precioPorAsientoTurnoManana: precioPorAsientoTurnoManana ?? this.precioPorAsientoTurnoManana,
-      precioPorAsientoTurnoTarde: precioPorAsientoTurnoTarde ?? this.precioPorAsientoTurnoTarde,
-      // precioPorAsiento: precioPorAsiento ?? this.precioPorAsiento,
+      precioPorAsientoTurnoManana:
+          precioPorAsientoTurnoManana ?? this.precioPorAsientoTurnoManana,
+      precioPorAsientoTurnoTarde:
+          precioPorAsientoTurnoTarde ?? this.precioPorAsientoTurnoTarde,
 
+      // precioPorAsiento: precioPorAsiento ?? this.precioPorAsiento,
       tipoDocumento: tipoDocumento ?? this.tipoDocumento,
       numeroDocumento: numeroDocumento ?? this.numeroDocumento,
       nombreBeneficiario: nombreBeneficiario ?? this.nombreBeneficiario,
@@ -114,10 +116,7 @@ class AgenciaConReservas {
   final Agencia agencia;
   final int totalReservas;
 
-  AgenciaConReservas({
-    required this.agencia,
-    required this.totalReservas,
-  });
+  AgenciaConReservas({required this.agencia, required this.totalReservas});
 
   // Exponer propiedades de la Agencia interna para conveniencia
   String get id => agencia.id;
@@ -125,7 +124,8 @@ class AgenciaConReservas {
   String? get imagenUrl => agencia.imagenUrl;
   bool get eliminada => agencia.eliminada;
   // double? get precioPorAsiento => agencia.precioPorAsiento;
-  double? get precioPorAsientoTurnoManana => agencia.precioPorAsientoTurnoManana;
+  double? get precioPorAsientoTurnoManana =>
+      agencia.precioPorAsientoTurnoManana;
   double? get precioPorAsientoTurnoTarde => agencia.precioPorAsientoTurnoTarde;
   TipoDocumento? get tipoDocumento => agencia.tipoDocumento;
   String? get numeroDocumento => agencia.numeroDocumento;

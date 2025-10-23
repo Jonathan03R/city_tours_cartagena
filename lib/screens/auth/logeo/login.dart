@@ -54,15 +54,15 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _onLoginPressed() async {
-    final authController = Provider.of<AuthSupabaseController>(context, listen: false);
+    final authController = Provider.of<AuthSupabaseController>(
+      context,
+      listen: false,
+    );
 
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    final perfil = await authController.login(
-      email: email,
-      password: password,
-    );
+    final perfil = await authController.login(email: email, password: password);
 
     if (!mounted) return;
 
@@ -92,13 +92,9 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             // Elementos decorativos de fondo
             _buildBackgroundElements(size),
-            
+
             // Botón para cambiar tema
-            Positioned(
-              top: 50.h,
-              right: 20.w,
-              child: _buildThemeToggle(),
-            ),
+            Positioned(top: 50.h, right: 20.w, child: _buildThemeToggle()),
 
             // Contenido principal
             SafeArea(
@@ -119,7 +115,8 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               child: IntrinsicHeight(
                                 child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     SizedBox(height: 80.h),
                                     _buildHeader(),
@@ -157,7 +154,9 @@ class _LoginScreenState extends State<LoginScreen>
               width: size.width * 0.8,
               height: size.width * 0.8,
               decoration: BoxDecoration(
-                color: (_isDarkMode ? Colors.white : Colors.black).withOpacity(0.03),
+                color: (_isDarkMode ? Colors.white : Colors.black).withOpacity(
+                  0.03,
+                ),
                 borderRadius: BorderRadius.circular(size.width * 0.2),
               ),
             ),
@@ -172,7 +171,9 @@ class _LoginScreenState extends State<LoginScreen>
               width: size.width * 0.7,
               height: size.width * 0.7,
               decoration: BoxDecoration(
-                color: (_isDarkMode ? Colors.white : Colors.black).withOpacity(0.02),
+                color: (_isDarkMode ? Colors.white : Colors.black).withOpacity(
+                  0.02,
+                ),
                 borderRadius: BorderRadius.circular(size.width * 0.15),
               ),
             ),
@@ -260,7 +261,9 @@ class _LoginScreenState extends State<LoginScreen>
             color: AppColors.getAccentColor(_isDarkMode).withOpacity(0.5),
             borderRadius: BorderRadius.circular(20.r),
             border: Border.all(
-              color: (_isDarkMode ? Colors.white : Colors.black).withOpacity(0.1),
+              color: (_isDarkMode ? Colors.white : Colors.black).withOpacity(
+                0.1,
+              ),
             ),
           ),
           child: Text(
@@ -334,7 +337,9 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       child: Text(
                         _error!,
-                        style: TextStyle(color: AppColors.getTextColor(_isDarkMode)),
+                        style: TextStyle(
+                          color: AppColors.getTextColor(_isDarkMode),
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -346,8 +351,10 @@ class _LoginScreenState extends State<LoginScreen>
                     label: 'Correo Electrónico',
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) => (v == null || v.isEmpty || !v.contains('@')) 
-                        ? 'Ingrese un correo válido' : null,
+                    validator: (v) =>
+                        (v == null || v.isEmpty || !v.contains('@'))
+                        ? 'Ingrese un correo válido'
+                        : null,
                   ),
                   SizedBox(height: 20.h),
 
@@ -357,19 +364,23 @@ class _LoginScreenState extends State<LoginScreen>
                     icon: Icons.lock_outline_rounded,
                     isPassword: true,
                     validator: (v) => (v == null || v.length < 6)
-                        ? 'Mínimo 6 caracteres' : null,
+                        ? 'Mínimo 6 caracteres'
+                        : null,
                   ),
                   SizedBox(height: 32.h),
 
                   _buildLoginButton(auth),
-                  
+
                   SizedBox(height: 20.h),
-                  
+
                   TextButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(
-                        builder: (context) => const RegistroScreen()
-                      ));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegistroScreen(),
+                        ),
+                      );
                     },
                     child: Text(
                       '¿No tienes cuenta? Regístrate',
@@ -521,14 +532,18 @@ class _LoginScreenState extends State<LoginScreen>
             Container(
               width: 50.w,
               height: 1.h,
-              color: AppColors.getSecondaryTextColor(_isDarkMode).withOpacity(0.3),
+              color: AppColors.getSecondaryTextColor(
+                _isDarkMode,
+              ).withOpacity(0.3),
             ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Text(
                 'Seguridad y Confianza',
                 style: TextStyle(
-                  color: AppColors.getSecondaryTextColor(_isDarkMode).withOpacity(0.7),
+                  color: AppColors.getSecondaryTextColor(
+                    _isDarkMode,
+                  ).withOpacity(0.7),
                   fontSize: 12.sp,
                 ),
               ),
@@ -536,7 +551,9 @@ class _LoginScreenState extends State<LoginScreen>
             Container(
               width: 50.w,
               height: 1.h,
-              color: AppColors.getSecondaryTextColor(_isDarkMode).withOpacity(0.3),
+              color: AppColors.getSecondaryTextColor(
+                _isDarkMode,
+              ).withOpacity(0.3),
             ),
           ],
         ),

@@ -87,7 +87,8 @@ class AgenciasController extends ChangeNotifier {
       nombre: nombre,
       imagenUrl: imageUrl,
       // precioPorAsiento: precioPorAsiento
-      precioPorAsientoTurnoManana:precioPorAsientoTurnoManana, // Asignar un valor por defecto si no se proporciona
+      precioPorAsientoTurnoManana:
+          precioPorAsientoTurnoManana, // Asignar un valor por defecto si no se proporciona
       precioPorAsientoTurnoTarde: precioPorAsientoTurnoTarde,
       tipoDocumento: tipoDocumento,
       numeroDocumento: numeroDocumento,
@@ -135,20 +136,24 @@ class AgenciasController extends ChangeNotifier {
       precioPorAsientoTurnoTarde: newPrecioPorAsientoTurnoTarde, // NUEVO
       tipoDocumento: tipoDocumento,
       numeroDocumento: numeroDocumento ?? currentAgencia?.numeroDocumento,
-      nombreBeneficiario: nombreBeneficiario ?? currentAgencia?.nombreBeneficiario,
+      nombreBeneficiario:
+          nombreBeneficiario ?? currentAgencia?.nombreBeneficiario,
       contactoAgencia: contactoAgencia ?? currentAgencia?.contactoAgencia,
-      linkContactoAgencia: linkContactoAgencia ?? currentAgencia?.linkContactoAgencia,
+      linkContactoAgencia:
+          linkContactoAgencia ?? currentAgencia?.linkContactoAgencia,
     );
 
     await _firestoreService.updateAgencia(id, updatedAgencia);
 
     // Si el precio por asiento ha cambiado, actualizar todas las reservas asociadas
-    if (currentAgencia?.precioPorAsientoTurnoManana != newPrecioPorAsientoTurnoManana ||
-        currentAgencia?.precioPorAsientoTurnoTarde  != newPrecioPorAsientoTurnoTarde) {
-
+    if (currentAgencia?.precioPorAsientoTurnoManana !=
+            newPrecioPorAsientoTurnoManana ||
+        currentAgencia?.precioPorAsientoTurnoTarde !=
+            newPrecioPorAsientoTurnoTarde) {
       // Actualiza reservas de la mañana
       if (newPrecioPorAsientoTurnoManana != null &&
-          currentAgencia?.precioPorAsientoTurnoManana != newPrecioPorAsientoTurnoManana) {
+          currentAgencia?.precioPorAsientoTurnoManana !=
+              newPrecioPorAsientoTurnoManana) {
         await _firestoreService.updateReservasCostoAsientoManana(
           id,
           newPrecioPorAsientoTurnoManana,
@@ -157,7 +162,8 @@ class AgenciasController extends ChangeNotifier {
 
       // Actualiza reservas de la tarde
       if (newPrecioPorAsientoTurnoTarde != null &&
-          currentAgencia?.precioPorAsientoTurnoTarde != newPrecioPorAsientoTurnoTarde) {
+          currentAgencia?.precioPorAsientoTurnoTarde !=
+              newPrecioPorAsientoTurnoTarde) {
         await _firestoreService.updateReservasCostoAsientoTarde(
           id,
           newPrecioPorAsientoTurnoTarde,
