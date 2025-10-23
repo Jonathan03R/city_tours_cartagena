@@ -6,6 +6,7 @@ import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
+import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
@@ -15,7 +16,9 @@ import 'package:citytourscartagena/screens/agencias/widget/filtros.dart';
 import 'package:citytourscartagena/screens/agencias/widget/tabla_reservas_widget.dart';
 import 'package:citytourscartagena/screens/reservas/crear_reservas_form.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReservaVista extends StatefulWidget {
   final int? codigoAgencia;
@@ -39,10 +42,15 @@ class _ReservaVistaState extends State<ReservaVista> {
   int? _selectedEstadoCodigo;
   bool _isTableView = true;
   String? _currentReservaIdNotificada;
-
   int _paginaActual = 1;
   int _totalReservas = 0;
+  bool _hasContact = false;
+  String? _telContacto;
+  String? _linkContacto;
+
   late Future<AgenciaSupabase?> _futureAgencia;
+  late final Future<({bool hasContact, String? telefono, String? link})>
+  _contactoFuture;
 
   final ValueNotifier<List<ReservaResumen>> _reservasPaginadas = ValueNotifier(
     [],
@@ -59,6 +67,24 @@ class _ReservaVistaState extends State<ReservaVista> {
     _serviciosController = ServiciosController(ServiciosService());
     _serviciosController.cargarTiposServicios(1); // operadorId
     _serviciosController.cargarEstadosReservas();
+    _contactoFuture = (widget.codigoAgencia != null)
+        ? AgenciasService().getContactoAgencia(widget.codigoAgencia!)
+        : Future.value((hasContact: false, telefono: null, link: null));
+
+    // Resuelve el futuro y guarda en el estado
+    _contactoFuture
+        .then((d) {
+          if (!mounted) return;
+          setState(() {
+            _hasContact = d.hasContact;
+            _telContacto = d.telefono;
+            _linkContacto = d.link;
+          });
+        })
+        .catchError((_) {
+          /* si falla, simplemente no mostramos el botón */
+        });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarReservas();
       _loadPreciosIfNeeded();
@@ -175,7 +201,6 @@ class _ReservaVistaState extends State<ReservaVista> {
     _reservasPaginadas.value = reservas;
   }
 
-
   void _clearNotificatedReserva() {
     if (_currentReservaIdNotificada != null && mounted) {
       setState(() {
@@ -198,6 +223,37 @@ class _ReservaVistaState extends State<ReservaVista> {
     }
   }
 
+  Future<void> _abrirContactoAgencia({
+    required String? telefono,
+    required String? link,
+  }) async {
+    if (link != null && link.trim().isNotEmpty) {
+      final uri = Uri.parse(link);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
+    if (telefono != null && telefono.trim().isNotEmpty) {
+      var tel = telefono.replaceAll(RegExp(r'[^0-9+]'), '');
+      if (!tel.startsWith('+'))
+        tel = '+51$tel'; // <-- puedes cambiar el prefijo del país
+      final uri = Uri.parse('https://wa.me/$tel');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No se pudo abrir el contacto de la agencia'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<ControladorDeltaReservas>(context);
@@ -205,9 +261,6 @@ class _ReservaVistaState extends State<ReservaVista> {
     final bool puedeEditarAgencia = true;
     final bool puedeAgregarReserva = true;
     final bool puedeAgregarManual = true;
-    final bool puedeWhatsapp = true;
-    final String? contactoAgencia = null;
-    final String? linkContactoAgencia = null;
     final String? nombreAgencia = widget.nombreAgencia;
 
     return StreamBuilder<List<ReservaResumen>>(
@@ -388,6 +441,8 @@ class _ReservaVistaState extends State<ReservaVista> {
                         );
                       }
                       final agencia = snapshot.data!;
+                      // Sincroniza con el estado para que el SpeedDial lo use
+
                       return EncabezadoAgenciaWidget(
                         nombreAgencia: agencia.nombre,
                         imagenUrlAgencia: agencia.logoUrl,
@@ -460,11 +515,16 @@ class _ReservaVistaState extends State<ReservaVista> {
                           ),
                         )
                         .origen,
-                    filtroTurno: _selectedTurno != null 
-                        ? _serviciosController.tiposServicios.firstWhere(
-                            (t) => t.codigo == _selectedTurno,
-                            orElse: () => TipoServicio(codigo: -1, descripcion: 'Desconocido'),
-                          ).descripcion
+                    filtroTurno: _selectedTurno != null
+                        ? _serviciosController.tiposServicios
+                              .firstWhere(
+                                (t) => t.codigo == _selectedTurno,
+                                orElse: () => TipoServicio(
+                                  codigo: -1,
+                                  descripcion: 'Desconocido',
+                                ),
+                              )
+                              .descripcion
                         : null,
                     puedeEditarPrecios: false,
                   ),
@@ -477,33 +537,41 @@ class _ReservaVistaState extends State<ReservaVista> {
               ],
             ),
           ),
-          floatingActionButton: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+          floatingActionButton: SpeedDial(
+            icon: Icons.more_vert,
+            activeIcon: Icons.close,
+            spacing: 12,
+            spaceBetweenChildren: 12,
             children: [
-              if (puedeWhatsapp)
-                FloatingActionButton(
-                  heroTag: "wa_btn",
-                  onPressed: () {
-                    /* abrir whatsapp */
-                  },
-                  backgroundColor: Colors.green.shade600,
-                  child: const Icon(Icons.abc),
-                  tooltip: 'Contactar agencia',
-                ),
-              const SizedBox(height: 16),
+              // WhatsApp
+              SpeedDialChild(
+                visible: _hasContact, // ← no cambia la cantidad de children
+                label: 'Contactar agencia',
+                child: const Icon(Icons.chat),
+                backgroundColor: Colors.green.shade600,
+                onTap: _hasContact
+                    ? () => _abrirContactoAgencia(
+                        telefono: _telContacto,
+                        link: _linkContacto,
+                      )
+                    : null,
+              ),
+
               if (puedeAgregarReserva)
-                FloatingActionButton.extended(
-                  heroTag: "pro_btn",
-                  onPressed: () {
-                    /* registro rápido */
-                  },
+                SpeedDialChild(
+                  label: 'Registro rápido',
+                  child: const Icon(Icons.auto_awesome),
                   backgroundColor: Colors.purple.shade600,
                   foregroundColor: Colors.white,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('Registro rápido'),
+                  onTap: () {
+                    /* … */
+                  },
                 ),
-              const SizedBox(height: 16),
               if (puedeAgregarManual)
+                SpeedDialChild(
+                  label: 'Agregar Reserva',
+                  child: const Icon(Icons.add),
+/*
                 FloatingActionButton.extended(
                   heroTag: "manual_btn",
                   onPressed: () {
@@ -524,10 +592,27 @@ class _ReservaVistaState extends State<ReservaVista> {
                       ),
                     );
                   },
+*/
                   backgroundColor: Colors.blue.shade600,
                   foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar Reserva'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MultiProvider(
+                          providers: [
+                            ChangeNotifierProvider<ServiciosController>.value(
+                              value: _serviciosController,
+                            ),
+                            ChangeNotifierProvider<OperadoresController>.value(
+                              value: Provider.of<OperadoresController>(context, listen: false),
+                            ),
+                          ],
+                          child: const CrearReservasForm(),
+                        ),
+                      ),
+                    );
+                  },
                 ),
             ],
           ),
@@ -576,7 +661,9 @@ class _ReservaVistaState extends State<ReservaVista> {
       return const Center(child: CircularProgressIndicator());
     }
     // Mostrar columna de fecha solo si no es filtro específico de fecha
-    final mostrarFecha = _selectedFilter != DateFilterType.today && _selectedFilter != DateFilterType.custom;
+    final mostrarFecha =
+        _selectedFilter != DateFilterType.today &&
+        _selectedFilter != DateFilterType.custom;
     // Mostrar columna de servicio solo si no está filtrando por turno específico
     final mostrarServicio = _selectedTurno == null;
     return ValueListenableBuilder<List<ReservaResumen>>(
@@ -588,8 +675,14 @@ class _ReservaVistaState extends State<ReservaVista> {
           mostrarColumnaServicio: mostrarServicio,
           mostrarColumnaObservaciones: true,
           onActualizarObservaciones: (reserva, obs) async {
-            final controller = Provider.of<ControladorDeltaReservas>(context, listen: false);
-            final authController = Provider.of<AuthController>(context, listen: false);
+            final controller = Provider.of<ControladorDeltaReservas>(
+              context,
+              listen: false,
+            );
+            final authController = Provider.of<AuthController>(
+              context,
+              listen: false,
+            );
             await controller.actualizarObservaciones(
               reservaId: reserva.reservaCodigo,
               observaciones: obs,
@@ -597,15 +690,25 @@ class _ReservaVistaState extends State<ReservaVista> {
             );
             // Actualizar la lista local para reflejar el cambio en tiempo real
             final reservasActuales = _reservasPaginadas.value;
-            final index = reservasActuales.indexWhere((r) => r.reservaCodigo == reserva.reservaCodigo);
+            final index = reservasActuales.indexWhere(
+              (r) => r.reservaCodigo == reserva.reservaCodigo,
+            );
             if (index != -1) {
-              reservasActuales[index] = reservasActuales[index].copyWith(observaciones: obs);
+              reservasActuales[index] = reservasActuales[index].copyWith(
+                observaciones: obs,
+              );
               _reservasPaginadas.value = List.from(reservasActuales);
             }
           },
           onProcesarPago: (reserva) async {
-            final controller = Provider.of<ControladorDeltaReservas>(context, listen: false);
-            final authController = Provider.of<AuthController>(context, listen: false);
+            final controller = Provider.of<ControladorDeltaReservas>(
+              context,
+              listen: false,
+            );
+            final authController = Provider.of<AuthController>(
+              context,
+              listen: false,
+            );
             final result = await controller.procesarPago(
               reserva: reserva,
               pagadoPor: authController.appUser?.id as int?,
@@ -614,10 +717,23 @@ class _ReservaVistaState extends State<ReservaVista> {
             await _cargarReservas();
             return result;
           },
-          onObtenerColores: () => Provider.of<ControladorDeltaReservas>(context, listen: false).obtenerColores(),
-          onActualizarColor: (reservaId, colorCodigo, usuarioId) => Provider.of<ControladorDeltaReservas>(context, listen: false).actualizarColorReserva(reservaId: reservaId, colorCodigo: colorCodigo, usuarioId: usuarioId),
+          onObtenerColores: () => Provider.of<ControladorDeltaReservas>(
+            context,
+            listen: false,
+          ).obtenerColores(),
+          onActualizarColor: (reservaId, colorCodigo, usuarioId) =>
+              Provider.of<ControladorDeltaReservas>(
+                context,
+                listen: false,
+              ).actualizarColorReserva(
+                reservaId: reservaId,
+                colorCodigo: colorCodigo,
+                usuarioId: usuarioId,
+              ),
           onReload: () => _cargarReservas(),
-          usuarioId: Provider.of<AuthController>(context, listen: false).appUser?.id as int?,
+          usuarioId:
+              Provider.of<AuthController>(context, listen: false).appUser?.id
+                  as int?,
         );
       },
     );

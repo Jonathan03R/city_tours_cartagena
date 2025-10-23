@@ -11,6 +11,8 @@ class AgenciaSupabase {
   final double deuda;
   final int totalPasajeros;
   final int totalReservas;
+  final String? contactoAgencia;
+  final String? linkContactoAgencia;
 
   AgenciaSupabase({
     required this.codigo,
@@ -25,6 +27,8 @@ class AgenciaSupabase {
     required this.deuda,
     required this.totalPasajeros,
     required this.totalReservas,
+    this.contactoAgencia,
+    this.linkContactoAgencia,
   });
 
   factory AgenciaSupabase.fromMap(Map<String, dynamic> map) {
@@ -41,6 +45,8 @@ class AgenciaSupabase {
       deuda: 0.0,
       totalPasajeros: 0,
       totalReservas: 0,
+      contactoAgencia: map['contacto_agencia'] as String?,
+      linkContactoAgencia: map['link_contacto_agencia'] as String?,
     );
   }
 
@@ -57,6 +63,8 @@ class AgenciaSupabase {
     double? deuda,
     int? totalPasajeros,
     int? totalReservas,
+    String? contactoAgencia,
+    String? linkContactoAgencia,
   }) {
     return AgenciaSupabase(
       codigo: codigo ?? this.codigo,
@@ -71,6 +79,8 @@ class AgenciaSupabase {
       deuda: deuda ?? this.deuda,
       totalPasajeros: totalPasajeros ?? this.totalPasajeros,
       totalReservas: totalReservas ?? this.totalReservas,
+      contactoAgencia: contactoAgencia ?? this.contactoAgencia,
+      linkContactoAgencia: linkContactoAgencia ?? this.linkContactoAgencia,
     );
   }
 }
