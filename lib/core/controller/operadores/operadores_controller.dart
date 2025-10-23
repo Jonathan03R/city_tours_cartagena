@@ -23,10 +23,13 @@ class OperadoresController extends ChangeNotifier {
   Future<Operadores?>? _operadorFuture;
   Future<List<ContactoOperador>>? _contactosFuture;
   Future<List<TipoContacto>>? _tiposContactosFuture;
+  List<AgenciaSupabase>? _agenciasCache;
 
   OperadoresController(this.auth);
 
   int get codigoUsuario => auth.perfilUsuario!.usuario.codigo;
+
+  List<AgenciaSupabase> get agencias => _agenciasCache ?? [];
 
   // ===== MÉTODOS PARA OPERADORES =====
 
@@ -222,6 +225,8 @@ class OperadoresController extends ChangeNotifier {
 
   /// Obtiene las agencias del operador actual
   Future<List<AgenciaSupabase>> obtenerAgenciasDeOperador() async {
+    if (_agenciasCache != null) return _agenciasCache!;
+
     try {
       final operador = await obtenerOperador();
       if (operador == null) {
@@ -231,6 +236,8 @@ class OperadoresController extends ChangeNotifier {
       final agencias = await _agenciasService.obtenerAgenciasDeOperador(
         operadorCod: operador.id,
       );
+      _agenciasCache = agencias;
+      notifyListeners();
       return agencias;
     } catch (e) {
       debugPrint('Error obteniendo agencias: $e');
@@ -243,6 +250,7 @@ class OperadoresController extends ChangeNotifier {
     _operadorFuture = null;
     _contactosFuture = null;
     _tiposContactosFuture = null;
+    _agenciasCache = null;
     notifyListeners();
   }
 
