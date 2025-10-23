@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/colores/color_model.dart';
+import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
+import 'package:citytourscartagena/core/models/reservas/reserva_contacto.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/reservas/colores_service.dart';
 import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
+import 'package:citytourscartagena/core/services/reservas/reservas_contactos.dart';
 import 'package:citytourscartagena/core/services/reservas/reservas_service.supabase.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +17,7 @@ class ControladorDeltaReservas extends ChangeNotifier {
   final ReservasSupabaseService _servicio;
   final PagosService _pagosService;
   final ColoresService _coloresService;
+  final ReservasContactosService _contactosService;
   final AgenciasService agenciasService = AgenciasService();
   final Duration debounceDuracion;
 
@@ -30,10 +34,12 @@ class ControladorDeltaReservas extends ChangeNotifier {
     required ReservasSupabaseService servicio,
     required PagosService pagosService,
     required ColoresService coloresService,
+    required ReservasContactosService contactosService,
     Duration? debounce,
   }) : _servicio = servicio,
        _pagosService = pagosService,
        _coloresService = coloresService,
+       _contactosService = contactosService,
        debounceDuracion = debounce ?? const Duration(milliseconds: 350);
 
   // Inicia la escucha de cambios en la tabla reservas
@@ -220,34 +226,26 @@ class ControladorDeltaReservas extends ChangeNotifier {
     );
   }
 
-  bool _listasIguales(List<ReservaResumen> a, List<ReservaResumen> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (!_reservasIguales(a[i], b[i])) return false;
+  Future<int> crearReservaCompleta({
+    required CrearReservaDto dto,
+    required List<ReservaContacto> contactos,
+  }) async {
+    try {
+      // Crear la reserva
+      final reservaId = await _servicio.crearReserva(dto);
+
+      // Si se creó, insertar contactos
+      if (contactos.isNotEmpty) {
+        await _contactosService.insertarContactosReserva(
+          reservaId: reservaId,
+          contactos: contactos,
+        );
+      }
+
+      return reservaId;
+    } catch (e) {
+      // Si falla la reserva, no insertar contactos
+      rethrow;
     }
-    return true;
-  }
-
-  bool _reservasIguales(ReservaResumen a, ReservaResumen b) {
-    return a.reservaCodigo == b.reservaCodigo &&
-        a.tipoServicioDescripcion == b.tipoServicioDescripcion &&
-        a.reservaPuntoEncuentro == b.reservaPuntoEncuentro &&
-        a.reservaRepresentante == b.reservaRepresentante &&
-        a.reservaFecha == b.reservaFecha &&
-        a.reservaPasajeros == b.reservaPasajeros &&
-        a.observaciones == b.observaciones &&
-        a.agenciaNombre == b.agenciaNombre &&
-        a.numeroTickete == b.numeroTickete &&
-        a.numeroHabitacion == b.numeroHabitacion &&
-        a.estadoNombre == b.estadoNombre &&
-        a.colorPrefijo == b.colorPrefijo &&
-        a.saldo == b.saldo &&
-        a.deuda == b.deuda;
-  }
-
-  // Cierra todo al destruir el controlador
-  void dispose() {
-    _suscripcionStream?.cancel();
-    _reservasDeltaController.close();
   }
 }

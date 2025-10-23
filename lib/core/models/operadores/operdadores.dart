@@ -8,6 +8,7 @@ class Operadores{
     final String? logo;
     final int tipoDocumento;
     final String? documento;
+    final String? direccion;
 
     Operadores({
         required this.id,
@@ -17,6 +18,7 @@ class Operadores{
         this.logo,
         required this.tipoDocumento,
         this.documento,
+        this.direccion,
     });
 
 
@@ -29,6 +31,7 @@ class Operadores{
             logo: map ['operador_logo'] as String?,
             tipoDocumento: map ['tipo_documento_codigo'] as int,
             documento: map ['operador_documento'] as String?,
+            direccion: map ['operador_direccion'] as String?,
         );
     }
 

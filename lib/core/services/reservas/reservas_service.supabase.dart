@@ -1,3 +1,4 @@
+import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,21 +7,6 @@ class ReservasSupabaseService {
   final SupabaseClient _client;
 
   ReservasSupabaseService(this._client);
-
-  // RPC: devuelve los datos consolidados (tu función grande)
-  // Future<List<ReservaResumen>> obtenerResumenReservas({
-  //   required int agenciaId,
-  //   required int operadorId,
-  // }) async {
-  //   final response = await _client.rpc(
-  //     'obtener_resumen_reservas',
-  //     params: {'p_agencia_codigo': agenciaId, 'p_operador_codigo': operadorId},
-  //   );
-  //   final data = response as List;
-  //   return data
-  //       .map((e) => ReservaResumen.fromJson(e as Map<String, dynamic>))
-  //       .toList();
-  // }
 
   Future<Map<String, dynamic>> eliminarReserva({
     required int reservaId,
@@ -233,6 +219,21 @@ class ReservasSupabaseService {
     } catch (e, s) {
       debugPrint('actualizarReserva error: $e\n$s');
       throw Exception('No se pudo actualizar reserva: ${e.toString()}');
+    }
+  }
+
+  Future<int> crearReserva(CrearReservaDto dto) async {
+    try {
+      final response = await _client.rpc(
+        'insertar_reserva',
+        params: dto.toJson(),
+      );
+      return response as int;
+    } on PostgrestException catch (e) {
+      throw Exception('Error al crear reserva: ${e.message}');
+    } catch (e, s) {
+      debugPrint('crearReserva error: $e\n$s');
+      throw Exception('No se pudo crear reserva: ${e.toString()}');
     }
   }
 }
