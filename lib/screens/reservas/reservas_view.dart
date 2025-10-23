@@ -6,6 +6,7 @@ import 'package:citytourscartagena/core/controller/configuracion_controller.dart
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
+import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
 import 'package:citytourscartagena/core/widgets/add_reserva_pro_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
@@ -20,6 +21,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/controller/reservas_controller.dart';
 
@@ -64,10 +66,12 @@ class _ReservasViewState extends State<ReservasView> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_handledRouteArgs) return;
-    _handledRouteArgs = true; 
+    _handledRouteArgs = true;
 
     // Debug: imprimir parámetros recibidos
-    debugPrint('ReservasView.didChangeDependencies - agenciaId: ${widget.agencia?.id}, turno: ${widget.turno}');
+    debugPrint(
+      'ReservasView.didChangeDependencies - agenciaId: ${widget.agencia?.id}, turno: ${widget.turno}',
+    );
 
     // Obtener argumentos de navegación
     final route = ModalRoute.of(context);
@@ -92,33 +96,39 @@ class _ReservasViewState extends State<ReservasView> {
       /// ctrl es el controlador de reservas es una instancia de ReservasController
       final ctrl = Provider.of<ReservasController>(context, listen: false);
       // Debug: antes de filtrar
-        debugPrint('ReservasView.postFrameCallback - filtrando con agenciaId: ${widget.agencia?.id}, turno: ${widget.turno}');
+      debugPrint(
+        'ReservasView.postFrameCallback - filtrando con agenciaId: ${widget.agencia?.id}, turno: ${widget.turno}',
+      );
       // Aplicar filtro de reservas
-        ctrl.updateFilter(
-          customDate != null ? DateFilterType.custom : DateFilterType.today,
-          agenciaId: widget.agencia?.id,
-          date: customDate, 
-          turno: widget.turno,
-        );
-        if (mounted) {
-          setState(() {
-            _currentReservaIdNotificada = reservaFromArgs;
-          });
-        }
-      });
+      ctrl.updateFilter(
+        customDate != null ? DateFilterType.custom : DateFilterType.today,
+        agenciaId: widget.agencia?.id,
+        date: customDate,
+        turno: widget.turno,
+      );
+      if (mounted) {
+        setState(() {
+          _currentReservaIdNotificada = reservaFromArgs;
+        });
+      }
+    });
   }
 
   @override
   void initState() {
     super.initState();
+
     ///_authController es el controlador de autenticación
     ///sirve para gestionar la autenticación de usuarios
     _authController = Provider.of<AuthController>(context, listen: false);
+
     ///_currentAgencia es la agencia actualmente seleccionada
     ///sirve para gestionar la agencia seleccionada por el usuario
     _currentAgencia = widget.agencia;
+
     ///agenciasCtrl es el controlador de agencias y read es un método para acceder a su estado
     final agenciasCtrl = context.read<AgenciasController>();
+
     /// Si se ha pasado un ID de reserva notificada, lo asignamos
     /// _agenciasSub es una suscripción al stream de agencias con reservas
     _agenciasSub = agenciasCtrl.agenciasConReservasStream.listen((lista) {
@@ -391,12 +401,27 @@ class _ReservasViewState extends State<ReservasView> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (_currentAgencia != null &&
-              authRole.hasPermission(Permission.contacto_agencia_whatsapp))
-            WhatsappContactButton(
-              contacto: _currentAgencia?.contactoAgencia,
-              link: _currentAgencia?.linkContactoAgencia,
+          if (authRole.hasPermission(Permission.contacto_agencia_whatsapp))
+            FutureBuilder<({bool hasContact, String? telefono, String? link})>(
+              future: (widget.codigoAgencia != 0)
+                  ? AgenciasService().getContactoAgencia(widget.codigoAgencia)
+                  : Future.value((
+                      hasContact: false,
+                      telefono: null,
+                      link: null,
+                    )),
+              builder: (context, snap) {
+                if (!snap.hasData || !snap.data!.hasContact) {
+                  return const SizedBox.shrink();
+                }
+                final d = snap.data!;
+                return WhatsappContactButton(
+                  contacto: d.telefono,
+                  link: d.link,
+                );
+              },
             ),
+
           if (_currentAgencia != null) const SizedBox(height: 16),
 
           if (authRole.hasPermission(Permission.crear_reserva))
@@ -483,8 +508,6 @@ class _ReservasViewState extends State<ReservasView> {
         initialTipoDocumento: agencia.tipoDocumento,
         initialNumeroDocumento: agencia.numeroDocumento,
         initialNombreBeneficiario: agencia.nombreBeneficiario,
-        initialContactoAgencia: agencia.contactoAgencia,
-        initialLinkContactoAgencia: agencia.linkContactoAgencia,
         onCrear:
             (
               nuevoNombre,

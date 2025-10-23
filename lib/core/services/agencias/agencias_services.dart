@@ -115,4 +115,24 @@ class AgenciasService {
         )
         .toList();
   }
+
+  Future<({bool hasContact, String? telefono, String? link})>
+  getContactoAgencia(int agenciaId) async {
+    // Llama a la función SQL que hiciste en Supabase
+    final res = await _client.rpc(
+      'get_agencia_contacto',
+      params: {'p_agencia': agenciaId},
+    );
+
+    // res suele venir como List con 1 fila
+    final row = (res is List && res.isNotEmpty)
+        ? (res.first as Map<String, dynamic>)
+        : <String, dynamic>{};
+
+    return (
+      hasContact: row['has_contact'] == true,
+      telefono: row['telefono'] as String?,
+      link: row['link'] as String?,
+    );
+  }
 }
