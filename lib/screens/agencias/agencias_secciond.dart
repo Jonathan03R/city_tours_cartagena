@@ -2,6 +2,7 @@ import 'package:citytourscartagena/core/controller/reservas/reservas_controller.
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/utils/formatters.dart';
+import 'package:citytourscartagena/screens/agencias/crear_agencia.dart';
 import 'package:citytourscartagena/screens/agencias/widget/reserva_refactorizada.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -350,6 +351,14 @@ class _AgenciasSeccionState extends State<AgenciasSeccion> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const CrearAgenciaScreen()));
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:citytourscartagena/core/controller/agencias/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
@@ -74,6 +75,7 @@ class _OperadorScope extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
+        ChangeNotifierProvider(create: (_) => AgenciasControllerSupabase()),
         ChangeNotifierProvider(create: (_) => ConfiguracionController()),
         ChangeNotifierProvider(create: (_) => ReportesController()),
         ChangeNotifierProvider(create: (_) => FiltroFlexibleController()),

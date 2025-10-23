@@ -116,7 +116,23 @@ class AgenciasService {
         .toList();
   }
 
-  Future<({bool hasContact, String? telefono, String? link})>
+  Future<Map<String, dynamic>> crearAgenciaCompleta(
+    CrearAgenciaDTO request,
+  ) async {
+    final response = await _client.rpc(
+      'crear_agencia_completa',
+      params: request.toMap(),
+    );
+
+    // La función devuelve una tabla, así que response es una lista
+    if (response is List && response.isNotEmpty) {
+      return response[0] as Map<String, dynamic>;
+    } else {
+      throw Exception('Error al crear la agencia: respuesta inesperada');
+    }
+
+  }
+  
   getContactoAgencia(int agenciaId) async {
     // Llama a la función SQL que hiciste en Supabase
     final res = await _client.rpc(
@@ -134,5 +150,7 @@ class AgenciasService {
       telefono: row['telefono'] as String?,
       link: row['link'] as String?,
     );
-  }
 }
+  
+  
+  
