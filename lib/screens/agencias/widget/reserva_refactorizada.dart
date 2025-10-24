@@ -1,15 +1,17 @@
+import 'package:citytourscartagena/core/controller/agencias/agencias_controller.dart';
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
-import 'package:citytourscartagena/core/models/agencia/agencia.dart';
+import 'package:citytourscartagena/core/models/agencia/contacto_agencia.dart';
+import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
-import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/screens/agencias/detalle_agencia.dart';
 import 'package:citytourscartagena/screens/agencias/widget/control_precios_widget.dart';
 import 'package:citytourscartagena/screens/agencias/widget/encabezado_agencia_widget.dart';
 import 'package:citytourscartagena/screens/agencias/widget/filtros.dart';
@@ -45,12 +47,10 @@ class _ReservaVistaState extends State<ReservaVista> {
   int _paginaActual = 1;
   int _totalReservas = 0;
   bool _hasContact = false;
-  String? _telContacto;
-  String? _linkContacto;
+  List<ContactoAgencia> _contactosAgencia = [];
 
-  late Future<AgenciaSupabase?> _futureAgencia;
-  late final Future<({bool hasContact, String? telefono, String? link})>
-  _contactoFuture;
+  late Future<Agenciaperfil?> _futureAgencia;
+  late final Future<List<ContactoAgencia>> _contactosFuture;
 
   final ValueNotifier<List<ReservaResumen>> _reservasPaginadas = ValueNotifier(
     [],
@@ -67,23 +67,32 @@ class _ReservaVistaState extends State<ReservaVista> {
     _serviciosController = ServiciosController(ServiciosService());
     _serviciosController.cargarTiposServicios(1); // operadorId
     _serviciosController.cargarEstadosReservas();
-    _contactoFuture = (widget.codigoAgencia != null)
-        ? AgenciasService().getContactoAgencia(widget.codigoAgencia!)
-        : Future.value((hasContact: false, telefono: null, link: null));
-
-    // Resuelve el futuro y guarda en el estado
-    _contactoFuture
-        .then((d) {
-          if (!mounted) return;
-          setState(() {
-            _hasContact = d.hasContact;
-            _telContacto = d.telefono;
-            _linkContacto = d.link;
-          });
-        })
-        .catchError((_) {
-          /* si falla, simplemente no mostramos el botón */
+    
+    // Obtener contactos usando el controlador
+    if (widget.codigoAgencia != null) {
+      final agenciasController = Provider.of<AgenciasControllerSupabase>(
+        context,
+        listen: false,
+      );
+      _contactosFuture = agenciasController.obtenerContactosAgencia(widget.codigoAgencia!);
+      
+      // Resolver el futuro y actualizar el estado
+      _contactosFuture.then((contactos) {
+        if (!mounted) return;
+        setState(() {
+          _contactosAgencia = contactos;
+          _hasContact = contactos.isNotEmpty;
         });
+      }).catchError((_) {
+        // Si falla, simplemente no mostramos el botón
+        if (!mounted) return;
+        setState(() {
+          _hasContact = false;
+        });
+      });
+    } else {
+      _contactosFuture = Future.value([]);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarReservas();
@@ -223,22 +232,76 @@ class _ReservaVistaState extends State<ReservaVista> {
     }
   }
 
-  Future<void> _abrirContactoAgencia({
-    required String? telefono,
-    required String? link,
-  }) async {
-    if (link != null && link.trim().isNotEmpty) {
-      final uri = Uri.parse(link);
+  Future<void> _abrirContactoAgencia() async {
+    if (_contactosAgencia.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay contactos disponibles para esta agencia')),
+      );
+      return;
+    }
+
+    // Si hay solo un contacto, abrirlo directamente
+    if (_contactosAgencia.length == 1) {
+      final contacto = _contactosAgencia.first;
+      await _abrirContactoEspecifico(contacto);
+      return;
+    }
+
+    // Si hay múltiples contactos, mostrar diálogo para seleccionar
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seleccionar Contacto'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _contactosAgencia.length,
+            itemBuilder: (context, index) {
+              final contacto = _contactosAgencia[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green.shade100,
+                  child: const Icon(Icons.contact_phone, color: Colors.green),
+                ),
+                title: Text(contacto.tipoContacto.descripcion),
+                subtitle: Text(contacto.descripcion),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _abrirContactoEspecifico(contacto);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _abrirContactoEspecifico(ContactoAgencia contacto) async {
+    final descripcion = contacto.descripcion;
+
+    // Intentar como link primero
+    if (descripcion.contains('http') || descripcion.contains('www')) {
+      final uri = Uri.parse(descripcion.startsWith('http') ? descripcion : 'https://$descripcion');
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
         return;
       }
     }
 
-    if (telefono != null && telefono.trim().isNotEmpty) {
-      var tel = telefono.replaceAll(RegExp(r'[^0-9+]'), '');
-      if (!tel.startsWith('+'))
-        tel = '+51$tel'; // <-- puedes cambiar el prefijo del país
+    // Intentar como teléfono/WhatsApp
+    var tel = descripcion.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (tel.isNotEmpty) {
+      if (!tel.startsWith('+')) tel = '+51$tel'; // Prefijo del país
       final uri = Uri.parse('https://wa.me/$tel');
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -248,9 +311,7 @@ class _ReservaVistaState extends State<ReservaVista> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No se pudo abrir el contacto de la agencia'),
-      ),
+      const SnackBar(content: Text('No se pudo abrir el contacto')),
     );
   }
 
@@ -258,7 +319,6 @@ class _ReservaVistaState extends State<ReservaVista> {
   Widget build(BuildContext context) {
     final controller = Provider.of<ControladorDeltaReservas>(context);
     // Simulación de roles y permisos (ajusta según tu lógica real)
-    final bool puedeEditarAgencia = true;
     final bool puedeAgregarReserva = true;
     final bool puedeAgregarManual = true;
     final String? nombreAgencia = widget.nombreAgencia;
@@ -296,14 +356,21 @@ class _ReservaVistaState extends State<ReservaVista> {
                 },
                 tooltip: _isTableView ? 'Vista de lista' : 'Vista de tabla',
               ),
-              if (puedeEditarAgencia)
+              if (widget.codigoAgencia != null)
                 IconButton(
                   icon: const Icon(Icons.settings),
                   onPressed: () {
-                    /* abrir dialog editar agencia */
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DetalleAgenciaScreen(
+                          agenciaId: widget.codigoAgencia!,
+                        ),
+                      ),
+                    );
                   },
                   tooltip: 'Editar agencia',
                 ),
+
               IconButton(
                 icon: const Icon(Icons.visibility),
                 onPressed: () {
@@ -425,7 +492,7 @@ class _ReservaVistaState extends State<ReservaVista> {
                   estadosReservas: _serviciosController.estadosReservas,
                 ),
                 if (widget.codigoAgencia != null)
-                  FutureBuilder<AgenciaSupabase?>(
+                  FutureBuilder<Agenciaperfil?>(
                     future: _futureAgencia, // Usa el Future almacenado
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -549,12 +616,7 @@ class _ReservaVistaState extends State<ReservaVista> {
                 label: 'Contactar agencia',
                 child: const Icon(Icons.chat),
                 backgroundColor: Colors.green.shade600,
-                onTap: _hasContact
-                    ? () => _abrirContactoAgencia(
-                        telefono: _telContacto,
-                        link: _linkContacto,
-                      )
-                    : null,
+                onTap: _hasContact ? _abrirContactoAgencia : null,
               ),
 
               if (puedeAgregarReserva)
@@ -571,7 +633,7 @@ class _ReservaVistaState extends State<ReservaVista> {
                 SpeedDialChild(
                   label: 'Agregar Reserva',
                   child: const Icon(Icons.add),
-/*
+                  /*
                 FloatingActionButton.extended(
                   heroTag: "manual_btn",
                   onPressed: () {
@@ -605,7 +667,10 @@ class _ReservaVistaState extends State<ReservaVista> {
                               value: _serviciosController,
                             ),
                             ChangeNotifierProvider<OperadoresController>.value(
-                              value: Provider.of<OperadoresController>(context, listen: false),
+                              value: Provider.of<OperadoresController>(
+                                context,
+                                listen: false,
+                              ),
                             ),
                           ],
                           child: const CrearReservasForm(),

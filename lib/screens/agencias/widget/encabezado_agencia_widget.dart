@@ -324,6 +324,9 @@ class EncabezadoAgenciaWidget extends StatelessWidget {
     if (whatsapp.isEmpty) {
       return const SizedBox.shrink();
     }
+    // Botón de WhatsApp comentado
+    return const SizedBox.shrink();
+    /*
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -374,6 +377,7 @@ class EncabezadoAgenciaWidget extends StatelessWidget {
         ),
       ),
     );
+    */
   }
 
   void _abrirWhatsApp(String numeroTelefono) {

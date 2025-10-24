@@ -1,8 +1,31 @@
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
+import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AgenciasService {
+  Future<Map<String, dynamic>> actualizarDatosAgencia({
+    required int agenciaId,
+    required String nombre,
+    required String? direccion,
+    required int? tipoDocumentoCodigo,
+    required String? representante,
+    required String? documento,
+  }) async {
+    final response = await _client
+        .from('agencias')
+        .update({
+          'agencia_nombre': nombre,
+          'agencia_direccion': direccion,
+          'tipo_documento_codigo': tipoDocumentoCodigo,
+          'agencia_beneficiario': representante,
+          'agencia_documento': documento,
+        })
+        .eq('agencia_codigo', agenciaId)
+        .select()
+        .single();
+    return response;
+  }
   final SupabaseClient _client = Supabase.instance.client;
 
   Future<Map<String, dynamic>> obtenerDeudaAgencia(int agenciaId) async {
@@ -49,20 +72,28 @@ class AgenciasService {
     return await Future.wait(futures);
   }
 
-  Future<AgenciaSupabase?> obtenerAgenciaPorId(int agenciaId) async {
+  Future<Agenciaperfil?> obtenerAgenciaPorId(int agenciaId) async {
     try {
       final response = await _client
           .from('agencias')
-          .select()
+          .select(
+            'agencia_codigo, agencia_nombre, agencia_direccion, tipo_documento_codigo, agencia_beneficiario, tipo_empresa_codigo, agencia_logo_url, agencia_documento, agencia_activo, tipos_documentos(tipo_documento_nombre)',
+          )
           .eq('agencia_codigo', agenciaId)
           .single();
+
+      debugPrint('Respuesta cruda para agencia ID $agenciaId: $response');
 
       if (response.isEmpty) {
         debugPrint('Agencia no encontrada para el ID $agenciaId');
         return null;
       }
 
-      return AgenciaSupabase.fromMap(response);
+      final agencia = Agenciaperfil.fromMap(response);
+      debugPrint(
+        'Agencia mapeada: ${agencia.nombre}, código: ${agencia.codigo}',
+      );
+      return agencia;
     } catch (e, s) {
       debugPrint('Error al obtener agencia por ID $agenciaId: $e\n$s');
       return null;
@@ -132,7 +163,9 @@ class AgenciasService {
     }
   }
 
-  Future<({bool hasContact, String? telefono, String? link})> getContactoAgencia(int agenciaId) async {
+  //// con gripe tener en cuenta
+  Future<({bool hasContact, String? telefono, String? link})>
+  getContactoAgencia(int agenciaId) async {
     // Llama a la función SQL que hiciste en Supabase
     final res = await _client.rpc(
       'get_agencia_contacto',

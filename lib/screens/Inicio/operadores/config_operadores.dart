@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
-import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
 import 'package:citytourscartagena/core/models/operadores/contacto_operador.dart';
-import 'package:citytourscartagena/core/models/operadores/tipo_contacto.dart';
+import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
+import 'package:citytourscartagena/core/models/tipos/tipo_contacto.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:flutter/material.dart';
 
 class ConfigOperadoresScreems extends StatefulWidget {
   final OperadoresController controller;
