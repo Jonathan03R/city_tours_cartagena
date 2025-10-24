@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:citytourscartagena/core/models/agencia/agencia.dart';
+import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
 import 'package:citytourscartagena/core/models/colores/color_model.dart';
 import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
@@ -62,7 +62,7 @@ class ControladorDeltaReservas extends ChangeNotifier {
   //       });
   // }
 
-  Future<AgenciaSupabase?> cargarAgenciaPorId(int agenciaId) async {
+  Future<Agenciaperfil?> cargarAgenciaPorId(int agenciaId) async {
     return await agenciasService.obtenerAgenciaPorId(agenciaId);
   }
 

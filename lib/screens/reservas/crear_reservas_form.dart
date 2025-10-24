@@ -4,7 +4,7 @@ import 'package:citytourscartagena/core/controller/operadores/operadores_control
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_contacto.dart';
-import 'package:citytourscartagena/core/models/operadores/tipo_contacto.dart';
+import 'package:citytourscartagena/core/models/tipos/tipo_contacto.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

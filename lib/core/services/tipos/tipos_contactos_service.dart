@@ -1,4 +1,4 @@
-import 'package:citytourscartagena/core/models/operadores/tipo_contacto.dart';
+import 'package:citytourscartagena/core/models/tipos/tipo_contacto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TiposContactosService {
