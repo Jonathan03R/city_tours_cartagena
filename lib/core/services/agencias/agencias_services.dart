@@ -26,6 +26,7 @@ class AgenciasService {
         .single();
     return response;
   }
+
   final SupabaseClient _client = Supabase.instance.client;
 
   Future<Map<String, dynamic>> obtenerDeudaAgencia(int agenciaId) async {
@@ -106,46 +107,59 @@ class AgenciasService {
   }) async {
     final response = await _client
         .from('servicio_precios_agencias')
-        .select(
-          'servicio_agencias_codigo, servicio_agencias_precio, tipos_servicios(tipo_servicio_descripcion)',
-        )
+        .select('''
+        servicio_agencias_codigo,
+        tipo_servicio_codigo,
+        servicio_agencias_precio
+      ''')
         .eq('operador_codigo', operadorCodigo)
-        .eq('agencia_codigo', agenciaCodigo)
-        .eq('tipos_servicios.tipo_servicio_activo', true);
+        .eq('agencia_codigo', agenciaCodigo);
 
     return (response as List)
         .map(
           (item) => {
-            'codigo': item['servicio_agencias_codigo'],
+            'servicio_agencias_codigo': item['servicio_agencias_codigo'],
+            'tipo_servicio_codigo': item['tipo_servicio_codigo'],
             'precio': item['servicio_agencias_precio'],
-            'descripcion':
-                item['tipos_servicios']?['tipo_servicio_descripcion'],
           },
         )
         .toList();
   }
 
   Future<List<Map<String, dynamic>>> obtenerPreciosServiciosOperador({
-    required int operadorCodigo,
-  }) async {
+  required int operadorCodigo,
+}) async {
+  try {
     final response = await _client
         .from('servicios_precios')
-        .select(
-          'servicio_precio_codigo, precio, tipos_servicios(tipo_servicio_descripcion)',
-        )
+        .select('''
+          servicio_precio_codigo,
+          precio,
+          tipos_servicios!inner(
+            tipo_servicio_codigo,
+            tipo_servicio_descripcion,
+            operador_codigo
+          )
+        ''')
         .eq('tipos_servicios.operador_codigo', operadorCodigo);
 
-    return (response as List)
-        .map(
-          (item) => {
-            'codigo': item['servicio_precio_codigo'],
-            'precio': item['precio'],
-            'descripcion':
-                item['tipos_servicios']?['tipo_servicio_descripcion'],
-          },
-        )
-        .toList();
+    final data = response as List<dynamic>;
+
+    return data.map((item) {
+      final ts = item['tipos_servicios'] as Map<String, dynamic>?;
+
+      return {
+        'codigo': item['servicio_precio_codigo'],
+        'tipo_servicio_codigo': ts?['tipo_servicio_codigo'],
+        'descripcion': ts?['tipo_servicio_descripcion'],
+        'precio': item['precio'],
+      };
+    }).toList();
+  } catch (e, st) {
+    debugPrint('Error al obtener precios globales: $e\n$st');
+    rethrow;
   }
+}
 
   Future<Map<String, dynamic>> crearAgenciaCompleta(
     CrearAgenciaDTO request,

@@ -1,6 +1,5 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/models/roles.dart';
-import 'package:citytourscartagena/core/widgets/agencia_selector.dart'; // ← nuevo import
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -256,15 +255,15 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                   ),
                 ),
                 SizedBox(height: 8.h),
-                AgenciaSelector(
-                  selectedAgenciaId: _selectedAgenciaId,
-                  onAgenciaSelected: (id) {
-                    setState(() {
-                      _selectedAgenciaId = id;
-                      _agencyError = false;
-                    });
-                  },
-                ),
+                // AgenciaSelector(
+                //   selectedAgenciaId: _selectedAgenciaId,
+                //   onAgenciaSelected: (id) {
+                //     setState(() {
+                //       _selectedAgenciaId = id;
+                //       _agencyError = false;
+                //     });
+                //   },
+                // ),
                 if (_agencyError)
                   Padding(
                     padding: EdgeInsets.only(top: 4.h, left: 4.w),

@@ -2,11 +2,11 @@ import 'package:citytourscartagena/core/controller/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
-import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
-import 'package:citytourscartagena/core/widgets/add_reserva_pro_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+
+/// NO SE USA ? 
 
 class FloatingActionButtonsWidget extends StatelessWidget {
   final AgenciaConReservas? agencia;
@@ -69,39 +69,39 @@ class FloatingActionButtonsWidget extends StatelessWidget {
   }
 
   void _showAddReservaProForm(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => AddReservaProForm(
-        agencia: agencia?.agencia,
-        turno: reservasController.turnoFilter,
-        onAdd: () {
-          reservasController.updateFilter(
-            reservasController.selectedFilter,
-            date: reservasController.customDate,
-            agenciaId: agencia?.id,
-            turno: reservasController.turnoFilter,
-          );
-        },
-      ),
-    );
+    // showModalBottomSheet(
+    //   context: context,
+    //   isScrollControlled: true,
+    //   // builder: (context) => AddReservaProForm(
+    //   //   agencia: agencia?.agencia,
+    //   //   turno: reservasController.turnoFilter,
+    //   //   onAdd: () {
+    //   //     reservasController.updateFilter(
+    //   //       reservasController.selectedFilter,
+    //   //       date: reservasController.customDate,
+    //   //       agenciaId: agencia?.id,
+    //   //       turno: reservasController.turnoFilter,
+    //   //     );
+    //   //   },
+    //   ),
+    // );
   }
 
   void _showAddReservaForm(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => AddReservaForm(
-        agenciaId: agencia?.id,
-        onAdd: () {
-          reservasController.updateFilter(
-            reservasController.selectedFilter,
-            date: reservasController.customDate,
-            agenciaId: agencia?.id,
-            turno: reservasController.turnoFilter,
-          );
-        },
-      ),
-    );
+    // showModalBottomSheet(
+    //   context: context,
+    //   isScrollControlled: true,
+    //   // builder: (context) => AddReservaForm(
+    //   //   agenciaId: agencia?.id,
+    //   //   onAdd: () {
+    //   //     reservasController.updateFilter(
+    //   //       reservasController.selectedFilter,
+    //   //       date: reservasController.customDate,
+    //   //       agenciaId: agencia?.id,
+    //   //       turno: reservasController.turnoFilter,
+    //   //     );
+    //   //   },
+    //   // ),
+    // );
   }
 }

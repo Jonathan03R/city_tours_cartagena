@@ -15,7 +15,6 @@ class ServiciosService {
 
     return response.map((e) => TipoServicio.fromMap(e)).toList();
   }
-
   Future<List<TipoServicio>> obtenerTiposServiciosDisponiblesParaAgencia({
     required int operadorCodigo,
     required int agenciaCodigo,
@@ -27,8 +26,14 @@ class ServiciosService {
         .eq('operador_codigo', operadorCodigo)
         .eq('tipo_servicio_activo', true);
 
-    print('Todos los servicios activos del operador $operadorCodigo: ${todosServicios.length}');
-    todosServicios.forEach((s) => print('Servicio: ${s['tipo_servicio_codigo']} - ${s['tipo_servicio_descripcion']}'));
+    print(
+      'Todos los servicios activos del operador $operadorCodigo: ${todosServicios.length}',
+    );
+    todosServicios.forEach(
+      (s) => print(
+        'Servicio: ${s['tipo_servicio_codigo']} - ${s['tipo_servicio_descripcion']}',
+      ),
+    );
 
     // Obtener los tipos de servicios que TIENEN precio base en servicios_precios
     final serviciosConPrecioBase = await _client
@@ -36,7 +41,9 @@ class ServiciosService {
         .select('tipo_servicio_codigo');
 
     print('Servicios con precio base: ${serviciosConPrecioBase.length}');
-    serviciosConPrecioBase.forEach((s) => print('Servicio con precio base: ${s['tipo_servicio_codigo']}'));
+    serviciosConPrecioBase.forEach(
+      (s) => print('Servicio con precio base: ${s['tipo_servicio_codigo']}'),
+    );
 
     // Extraer códigos de servicios con precio base
     final codigosConPrecioBase = serviciosConPrecioBase
@@ -50,8 +57,14 @@ class ServiciosService {
         .eq('operador_codigo', operadorCodigo)
         .eq('agencia_codigo', agenciaCodigo);
 
-    print('Servicios con precio personalizado para agencia $agenciaCodigo: ${serviciosConPrecio.length}');
-    serviciosConPrecio.forEach((s) => print('Servicio con precio personalizado: ${s['tipo_servicio_codigo']}'));
+    print(
+      'Servicios con precio personalizado para agencia $agenciaCodigo: ${serviciosConPrecio.length}',
+    );
+    serviciosConPrecio.forEach(
+      (s) => print(
+        'Servicio con precio personalizado: ${s['tipo_servicio_codigo']}',
+      ),
+    );
 
     // Extraer los códigos de servicios que ya tienen precio personalizado
     final codigosConPrecioPersonalizado = serviciosConPrecio
@@ -62,19 +75,23 @@ class ServiciosService {
 
     // Filtrar servicios que tienen precio base PERO NO tienen precio personalizado
     final serviciosDisponibles = todosServicios
-        .where((servicio) => 
-          codigosConPrecioBase.contains(servicio['tipo_servicio_codigo']) &&
-          !codigosConPrecioPersonalizado.contains(servicio['tipo_servicio_codigo'])
+        .where(
+          (servicio) =>
+              codigosConPrecioBase.contains(servicio['tipo_servicio_codigo']) &&
+              !codigosConPrecioPersonalizado.contains(
+                servicio['tipo_servicio_codigo'],
+              ),
         )
         .map((e) => TipoServicio.fromMap(e))
         .toList();
 
     print('Servicios disponibles: ${serviciosDisponibles.length}');
-    serviciosDisponibles.forEach((s) => print('Disponible: ${s.codigo} - ${s.descripcion}'));
+    serviciosDisponibles.forEach(
+      (s) => print('Disponible: ${s.codigo} - ${s.descripcion}'),
+    );
 
     return serviciosDisponibles;
   }
-
 
   Future<Map<String, dynamic>> crearTipoServicio({
     required int operadorCodigo,

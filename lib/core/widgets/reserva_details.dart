@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../controller/reservas_controller.dart';
 import '../utils/colors.dart';
 import '../utils/formatters.dart';
-import 'agencia_selector.dart';
 
 class ReservaDetails extends StatefulWidget {
   final ReservaConAgencia reserva;
@@ -253,14 +252,14 @@ class _ReservaDetailsState extends State<ReservaDetails> {
         const SizedBox(height: 16),
         const Text('Agencia', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        AgenciaSelector(
-          selectedAgenciaId: _selectedAgenciaId,
-          onAgenciaSelected: (agenciaId) {
-            setState(() {
-              _selectedAgenciaId = agenciaId;
-            });
-          },
-        ),
+        // AgenciaSelector(
+        //   selectedAgenciaId: _selectedAgenciaId,
+        //   onAgenciaSelected: (agenciaId) {
+        //     setState(() {
+        //       _selectedAgenciaId = agenciaId;
+        //     });
+        //   },
+        // ),
         const SizedBox(height: 16),
         _buildTextField('Observaciones', _observacionController, Icons.note, maxLines: 3),
       ],
