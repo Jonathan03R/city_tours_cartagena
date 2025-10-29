@@ -57,9 +57,9 @@ class ConfiguracionController extends ChangeNotifier {
   List<Map<String, dynamic>> get adicionales => _adicionales;
 
   /// Agregar adicional
-  Future<void> agregarAdicional(String nombre, double precio) async {
+  Future<void> agregarAdicional(String nombre, double precio, String icono) async {
     try {
-      await ConfiguracionService.agregarAdicional(nombre, precio);
+      await ConfiguracionService.agregarAdicional(nombre, precio, icono);
     } catch (e) {
       debugPrint('❌ Error agregando adicional: $e');
       rethrow;
@@ -67,9 +67,9 @@ class ConfiguracionController extends ChangeNotifier {
   }
 
   /// Actualizar adicional
-  Future<void> actualizarAdicional(String docId, String nombre, double precio) async {
+  Future<void> actualizarAdicional(String docId, String nombre, double precio, String icono) async {
     try {
-      await ConfiguracionService.actualizarAdicional(docId, nombre, precio);
+      await ConfiguracionService.actualizarAdicional(docId, nombre, precio, icono);
     } catch (e) {
       debugPrint('❌ Error actualizando adicional: $e');
       rethrow;

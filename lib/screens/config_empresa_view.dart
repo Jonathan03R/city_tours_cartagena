@@ -33,6 +33,7 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
   // Adicionales
   final TextEditingController _adicionalNombreController = TextEditingController();
   final TextEditingController _adicionalPrecioController = TextEditingController();
+  final TextEditingController _adicionalIconoController = TextEditingController();
 
   @override
   void dispose() {
@@ -46,6 +47,7 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
     _whatsappController.dispose();
     _adicionalNombreController.dispose();
     _adicionalPrecioController.dispose();
+    _adicionalIconoController.dispose();
     super.dispose();
   }
 
@@ -324,7 +326,7 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
                                 backgroundColor: Colors.red,
                                 radius: 8,
                               )
-                            : null,
+                            : Text(adicional['icono'] ?? '➕', style: const TextStyle(fontSize: 20)),
                         title: Text(adicional['adicionales_nombres'] ?? 'Sin nombre'),
                         subtitle: Text('Precio: ${Formatters.formatCurrency(adicional['adicionales_precio'] ?? 0.0)}${adicional['activo'] == false ? ' (Inactivo)' : ''}'),
                         trailing: PopupMenuButton<String>(
@@ -485,9 +487,11 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
     if (isEditing) {
       _adicionalNombreController.text = adicional['adicionales_nombres'] ?? '';
       _adicionalPrecioController.text = (adicional['adicionales_precio'] ?? 0.0).toString();
+      _adicionalIconoController.text = adicional['icono'] ?? '➕';
     } else {
       _adicionalNombreController.clear();
       _adicionalPrecioController.clear();
+      _adicionalIconoController.text = '➕';
     }
     showDialog(
       context: context,
@@ -507,6 +511,11 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Precio'),
               ),
+              TextField(
+                controller: _adicionalIconoController,
+                maxLength: 1,
+                decoration: const InputDecoration(labelText: 'Ícono (1 caracter, ej: 🌟)'),
+              ),
             ],
           ),
           actions: [
@@ -518,14 +527,16 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
               onPressed: () async {
                 final nombre = _adicionalNombreController.text.trim();
                 final precio = double.tryParse(_adicionalPrecioController.text);
-                if (nombre.isNotEmpty && precio != null) {
+                final icono = _adicionalIconoController.text.trim();
+                if (nombre.isNotEmpty && precio != null && icono.isNotEmpty) {
                   if (isEditing) {
-                    await Provider.of<ConfiguracionController>(context, listen: false).actualizarAdicional(adicional['id'], nombre, precio);
+                    await Provider.of<ConfiguracionController>(context, listen: false).actualizarAdicional(adicional['id'], nombre, precio, icono);
                   } else {
-                    await Provider.of<ConfiguracionController>(context, listen: false).agregarAdicional(nombre, precio);
+                    await Provider.of<ConfiguracionController>(context, listen: false).agregarAdicional(nombre, precio, icono);
                   }
                   _adicionalNombreController.clear();
                   _adicionalPrecioController.clear();
+                  _adicionalIconoController.clear();
                   Navigator.of(context).pop();
                 }
               },
