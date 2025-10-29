@@ -120,4 +120,63 @@ class ConfiguracionService {
       debugPrint('🔄 Configuración ya existe.');
     }
   }
+
+  // Métodos para adicionales
+  static final _adicionalesCollection = FirebaseFirestore.instance.collection('adicionales');
+
+  /// Agregar un adicional
+  static Future<void> agregarAdicional(String nombre, double precio) async {
+    await _adicionalesCollection.add({
+      'adicionales_nombres': nombre,
+      'adicionales_precio': precio,
+      'activo': true,
+      'creado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Adicional agregado: $nombre - $precio');
+  }
+
+  /// Actualizar un adicional
+  static Future<void> actualizarAdicional(String docId, String nombre, double precio) async {
+    await _adicionalesCollection.doc(docId).update({
+      'adicionales_nombres': nombre,
+      'adicionales_precio': precio,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Adicional actualizado: $docId - $nombre - $precio');
+  }
+
+  /// Eliminar adicional (marcar inactivo)
+  static Future<void> eliminarAdicional(String docId) async {
+    await _adicionalesCollection.doc(docId).update({
+      'activo': false,
+      'eliminado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Adicional marcado como inactivo: $docId');
+  }
+
+  /// Activar adicional
+  static Future<void> activarAdicional(String docId) async {
+    await _adicionalesCollection.doc(docId).update({
+      'activo': true,
+      'actualizado_en': DateTime.now().toIso8601String(),
+    });
+    debugPrint('✅ Adicional activado: $docId');
+  }
+
+  /// Obtener stream de adicionales
+  static Stream<List<Map<String, dynamic>>> getAdicionalesStream() {
+    return _adicionalesCollection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Obtener lista de adicionales una vez
+  static Future<List<Map<String, dynamic>>> getAdicionales() async {
+    final snapshot = await _adicionalesCollection.get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
 }

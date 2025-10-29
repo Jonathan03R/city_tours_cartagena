@@ -50,8 +50,68 @@ class ConfiguracionController extends ChangeNotifier {
 
   Configuracion? get configuracion => _configuracion;
 
+  // Adicionales
+  List<Map<String, dynamic>> _adicionales = [];
+  StreamSubscription<List<Map<String, dynamic>>>? _adicionalesSub;
+
+  List<Map<String, dynamic>> get adicionales => _adicionales;
+
+  /// Agregar adicional
+  Future<void> agregarAdicional(String nombre, double precio) async {
+    try {
+      await ConfiguracionService.agregarAdicional(nombre, precio);
+    } catch (e) {
+      debugPrint('❌ Error agregando adicional: $e');
+      rethrow;
+    }
+  }
+
+  /// Actualizar adicional
+  Future<void> actualizarAdicional(String docId, String nombre, double precio) async {
+    try {
+      await ConfiguracionService.actualizarAdicional(docId, nombre, precio);
+    } catch (e) {
+      debugPrint('❌ Error actualizando adicional: $e');
+      rethrow;
+    }
+  }
+
+  /// Eliminar adicional (marcar inactivo)
+  Future<void> eliminarAdicional(String docId) async {
+    try {
+      await ConfiguracionService.eliminarAdicional(docId);
+    } catch (e) {
+      debugPrint('❌ Error eliminando adicional: $e');
+      rethrow;
+    }
+  }
+
+  /// Activar adicional
+  Future<void> activarAdicional(String docId) async {
+    try {
+      await ConfiguracionService.activarAdicional(docId);
+    } catch (e) {
+      debugPrint('❌ Error activando adicional: $e');
+      rethrow;
+    }
+  }
+
+  /// Iniciar stream para adicionales
+  void _iniciarStreamAdicionales() {
+    _adicionalesSub = ConfiguracionService.getAdicionalesStream().listen(
+      (adicionales) {
+        _adicionales = adicionales;
+        notifyListeners();
+      },
+      onError: (error) {
+        debugPrint('❌ Error en stream de adicionales: $error');
+      },
+    );
+  }
+
   ConfiguracionController() {
     _iniciarStreamConfiguracion();
+    _iniciarStreamAdicionales();
   }
 
   /// NUEVO: Stream en tiempo real para configuración
@@ -135,6 +195,7 @@ class ConfiguracionController extends ChangeNotifier {
   @override
   void dispose() {
     _configSub?.cancel();
+    _adicionalesSub?.cancel();
     super.dispose();
   }
 }

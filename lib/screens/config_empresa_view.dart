@@ -1,8 +1,8 @@
 import 'package:citytourscartagena/core/controller/configuracion_controller.dart'; // <-- importar controlador
 import 'package:citytourscartagena/core/models/enum/tipo_documento.dart';
+import 'package:citytourscartagena/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// ...existing imports...
 
 class ConfigEmpresaView extends StatefulWidget {
   const ConfigEmpresaView({super.key});
@@ -30,6 +30,9 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
   final TextEditingController _numeroDocumentoController = TextEditingController();
   bool _isEditingNombreBeneficiario = false;
   final TextEditingController _nombreBeneficiarioController = TextEditingController();
+  // Adicionales
+  final TextEditingController _adicionalNombreController = TextEditingController();
+  final TextEditingController _adicionalPrecioController = TextEditingController();
 
   @override
   void dispose() {
@@ -41,6 +44,8 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
     _maxCuposMananaController.dispose();
     _maxCuposTardeController.dispose();
     _whatsappController.dispose();
+    _adicionalNombreController.dispose();
+    _adicionalPrecioController.dispose();
     super.dispose();
   }
 
@@ -176,7 +181,7 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
                     children: [
                       _buildEditableField(
                         label: 'Precio Asiento Mañana',
-                        value: cfg != null ? cfg.precioGeneralAsientoTemprano.toStringAsFixed(2) : 'No configurado',
+                        value: cfg != null ? Formatters.formatCurrency(cfg.precioGeneralAsientoTemprano) : 'No configurado',
                         isEditing: _isEditingPrecioManana,
                         controller: _precioMananaController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -198,7 +203,7 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
                       const Divider(),
                       _buildEditableField(
                         label: 'Precio Asiento Tarde',
-                        value: cfg != null ? cfg.precioGeneralAsientoTarde.toStringAsFixed(2) : 'No configurado',
+                        value: cfg != null ? Formatters.formatCurrency(cfg.precioGeneralAsientoTarde) : 'No configurado',
                         isEditing: _isEditingPrecioTarde,
                         controller: _precioTardeController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -294,6 +299,68 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
                           }
                         },
                         onCancel: () => setState(() => _isEditingNumeroDocumento = false),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Adicionales',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // Lista de adicionales
+                      ...configCtrl.adicionales.map((adicional) => ListTile(
+                        leading: adicional['activo'] == false
+                            ? const CircleAvatar(
+                                backgroundColor: Colors.red,
+                                radius: 8,
+                              )
+                            : null,
+                        title: Text(adicional['adicionales_nombres'] ?? 'Sin nombre'),
+                        subtitle: Text('Precio: ${Formatters.formatCurrency(adicional['adicionales_precio'] ?? 0.0)}${adicional['activo'] == false ? ' (Inactivo)' : ''}'),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'editar') {
+                              _showAddAdicionalDialog(adicional: adicional);
+                            } else if (value == 'toggle') {
+                              if (adicional['activo'] == true) {
+                                await Provider.of<ConfiguracionController>(context, listen: false).eliminarAdicional(adicional['id']);
+                              } else {
+                                await Provider.of<ConfiguracionController>(context, listen: false).activarAdicional(adicional['id']);
+                              }
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'editar', child: Text('Editar')),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: Text(adicional['activo'] == true ? 'Desactivar' : 'Activar'),
+                            ),
+                          ],
+                        ),
+                      )),
+                      if (configCtrl.adicionales.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text('No hay adicionales configurados'),
+                        ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          icon: const Icon(Icons.add, color: Colors.blue),
+                          onPressed: _showAddAdicionalDialog,
+                          tooltip: 'Agregar adicional',
+                        ),
                       ),
                     ],
                   ),
@@ -413,4 +480,60 @@ class _ConfigEmpresaViewState extends State<ConfigEmpresaView> {
           );
   }
 
+  void _showAddAdicionalDialog({Map<String, dynamic>? adicional}) {
+    final isEditing = adicional != null;
+    if (isEditing) {
+      _adicionalNombreController.text = adicional['adicionales_nombres'] ?? '';
+      _adicionalPrecioController.text = (adicional['adicionales_precio'] ?? 0.0).toString();
+    } else {
+      _adicionalNombreController.clear();
+      _adicionalPrecioController.clear();
+    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(isEditing ? 'Editar Adicional' : 'Agregar Adicional'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _adicionalNombreController,
+                decoration: const InputDecoration(labelText: 'Nombre del Adicional'),
+                autofocus: true,
+              ),
+              TextField(
+                controller: _adicionalPrecioController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Precio'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final nombre = _adicionalNombreController.text.trim();
+                final precio = double.tryParse(_adicionalPrecioController.text);
+                if (nombre.isNotEmpty && precio != null) {
+                  if (isEditing) {
+                    await Provider.of<ConfiguracionController>(context, listen: false).actualizarAdicional(adicional['id'], nombre, precio);
+                  } else {
+                    await Provider.of<ConfiguracionController>(context, listen: false).agregarAdicional(nombre, precio);
+                  }
+                  _adicionalNombreController.clear();
+                  _adicionalPrecioController.clear();
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text(isEditing ? 'Actualizar' : 'Agregar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
