@@ -39,6 +39,9 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
   // NUEVO: Hora seleccionada para reservas privadas
   TimeOfDay? _selectedTime;
   bool _horaPrivadoError = false;
+  
+  // Adicionales seleccionados (mismo comportamiento que AddReservaForm)
+  List<String> _selectedAdicionalesIds = [];
 
   // Instancia de TextParser
   final TextParser _textParser = TextParser();
@@ -93,6 +96,16 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       final parsed = double.tryParse(v.replaceAll(',', '.'));
       return (parsed != null && parsed > 0) ? parsed : 0.0;
     }
+    // Si hay adicionales seleccionados, forzamos el uso de precio global (ignorar precio por agencia)
+    if (_selectedAdicionalesIds.isNotEmpty) {
+      if (config != null) {
+        return turno == TurnoType.manana
+            ? config.precioGeneralAsientoTemprano
+            : config.precioGeneralAsientoTarde;
+      }
+      return 0.0;
+    }
+
     // primero precio de agencia, si lo tiene y es >0
     if (agencia != null) {
       final precioAg = turno == TurnoType.manana
@@ -129,11 +142,55 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
     if (_parsedData == null) return EstadoReserva.pendiente;
     final pax = _parsedData!['pax'] as int? ?? 1;
     final saldo = _parsedData!['saldo'] as double? ?? 0.0;
+    // calcular costo adicional total basado en adicionales seleccionados
+    final adicionalPorPersona = _selectedAdicionalesIds.fold<double>(0.0, (sum, id) {
+      final found = context.read<ConfiguracionController>().adicionales.firstWhere(
+          (a) => a['id'] == id,
+          orElse: () => <String, dynamic>{});
+      if (found.isNotEmpty) {
+        final val = found['adicionales_precio'];
+        final precio = (val is num) ? val.toDouble() : 0.0;
+        return sum + precio;
+      }
+      return sum;
+    });
+    final adicionalTotal = adicionalPorPersona * pax;
+
     if (_selectedTurno == TurnoType.privado) {
-      // En privado, el costoAsiento es el total, no por pax
-      return saldo >= costoAsiento ? EstadoReserva.pagada : EstadoReserva.pendiente;
+      // En privado, el costoAsiento es el total del servicio (no por pax)
+      return saldo >= (costoAsiento + adicionalTotal) ? EstadoReserva.pagada : EstadoReserva.pendiente;
     }
-    return saldo == pax * costoAsiento ? EstadoReserva.pagada : EstadoReserva.pendiente;
+    return saldo == (pax * costoAsiento + adicionalTotal) ? EstadoReserva.pagada : EstadoReserva.pendiente;
+  }
+
+  // Helpers for adicionales and currency formatting
+  double get _costoAdicionales {
+    return _selectedAdicionalesIds.fold(0.0, (sum, id) {
+      final found = context.read<ConfiguracionController>().adicionales.firstWhere(
+        (a) => a['id'] == id,
+        orElse: () => <String, dynamic>{},
+      );
+      if (found.isNotEmpty) {
+        final val = found['adicionales_precio'];
+        final precio = (val is num) ? val.toDouble() : 0.0;
+        return sum + precio;
+      }
+      return sum;
+    });
+  }
+
+  int get _paxParsed {
+    return (_parsedData != null && _parsedData!['pax'] is int) ? _parsedData!['pax'] as int : 1;
+  }
+
+  String _currency(num n) {
+    final locale = Intl.getCurrentLocale();
+    final fmt = NumberFormat.currency(
+      locale: locale,
+      symbol: r'$',
+      decimalDigits: 2,
+    );
+    return fmt.format(n);
   }
 
   Future<void> _submitReserva() async {
@@ -230,6 +287,18 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
       ticket: _parsedData!['ticket'] as String? ?? '',
       habitacion: _parsedData!['habitacion'] as String? ?? '',
       hora: _selectedTime,
+      adicionalesIds: _selectedAdicionalesIds,
+      adicionalCostoTotal: _selectedAdicionalesIds.fold<double>(0.0, (sum, id) {
+        final found = context.read<ConfiguracionController>().adicionales.firstWhere(
+            (a) => a['id'] == id,
+            orElse: () => <String, dynamic>{});
+        if (found.isNotEmpty) {
+          final val = found['adicionales_precio'];
+          final precio = (val is num) ? val.toDouble() : 0.0;
+          return sum + precio;
+        }
+        return sum;
+      }) * pax,
     );
 
     try {
@@ -595,6 +664,78 @@ class _AddReservaProFormState extends State<AddReservaProForm> {
                           ],
                         ),
                       ),
+                    // --- Adicionales: similar UI and logic as AddReservaForm
+                    Consumer<ConfiguracionController>(
+                      builder: (context, configCtrl, child) {
+                        final adicionalesActivos = configCtrl.adicionales.where((a) => a['activo'] == true).toList();
+                        if (adicionalesActivos.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Adicionales',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: adicionalesActivos.map((adicional) {
+                                final id = adicional['id'];
+                                final nombre = adicional['adicionales_nombres'] ?? 'Sin nombre';
+                                final precio = adicional['adicionales_precio'] ?? 0.0;
+                                final isSelected = _selectedAdicionalesIds.contains(id);
+                                final icono = adicional['icono'] ?? '➕';
+                                return FilterChip(
+                                  avatar: CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: Colors.transparent,
+                                    child: Text(
+                                      icono.toString(),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                  // label: Text('$nombre (+${_currency(precio)})'),
+                                  label: Text('$nombre'),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _selectedAdicionalesIds.add(id);
+                                      } else {
+                                        _selectedAdicionalesIds.remove(id);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 8),
+                            if (_costoAdicionales > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                // child: Row(
+                                //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                //   children: [
+                                //     const Text('Adicionales'),
+                                //     Text(_currency(_costoAdicionales * _paxParsed), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                //   ],
+                                // ),
+                              ),
+                            const SizedBox(height: 12),
+                          ],
+                        );
+                      },
+                    ),
                     const SizedBox(height: 20),
                     const Text(
                       'Texto de la reserva:',

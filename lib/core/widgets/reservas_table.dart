@@ -453,7 +453,7 @@ class _ReservasTableState extends State<ReservasTable> {
             : const Text('Sel'),
       ),
 
-      const DataColumn(label: Text('Adicionales')),
+      const DataColumn(label: Text('')),
       DataColumn(label: Text('Acción')),
       if (showTurnoColumn) const DataColumn(label: Text('Turno')),
       // "Número" hace referencia al teléfono del cliente

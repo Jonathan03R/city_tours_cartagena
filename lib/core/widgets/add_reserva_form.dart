@@ -805,8 +805,18 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                 final nombre = adicional['adicionales_nombres'] ?? 'Sin nombre';
                                 final precio = adicional['adicionales_precio'] ?? 0.0;
                                 final isSelected = _selectedAdicionalesIds.contains(id);
+                                final icono = adicional['icono'] ?? '➕';
                                 return FilterChip(
-                                  label: Text('$nombre (+${_currency(precio)})'),
+                                  avatar: CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: Colors.transparent,
+                                    child: Text(
+                                      icono.toString(),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                  // label: Text('$nombre (+${_currency(precio)})'),
+                                  label: Text('$nombre'),
                                   selected: isSelected,
                                   onSelected: (selected) {
                                     setState(() {
@@ -842,16 +852,16 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                     : null,
                               ),
                               const SizedBox(height: 8),
-                              if (_costoAdicionales > 0) ...[
-                                _InfoChip(
-                                  icon: Icons.add_circle_outline,
-                                  title: 'Adicionales',
-                                  value: _currency(_costoAdicionales * _pax),
-                                  color: cs.secondaryContainer,
-                                  textColor: cs.onSecondaryContainer,
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                              // if (_costoAdicionales > 0) ...[
+                              //   _InfoChip(
+                              //     icon: Icons.add_circle_outline,
+                              //     title: 'Adicionales',
+                              //     value: _currency(_costoAdicionales * _pax),
+                              //     color: cs.secondaryContainer,
+                              //     textColor: cs.onSecondaryContainer,
+                              //   ),
+                              //   const SizedBox(height: 8),
+                              // ],
                             ],
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
