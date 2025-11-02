@@ -23,6 +23,8 @@ class Reserva {
   final String? habitacion; // numero de habitación asociado a la reserva (opcional)
   final String? estatusReserva; // estado de la reserva (opcional)
   final TimeOfDay? hora;
+  final List<String> adicionalesIds; // ids de adicionales seleccionados
+  final double adicionalCostoTotal; // costo total de adicionales para esta reserva
 
 
   Reserva({
@@ -44,6 +46,8 @@ class Reserva {
     this.habitacion,
     this.estatusReserva,
     this.hora,
+    this.adicionalesIds = const [],
+    this.adicionalCostoTotal = 0.0,
   });
   
   double get ganancia {
@@ -81,14 +85,14 @@ class Reserva {
               minute: (data['hora']['minute'] as int?) ?? 0,
             ) 
           : null,
+      adicionalesIds: (data['adicionalesIds'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
+      adicionalCostoTotal: (data['adicionalCostoTotal'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   double get deuda {
-    if (turno == TurnoType.privado) {
-      return costoAsiento - saldo;
-    }
-    return costoAsiento * pax - saldo;
+    double totalCosto = costoAsiento * (turno == TurnoType.privado ? 1 : pax) + adicionalCostoTotal;
+    return totalCosto - saldo;
   }
 
   //este metodo convierte la reserva a un mapa de datos
@@ -113,6 +117,8 @@ class Reserva {
       'estatusReserva': estatusReserva,
       if (hora != null)
         'hora': {'hour': hora!.hour, 'minute': hora!.minute},
+      'adicionalesIds': adicionalesIds,
+      'adicionalCostoTotal': adicionalCostoTotal,
     };
   }
 
@@ -161,6 +167,8 @@ class Reserva {
     String? habitacion,
     String? estatusReserva,
     TimeOfDay? hora,
+    List<String>? adicionalesIds,
+    double? adicionalCostoTotal,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -180,6 +188,8 @@ class Reserva {
       habitacion: habitacion ?? this.habitacion,
       estatusReserva: estatusReserva ?? this.estatusReserva,
       hora: hora ?? this.hora,
+      adicionalesIds: adicionalesIds ?? this.adicionalesIds,
+      adicionalCostoTotal: adicionalCostoTotal ?? this.adicionalCostoTotal,
     );
   }
 }

@@ -125,24 +125,26 @@ class ConfiguracionService {
   static final _adicionalesCollection = FirebaseFirestore.instance.collection('adicionales');
 
   /// Agregar un adicional
-  static Future<void> agregarAdicional(String nombre, double precio) async {
+  static Future<void> agregarAdicional(String nombre, double precio, String icono) async {
     await _adicionalesCollection.add({
       'adicionales_nombres': nombre,
       'adicionales_precio': precio,
+      'icono': icono,
       'activo': true,
       'creado_en': DateTime.now().toIso8601String(),
     });
-    debugPrint('✅ Adicional agregado: $nombre - $precio');
+    debugPrint('✅ Adicional agregado: $nombre - $precio - $icono');
   }
 
   /// Actualizar un adicional
-  static Future<void> actualizarAdicional(String docId, String nombre, double precio) async {
+  static Future<void> actualizarAdicional(String docId, String nombre, double precio, String icono) async {
     await _adicionalesCollection.doc(docId).update({
       'adicionales_nombres': nombre,
       'adicionales_precio': precio,
+      'icono': icono,
       'actualizado_en': DateTime.now().toIso8601String(),
     });
-    debugPrint('✅ Adicional actualizado: $docId - $nombre - $precio');
+    debugPrint('✅ Adicional actualizado: $docId - $nombre - $precio - $icono');
   }
 
   /// Eliminar adicional (marcar inactivo)

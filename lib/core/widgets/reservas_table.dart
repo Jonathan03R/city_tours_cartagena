@@ -1,4 +1,5 @@
 import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/configuracion_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
@@ -358,6 +359,7 @@ class _ReservasTableState extends State<ReservasTable> {
   Widget build(BuildContext context) {
     _controller = Provider.of<ReservasController>(context);
     final authController = context.watch<AuthController>();
+    final adicionalesActivos = context.read<ConfiguracionController>().adicionales.where((a) => a['activo'] == true).toList();
 
     final reservasFiltradas = widget.reservas;
     debugPrint(
@@ -451,6 +453,7 @@ class _ReservasTableState extends State<ReservasTable> {
             : const Text('Sel'),
       ),
 
+      const DataColumn(label: Text('')),
       DataColumn(label: Text('Acción')),
       if (showTurnoColumn) const DataColumn(label: Text('Turno')),
       // "Número" hace referencia al teléfono del cliente
@@ -485,7 +488,7 @@ class _ReservasTableState extends State<ReservasTable> {
             rows: [
               ...reservasFiltradas.map(
                 (reserva) =>
-                    _buildDataRow(reserva, showFechaColumn, authController),
+                    _buildDataRow(reserva, showFechaColumn, authController, adicionalesActivos),
               ),
               // Fila de totales actualizada
               DataRow(
@@ -498,6 +501,7 @@ class _ReservasTableState extends State<ReservasTable> {
                 ),
                 cells: [
                   const DataCell(Text('')), // Celda de selección vacía
+                  const DataCell(Text('')), // Adicionales
                   const DataCell(Text('')), // Celda de acción vacía
                   if (showTurnoColumn)
                     const DataCell(Text('')), // Celda de turno vacía
@@ -744,6 +748,7 @@ class _ReservasTableState extends State<ReservasTable> {
     ReservaConAgencia ra,
     bool showFechaColumn,
     AuthController authController, // Pasa el AuthController directamente
+    List<Map<String, dynamic>> adicionalesActivos,
   ) {
     var r = ra.reserva;
     final isEditing = _editingReservaId == r.id;
@@ -787,6 +792,38 @@ class _ReservasTableState extends State<ReservasTable> {
                   size: 16.sp,
                   color: Colors.grey,
                 ),
+        ),
+      ),
+      // Adicionales
+      DataCell(
+        Row(
+          children: r.adicionalesIds.map((id) {
+            final adicional = adicionalesActivos.firstWhere((a) => a['id'] == id, orElse: () => <String, dynamic>{});
+            if (adicional.isNotEmpty) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.4),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 12,
+                  backgroundColor: Colors.blue.shade200,
+                  child: Text(
+                    adicional['icono'] ?? '➕',
+                    style: const TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }).toList(),
         ),
       ),
       // Celda de acción (WhatsApp)
@@ -975,6 +1012,8 @@ class _ReservasTableState extends State<ReservasTable> {
           onPressed: () => _showObservacionDialog(ra),
         ),
       ),
+
+      
 
       // Agencia (texto o dropdown si se está editando y hay permiso)
       DataCell(

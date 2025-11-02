@@ -85,6 +85,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   // Add a TimeOfDay field to handle the selected time for private reservations
   TimeOfDay? _selectedTime;
 
+  // Adicionales seleccionados
+  List<String> _selectedAdicionalesIds = [];
+
   @override
   void initState() {
     super.initState();
@@ -166,6 +169,9 @@ class _AddReservaFormState extends State<AddReservaForm> {
   Configuracion? get _config =>
       context.read<ConfiguracionController>().configuracion;
 
+  List<Map<String, dynamic>> get _adicionalesActivos =>
+      context.read<ConfiguracionController>().adicionales.where((a) => a['activo'] == true).toList();
+
   double _precioAsiento({
     TurnoType? turno,
     Configuracion? config,
@@ -193,6 +199,14 @@ class _AddReservaFormState extends State<AddReservaForm> {
       );
       return v ?? 0.0;
     }
+    // Si hay adicionales seleccionados, usar precio general (ignorar personalizado de agencia)
+    if (_selectedAdicionalesIds.isNotEmpty) {
+      return _precioAsiento(
+        turno: _selectedTurno,
+        config: _config,
+        agencia: null, // Forzar uso de precio global
+      );
+    }
     return _precioAsiento(
       turno: _selectedTurno,
       config: _config,
@@ -207,19 +221,24 @@ class _AddReservaFormState extends State<AddReservaForm> {
       );
       return v ?? 0.0;
     }
-    return _costoAsientoActual * _pax;
+    double base = _costoAsientoActual * _pax;
+    double adicionales = _costoAdicionales * _pax; // Multiplicar adicionales por pax
+    return base + adicionales;
+  }
+
+  double get _costoAdicionales {
+    return _selectedAdicionalesIds.fold(0.0, (sum, id) {
+      final adicional = _adicionalesActivos.firstWhere((a) => a['id'] == id, orElse: () => {});
+      return sum + (adicional['adicionales_precio'] ?? 0.0);
+    });
   }
 
   double get _diferencia => _costoTotal - _saldo;
 
-  EstadoReserva _estadoPor(double costoAsiento, int pax, double saldo) {
-    final total = costoAsiento * pax;
-    final diff = total - saldo;
+  EstadoReserva get _estadoActual {
+    final diff = _costoTotal - _saldo;
     return diff <= 0 ? EstadoReserva.pagada : EstadoReserva.pendiente;
   }
-
-  EstadoReserva get _estadoActual =>
-      _estadoPor(_costoAsientoActual, _pax, _saldo);
 
   // Actions -------------------------------------------------------------------
 
@@ -332,7 +351,7 @@ class _AddReservaFormState extends State<AddReservaForm> {
         return;
       }
 
-      final estado = _estadoPor(currentCostoAsiento, _pax, _saldo);
+      final estado = _estadoActual;
 
       final nuevaReserva = Reserva(
         id: '',
@@ -358,6 +377,8 @@ class _AddReservaFormState extends State<AddReservaForm> {
         estatusReserva: 'A',
         // NUEVO: Hora para reservas privadas
         hora: _selectedTime,
+        adicionalesIds: _selectedAdicionalesIds,
+        adicionalCostoTotal: _costoAdicionales * _pax,
       );
 
       final reservasController = context.read<ReservasController>();
@@ -770,6 +791,50 @@ class _AddReservaFormState extends State<AddReservaForm> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      Consumer<ConfiguracionController>(
+                        builder: (context, configCtrl, child) {
+                          final adicionalesActivos = configCtrl.adicionales.where((a) => a['activo'] == true).toList();
+                          if (adicionalesActivos.isEmpty) return const SizedBox.shrink();
+                          return _Section(
+                            title: 'Adicionales',
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: adicionalesActivos.map((adicional) {
+                                final id = adicional['id'];
+                                final nombre = adicional['adicionales_nombres'] ?? 'Sin nombre';
+                                final precio = adicional['adicionales_precio'] ?? 0.0;
+                                final isSelected = _selectedAdicionalesIds.contains(id);
+                                final icono = adicional['icono'] ?? '➕';
+                                return FilterChip(
+                                  avatar: CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: Colors.transparent,
+                                    child: Text(
+                                      icono.toString(),
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                  // label: Text('$nombre (+${_currency(precio)})'),
+                                  label: Text('$nombre'),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _selectedAdicionalesIds.add(id);
+                                      } else {
+                                        _selectedAdicionalesIds.remove(id);
+                                      }
+                                      _onValuesChanged();
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       _Section(
                         title: 'Resumen y estado',
                         child: Column(
@@ -787,6 +852,16 @@ class _AddReservaFormState extends State<AddReservaForm> {
                                     : null,
                               ),
                               const SizedBox(height: 8),
+                              // if (_costoAdicionales > 0) ...[
+                              //   _InfoChip(
+                              //     icon: Icons.add_circle_outline,
+                              //     title: 'Adicionales',
+                              //     value: _currency(_costoAdicionales * _pax),
+                              //     color: cs.secondaryContainer,
+                              //     textColor: cs.onSecondaryContainer,
+                              //   ),
+                              //   const SizedBox(height: 8),
+                              // ],
                             ],
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
