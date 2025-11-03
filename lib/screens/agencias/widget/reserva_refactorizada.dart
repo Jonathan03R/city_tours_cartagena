@@ -1,13 +1,12 @@
 import 'package:citytourscartagena/core/controller/agencias/agencias_controller.dart';
-import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/agencias_controller.dart'
+  as legacy_agencias;
 import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/contacto_agencia.dart';
 import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
-import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
-import 'package:citytourscartagena/core/models/reservas/reserva_contacto.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
@@ -73,7 +72,6 @@ class _ReservaVistaState extends State<ReservaVista> {
       Provider.of<OperadoresController>(context, listen: false),
       AgenciasService(),
     );
-    _serviciosController.cargarTiposServicios(1); // operadorId
     _serviciosController.cargarEstadosReservas();
 
     // Obtener contactos usando el controlador
@@ -107,6 +105,7 @@ class _ReservaVistaState extends State<ReservaVista> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _serviciosController.cargarTiposServiciosv2();
       _cargarReservas();
       _loadPreciosIfNeeded();
       context.read<OperadoresController>().obtenerAgenciasDeOperador();
@@ -117,6 +116,13 @@ class _ReservaVistaState extends State<ReservaVista> {
         listen: false,
       ).cargarAgenciaPorId(widget.codigoAgencia!);
     }
+  }
+
+  @override
+  void dispose() {
+    _reservasPaginadas.dispose();
+    _serviciosController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPreciosIfNeeded() async {
@@ -219,44 +225,12 @@ class _ReservaVistaState extends State<ReservaVista> {
       tamanoPagina: 10,
     );
 
-    _reservasPaginadas.value = reservas;
-  }
-
-  Future<void> _crearReserva({
-    required CrearReservaDto dto,
-    required List<ReservaContacto> contactos,
-  }) async {
-    try {
-      final controller = Provider.of<ControladorDeltaReservas>(
-        context,
-        listen: false,
-      );
-
-      final reservaId = await controller.crearReservaCompleta(
-        dto: dto,
-        contactos: contactos,
-      );
-
-      debugPrint('✅ Reserva creada con ID: $reservaId');
-
-      // Opcional: recargar la tabla o lista
-      await _cargarReservas();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Reserva creada correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      debugPrint('❌ Error al crear reserva: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al crear reserva: $e'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+    debugPrint('Reservas cargadas: ${reservas.length}');
+    if (reservas.isNotEmpty) {
+      debugPrint('Primera reserva: ${reservas.first.toString()}');
     }
+
+    _reservasPaginadas.value = reservas;
   }
 
   void _clearNotificatedReserva() {
@@ -678,15 +652,51 @@ class _ReservaVistaState extends State<ReservaVista> {
                   child: const Icon(Icons.auto_awesome),
                   backgroundColor: Colors.purple.shade600,
                   foregroundColor: Colors.white,
-                  onTap: () {
-                    Navigator.of(context).push(
+                  onTap: () async {
+          final reservasCtrl = context.read<ControladorDeltaReservas>();
+          final operadoresCtrl = context.read<OperadoresController>();
+          final agenciasCtrl =
+            context.read<legacy_agencias.AgenciasController>();
+
+                    if (_serviciosController.tiposServicios.isEmpty) {
+                      await _serviciosController.cargarTiposServiciosv2();
+                    }
+
+                    final created = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
-                        builder: (_) => Scaffold(
-                          appBar: AppBar(title: const Text('Crear Reserva')),
-                          body: const CrearReservasProForm(),
+                        builder: (_) => MultiProvider(
+                          providers: [
+                            ChangeNotifierProvider<ServiciosController>.value(
+                              value: _serviciosController,
+                            ),
+                            ChangeNotifierProvider<ControladorDeltaReservas>.value(
+                              value: reservasCtrl,
+                            ),
+                            ChangeNotifierProvider<OperadoresController>.value(
+                              value: operadoresCtrl,
+                            ),
+                            ChangeNotifierProvider<legacy_agencias.AgenciasController>.value(
+                              value: agenciasCtrl,
+                            ),
+                          ],
+                          child: Scaffold(
+                            appBar: AppBar(title: const Text('Crear Reserva')),
+                            body: const CrearReservasProForm(),
+                          ),
                         ),
                       ),
                     );
+
+                    if (created == true) {
+                      await _cargarReservas();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Reserva creada correctamente'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
               if (puedeAgregarManual)
@@ -804,14 +814,9 @@ class _ReservaVistaState extends State<ReservaVista> {
               context,
               listen: false,
             );
-            final authController = Provider.of<AuthController>(
-              context,
-              listen: false,
-            );
             await controller.actualizarObservaciones(
               reservaId: reserva.reservaCodigo,
               observaciones: obs,
-              usuarioId: authController.appUser?.id as int? ?? 1,
             );
             // Actualizar la lista local para reflejar el cambio en tiempo real
             final reservasActuales = _reservasPaginadas.value;
@@ -830,13 +835,8 @@ class _ReservaVistaState extends State<ReservaVista> {
               context,
               listen: false,
             );
-            final authController = Provider.of<AuthController>(
-              context,
-              listen: false,
-            );
             final result = await controller.procesarPago(
               reserva: reserva,
-              pagadoPor: authController.appUser?.id as int?,
             );
             // Recargar las reservas para actualizar el estado
             await _cargarReservas();
@@ -846,19 +846,15 @@ class _ReservaVistaState extends State<ReservaVista> {
             context,
             listen: false,
           ).obtenerColores(),
-          onActualizarColor: (reservaId, colorCodigo, usuarioId) =>
+          onActualizarColor: (reservaId, colorCodigo) =>
               Provider.of<ControladorDeltaReservas>(
                 context,
                 listen: false,
               ).actualizarColorReserva(
                 reservaId: reservaId,
                 colorCodigo: colorCodigo,
-                usuarioId: usuarioId,
               ),
           onReload: () => _cargarReservas(),
-          usuarioId:
-              Provider.of<AuthController>(context, listen: false).appUser?.id
-                  as int?,
         );
       },
     );

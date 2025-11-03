@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class EditarReservaScreen extends StatefulWidget {
   final ReservaResumen reserva;
@@ -631,7 +631,6 @@ class _EditarReservaScreenState extends State<EditarReservaScreen> {
         numeroTickete: _ticketController.text.trim().isEmpty ? null : _ticketController.text.trim(),
         numeroHabitacion: _habitacionController.text.trim().isEmpty ? null : _habitacionController.text.trim(),
         reservaPuntoEncuentro: _puntoEncuentroController.text.trim().isEmpty ? null : _puntoEncuentroController.text.trim(),
-        usuarioId: 1,
       );
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:citytourscartagena/core/controller/auth/auth_controller.dart';
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
 import 'package:citytourscartagena/core/models/colores/color_model.dart';
@@ -21,9 +22,9 @@ class ControladorDeltaReservas extends ChangeNotifier {
   final ReservasContactosService _contactosService;
   final AgenciasService agenciasService = AgenciasService();
   final Duration debounceDuracion;
-
+  final AuthSupabaseController _auth;
   final OperadoresController _operadoresController;
-
+  int? get _codigoUsuario => _auth.perfilUsuario?.usuario.codigo;
   // List<ReservaResumen> _reservasActuales = [];
   final StreamController<List<ReservaResumen>> _reservasDeltaController =
       StreamController.broadcast();
@@ -38,7 +39,9 @@ class ControladorDeltaReservas extends ChangeNotifier {
     this._pagosService,
     this._coloresService,
     this._contactosService,
-    this._operadoresController, [
+    this._operadoresController, 
+    this._auth,
+    [
     Duration? debounce,
   ]) : debounceDuracion = debounce ?? const Duration(milliseconds: 350);
 
@@ -190,25 +193,26 @@ class ControladorDeltaReservas extends ChangeNotifier {
   Future<Map<String, dynamic>> actualizarObservaciones({
     required int reservaId,
     required String observaciones,
-    required int usuarioId,
+
   }) async {
+
+    debugPrint('id del usuario en actualizarObservaciones: $_codigoUsuario');
     return await _servicio.actualizarObservacionesReserva(
       reservaId: reservaId,
       observaciones: observaciones,
-      usuarioId: usuarioId,
+      usuarioId: _codigoUsuario!,
     );
   }
 
   Future<double> procesarPago({
     required ReservaResumen reserva,
-    int? pagadoPor,
   }) async {
     if (reserva.estadoNombre.toLowerCase() == 'pendiente') {
       // Pagar reserva
       return await _pagosService.pagarReserva(
         reservaCodigo: reserva.reservaCodigo,
         tipoPagoCodigo: 1, // Siempre 1
-        pagadoPor: pagadoPor,
+        pagadoPor: _codigoUsuario!,
       );
     } else if (reserva.estadoNombre.toLowerCase() == 'pagada') {
       // Revertir pago
@@ -229,12 +233,11 @@ class ControladorDeltaReservas extends ChangeNotifier {
   Future<Map<String, dynamic>> actualizarColorReserva({
     required int reservaId,
     required int colorCodigo,
-    required int usuarioId,
   }) async {
     return await _servicio.actualizarColorReserva(
       reservaId: reservaId,
       colorCodigo: colorCodigo,
-      usuarioId: usuarioId,
+      usuarioId: _codigoUsuario!,
     );
   }
 
@@ -245,7 +248,6 @@ class ControladorDeltaReservas extends ChangeNotifier {
     String? numeroTickete,
     String? numeroHabitacion,
     String? reservaPuntoEncuentro,
-    required int usuarioId,
   }) async {
     return await _servicio.actualizarReserva(
       reservaId: reservaId,
@@ -254,7 +256,7 @@ class ControladorDeltaReservas extends ChangeNotifier {
       numeroTickete: numeroTickete,
       numeroHabitacion: numeroHabitacion,
       reservaPuntoEncuentro: reservaPuntoEncuentro,
-      usuarioId: usuarioId,
+      usuarioId: _codigoUsuario!,
     );
   }
 

@@ -5,7 +5,6 @@ import 'package:citytourscartagena/core/controller/filtros/servicios_controller.
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
-import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/reserva.dart';
 import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_contacto.dart';
@@ -37,25 +36,24 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
   bool _agencyError = false;
   int? _selectedAgenciaId;
 
-  /// id de la agencia pasada
   int? _selectedServicioId;
 
-  /// id del tipo de servicio selecionado
-  // TipoServicio? _selectedServicio;
-  bool _turnoError = false;
-  TurnoType? _selectedTurno;
   bool _costoPrivadoError = false;
-  // NUEVO: Hora seleccionada para reservas privadas
   TimeOfDay? _selectedTime;
   bool _horaPrivadoError = false;
+  double? _precioServicio;
 
-  // Instancia de TextParser
   final TextParser _textParser = TextParser();
 
   @override
   void initState() {
     super.initState();
     _selectedServicioId = widget.initialServicioId;
+    _selectedAgenciaId = widget.agencia != null ? int.parse(widget.agencia!.id) : null;
+    // Calcular precio inicial si hay servicio
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _recalcularPrecio();
+    });
   }
 
   @override
@@ -84,6 +82,50 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
         : EstadoReserva.pendiente;
   }
 
+  Future<void> _recalcularPrecio() async {
+    if (_selectedServicioId == null) return;
+
+    final reservasCtrl = context.read<ServiciosController>();
+    final precio = await reservasCtrl.obtenerPrecioPorServicio(
+      tipoServicioCodigo: _selectedServicioId!,
+      agenciaCodigo: _selectedAgenciaId,
+    );
+    if (mounted) {
+      setState(() => _precioServicio = precio);
+    }
+  }
+
+    // Nueva función para validar antes de enviar
+  bool _validateForm() {
+    bool isValid = true;
+
+    // Validar agencia
+    if (_selectedAgenciaId == null) {
+      setState(() => _agencyError = true);
+      isValid = false;
+    }
+
+    // Validar precio manual si es necesario
+    if (_precioServicio == null) {
+      final costoText = _costoTotalPrivadoController.text.trim();
+      final costo = double.tryParse(costoText);
+      if (costo == null || costo <= 0) {
+        setState(() => _costoPrivadoError = true);
+        isValid = false;
+      } else {
+        setState(() => _costoPrivadoError = false);
+      }
+    }
+
+    // Validar hora si es privado
+    if (_precioServicio == null && _selectedTime == null) {
+      setState(() => _horaPrivadoError = true);
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
   void _parseText() {
     final text = _textController.text;
     final agenciasController = Provider.of<AgenciasController>(
@@ -101,8 +143,20 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
   }
 
   Future<void> _submitReserva() async {
+    if (!_validateForm()) return;  // Nueva validación aquí
+
     try {
       setState(() => _isLoading = true);
+
+      // Validaciones iniciales
+      if (_selectedAgenciaId == null) {
+        await ErrorDialogs.showErrorDialog(context, 'Debes seleccionar una agencia.');
+        return;
+      }
+      if (_selectedServicioId == null) {
+        await ErrorDialogs.showErrorDialog(context, 'Debes seleccionar un servicio.');
+        return;
+      }
 
       // 1️⃣ Obtener dependencias
       final reservasCtrl = context.read<ControladorDeltaReservas>();
@@ -118,23 +172,32 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
         return;
       }
 
+      final pax = _parsedData?['pax'] ?? 1;
+      final manualCosto = double.tryParse(
+        _costoTotalPrivadoController.text.trim(),
+      );
+      final double? totalReserva = _precioServicio != null
+          ? _precioServicio! * pax
+          : manualCosto;
+
       // 3️⃣ Armar el DTO con los datos del formulario
       final dto = CrearReservaDto(
         reservaFecha: _parsedData?['fechaReserva'] != null
             ? DateTime.parse(_parsedData!['fechaReserva'])
             : DateTime.now(),
         numeroHabitacion: _parsedData?['habitacion'] as String?,
-        puntoEncuentro: _parsedData?['puntoEncuentro'] as String?,
+        puntoEncuentro: (_parsedData?['puntoEncuentro'] as String?) ??
+            (_parsedData?['hotel'] as String?),
         observaciones: _parsedData?['observacion'] as String?,
-        pasajeros: _parsedData?['pax'] ?? 1,
-        tipoServicioCodigo: _parsedData?['tipoServicioCodigo'] ?? 0,
+        pasajeros: pax,
+        tipoServicioCodigo: _selectedServicioId!,
         agenciaCodigo: _selectedAgenciaId!,
         operadorCodigo: operador.id,
         creadoPor: operador.id,
         representante: _parsedData?['nombreCliente'],
         numeroTickete: _parsedData?['ticket'],
         pagoMonto: _parsedData?['saldo']?.toDouble() ?? 0.0,
-        reservaTotal: _parsedData?['total']?.toDouble(),
+        reservaTotal: totalReserva,
         colorCodigo: 1,
       );
 
@@ -149,13 +212,7 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
 
       // 6️⃣ Mostrar confirmación y cerrar
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reserva creada correctamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       debugPrint('Error creando reserva: $e');
@@ -167,9 +224,6 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
 
   @override
   Widget build(BuildContext context) {
-    double? _precioServicio;
-    double precioPorAsiento;
-
     final double keyboardInset = MediaQuery.of(context).viewInsets.bottom;
     final double minHeight = MediaQuery.of(context).size.height * 0.5;
     final double availableHeight =
@@ -241,6 +295,7 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
                             _selectedAgenciaId = id;
                             _agencyError = false;
                           });
+                          _recalcularPrecio();
                         },
                       ),
                       if (_agencyError)
@@ -268,22 +323,7 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
                       selectedTipoServicioId: _selectedServicioId,
                       onSelected: (servicio) async {
                         _selectedServicioId = servicio?.codigo;
-
-                        if (servicio != null && _selectedAgenciaId != null) {
-                          final reservasCtrl = context
-                              .read<ServiciosController>();
-                          final precio = await reservasCtrl
-                              .obtenerPrecioPorServicio(
-                                tipoServicioCodigo: servicio.codigo,
-                                agenciaCodigo: _selectedAgenciaId!,
-                              );
-
-                          if (mounted) {
-                            setState(() => _precioServicio = precio);
-                          }
-                        } else {
-                          setState(() => _precioServicio = null);
-                        }
+                        await _recalcularPrecio();
                       },
                     ),
 
@@ -307,47 +347,47 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
                           setState(() => _costoPrivadoError = false);
                         },
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    // Campo Hora para privado
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _selectedTime != null
-                                ? 'Hora seleccionada: ${_selectedTime!.format(context)}'
-                                : 'Seleccione una hora',
+                      const SizedBox(height: 12),
+                      // Campo Hora para privado
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedTime != null
+                                  ? 'Hora seleccionada: ${_selectedTime!.format(context)}'
+                                  : 'Seleccione una hora',
+                            ),
                           ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            final time = await showTimePicker(
-                              context: context,
-                              initialTime: _selectedTime ?? TimeOfDay.now(),
-                              useRootNavigator: true,
-                              initialEntryMode: TimePickerEntryMode.dial,
-                              builder: (BuildContext ctx, Widget? child) {
-                                final mq = MediaQuery.of(ctx).copyWith(
-                                  viewInsets: EdgeInsets.zero,
-                                  alwaysUse24HourFormat: true,
-                                );
-                                return MediaQuery(
-                                  data: mq,
-                                  child: child ?? const SizedBox.shrink(),
-                                );
-                              },
-                            );
-                            if (time != null) {
-                              setState(() {
-                                _selectedTime = time;
-                                _horaPrivadoError = false;
-                              });
-                            }
-                          },
-                          child: const Text('Seleccionar Hora'),
-                        ),
-                      ],
-                    ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: _selectedTime ?? TimeOfDay.now(),
+                                useRootNavigator: true,
+                                initialEntryMode: TimePickerEntryMode.dial,
+                                builder: (BuildContext ctx, Widget? child) {
+                                  final mq = MediaQuery.of(ctx).copyWith(
+                                    viewInsets: EdgeInsets.zero,
+                                    alwaysUse24HourFormat: true,
+                                  );
+                                  return MediaQuery(
+                                    data: mq,
+                                    child: child ?? const SizedBox.shrink(),
+                                  );
+                                },
+                              );
+                              if (time != null) {
+                                setState(() {
+                                  _selectedTime = time;
+                                  _horaPrivadoError = false;
+                                });
+                              }
+                            },
+                            child: const Text('Seleccionar Hora'),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (_horaPrivadoError)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -433,14 +473,16 @@ class _CrearReservasProFormState extends State<CrearReservasProForm> {
                                   _precioServicio == null
                                       ? 'Precio por viaje'
                                       : 'Precio por asiento',
-                                  (_precioServicio ?? 0).toStringAsFixed(2),
+                                  _precioServicio == null
+                                      ? (double.tryParse(_costoTotalPrivadoController.text) ?? 0).toStringAsFixed(2)
+                                      : (_precioServicio ?? 0).toStringAsFixed(2),
                                 ),
-                                _buildPreviewItem(
-                                  'Turno',
-                                  _selectedTurno != null
-                                      ? _selectedTurno!.label
-                                      : 'No seleccionado',
-                                ),
+                                // _buildPreviewItem(
+                                //   'Turno',
+                                //   _selectedTurno != null
+                                //       ? _selectedTurno!.label
+                                //       : 'No seleccionado',
+                                // ),
                                 _buildPreviewItem(
                                   'Estado calculado',
                                   _computeEstado(_precioServicio).name,

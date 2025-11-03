@@ -85,7 +85,9 @@ class ServiciosController extends ChangeNotifier {
       );
 
       if (precioAgencia.isNotEmpty) {
-        return double.tryParse(precioAgencia['precio'].toString());
+        // debugPrint(
+        //     'Precio especial encontrado para tipoServicioCodigo: $tipoServicioCodigo -> ${precioAgencia['precio']}');
+        // return double.tryParse(precioAgencia['precio'].toString());
       }
     }
 
@@ -99,9 +101,12 @@ class ServiciosController extends ChangeNotifier {
     );
 
     if (precioGlobal.isNotEmpty) {
+      // debugPrint(
+      //     'Precio encontrado para tipoServicioCodigo: $tipoServicioCodigo -> ${precioGlobal['precio']}');
       return double.tryParse(precioGlobal['precio'].toString());
     }
-
+    // debugPrint(
+    //     'No se encontró precio para tipoServicioCodigo: $tipoServicioCodigo');
     // Si no hay precio global, no hay definición de precio
     return null;
   }

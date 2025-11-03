@@ -87,7 +87,8 @@ class _OperadorScope extends StatelessWidget {
             PagosService(Supabase.instance.client),
             ColoresService(Supabase.instance.client),
             ReservasContactosService(Supabase.instance.client),
-            OperadoresController(auth), // dummy inicial
+            OperadoresController(auth), 
+            auth, // dummy inicial
           ),
           update: (context, operadores, previous) => ControladorDeltaReservas(
             ReservasSupabaseService(Supabase.instance.client),
@@ -95,6 +96,7 @@ class _OperadorScope extends StatelessWidget {
             ColoresService(Supabase.instance.client),
             ReservasContactosService(Supabase.instance.client),
             operadores,
+            auth,
           ),
         ),
 
