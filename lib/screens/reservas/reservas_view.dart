@@ -7,8 +7,6 @@ import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/enum/tipo_turno.dart';
 import 'package:citytourscartagena/core/models/permisos.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
-import 'package:citytourscartagena/core/widgets/add_reserva_form.dart';
-import 'package:citytourscartagena/core/widgets/add_reserva_pro_form.dart';
 import 'package:citytourscartagena/core/widgets/crear_agencia_form.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
 import 'package:citytourscartagena/core/widgets/table_only_view_screen.dart';
@@ -21,7 +19,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/controller/reservas_controller.dart';
 
@@ -555,22 +552,22 @@ class _ReservasViewState extends State<ReservasView> {
       context,
       listen: false,
     );
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => AddReservaProForm(
-        agencia: widget.agencia?.agencia,
-        turno: reservasController.turnoFilter,
-        onAdd: () {
-          reservasController.updateFilter(
-            reservasController.selectedFilter,
-            date: reservasController.customDate,
-            agenciaId: widget.agencia?.id,
-            turno: reservasController.turnoFilter,
-          );
-        },
-      ),
-    );
+    // showModalBottomSheet(
+    //   context: context,
+    //   isScrollControlled: true,
+    //   builder: (context) => AddReservaProForm(
+    //     agencia: widget.agencia?.agencia,
+    //     turno: reservasController.turnoFilter,
+    //     onAdd: () {
+    //       reservasController.updateFilter(
+    //         reservasController.selectedFilter,
+    //         date: reservasController.customDate,
+    //         agenciaId: widget.agencia?.id,
+    //         turno: reservasController.turnoFilter,
+    //       );
+    //     },
+    //   ),
+    // );
   }
 
   void _showAddReservaForm() {
@@ -578,21 +575,21 @@ class _ReservasViewState extends State<ReservasView> {
       context,
       listen: false,
     );
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => AddReservaForm(
-        agenciaId: widget.agencia?.id,
-        onAdd: () {
-          reservasController.updateFilter(
-            reservasController.selectedFilter,
-            date: reservasController.customDate,
-            agenciaId: widget.agencia?.id,
-            turno: reservasController.turnoFilter,
-          );
-        },
-        initialTurno: reservasController.turnoFilter,
-      ),
-    );
+    // showModalBottomSheet(
+    //   context: context,
+    //   isScrollControlled: true,
+    //   // builder: (context) => AddReservaForm(
+    //   //   agenciaId: widget.agencia?.id,
+    //   //   onAdd: () {
+    //   //     reservasController.updateFilter(
+    //   //       reservasController.selectedFilter,
+    //   //       date: reservasController.customDate,
+    //   //       agenciaId: widget.agencia?.id,
+    //   //       turno: reservasController.turnoFilter,
+    //   //     );
+    //   //   },
+    //   //   initialTurno: reservasController.turnoFilter,
+    //   // ),
+    // );
   }
 }

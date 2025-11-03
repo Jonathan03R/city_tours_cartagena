@@ -1,5 +1,6 @@
 import 'package:citytourscartagena/core/controller/agencias/agencias_controller.dart';
-import 'package:citytourscartagena/core/controller/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/agencias_controller.dart'
+  as legacy_agencias;
 import 'package:citytourscartagena/core/controller/filtros/servicios_controller.dart';
 import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
@@ -8,6 +9,7 @@ import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
 import 'package:citytourscartagena/core/models/reservas/precio_servicio.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_resumen.dart';
 import 'package:citytourscartagena/core/models/servicios/servicio.dart';
+import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
@@ -17,6 +19,7 @@ import 'package:citytourscartagena/screens/agencias/widget/encabezado_agencia_wi
 import 'package:citytourscartagena/screens/agencias/widget/filtros.dart';
 import 'package:citytourscartagena/screens/agencias/widget/tabla_reservas_widget.dart';
 import 'package:citytourscartagena/screens/reservas/crear_reservas_form.dart';
+import 'package:citytourscartagena/screens/reservas/crear_reservas_pro_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
@@ -64,37 +67,45 @@ class _ReservaVistaState extends State<ReservaVista> {
   @override
   void initState() {
     super.initState();
-    _serviciosController = ServiciosController(ServiciosService());
-    _serviciosController.cargarTiposServicios(1); // operadorId
+    _serviciosController = ServiciosController(
+      ServiciosService(),
+      Provider.of<OperadoresController>(context, listen: false),
+      AgenciasService(),
+    );
     _serviciosController.cargarEstadosReservas();
-    
+
     // Obtener contactos usando el controlador
     if (widget.codigoAgencia != null) {
       final agenciasController = Provider.of<AgenciasControllerSupabase>(
         context,
         listen: false,
       );
-      _contactosFuture = agenciasController.obtenerContactosAgencia(widget.codigoAgencia!);
-      
+      _contactosFuture = agenciasController.obtenerContactosAgencia(
+        widget.codigoAgencia!,
+      );
+
       // Resolver el futuro y actualizar el estado
-      _contactosFuture.then((contactos) {
-        if (!mounted) return;
-        setState(() {
-          _contactosAgencia = contactos;
-          _hasContact = contactos.isNotEmpty;
-        });
-      }).catchError((_) {
-        // Si falla, simplemente no mostramos el botón
-        if (!mounted) return;
-        setState(() {
-          _hasContact = false;
-        });
-      });
+      _contactosFuture
+          .then((contactos) {
+            if (!mounted) return;
+            setState(() {
+              _contactosAgencia = contactos;
+              _hasContact = contactos.isNotEmpty;
+            });
+          })
+          .catchError((_) {
+            // Si falla, simplemente no mostramos el botón
+            if (!mounted) return;
+            setState(() {
+              _hasContact = false;
+            });
+          });
     } else {
       _contactosFuture = Future.value([]);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _serviciosController.cargarTiposServiciosv2();
       _cargarReservas();
       _loadPreciosIfNeeded();
       context.read<OperadoresController>().obtenerAgenciasDeOperador();
@@ -107,27 +118,39 @@ class _ReservaVistaState extends State<ReservaVista> {
     }
   }
 
+  @override
+  void dispose() {
+    _reservasPaginadas.dispose();
+    _serviciosController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadPreciosIfNeeded() async {
-    // si ya vienen por constructor, úsalos y no hagas petición
     if (widget.preciosCargados != null) {
       setState(() => _preciosCargados = widget.preciosCargados);
       return;
     }
-    if (_preciosCargados != null) return; // ya cargado
+    if (_preciosCargados != null) return;
+
     setState(() => _loadingPrecios = true);
     try {
-      final controller = Provider.of<ControladorDeltaReservas>(
-        context,
-        listen: false,
-      );
+      final operadoresCtrl = context.read<OperadoresController>();
+      final operador = await operadoresCtrl.obtenerOperador();
+
+      if (operador == null) {
+        debugPrint('No hay operador cargado todavía');
+        return;
+      }
+
+      final controller = context.read<ControladorDeltaReservas>();
       final precios = await controller.obtenerPreciosServiciosConFallback(
-        operadorCodigo: 1,
         agenciaCodigo: widget.codigoAgencia ?? 0,
       );
+
       if (!mounted) return;
       setState(() => _preciosCargados = precios);
     } catch (e) {
-      // falla al cargar precios: dejamos _preciosCargados en null y la UI lo indica
+      debugPrint('Error al cargar precios: $e');
     } finally {
       if (!mounted) return;
       setState(() => _loadingPrecios = false);
@@ -182,11 +205,6 @@ class _ReservaVistaState extends State<ReservaVista> {
       case DateFilterType.all:
         break;
     }
-
-    // debugPrint(
-    //   'Filtro seleccionado: $_selectedFilter, fechaInicio: $fechaInicio, fechaFin: $fechaFin',
-    // );
-
     _totalReservas = await controller.contarReservas(
       operadorId: 1,
       agenciaId: widget.codigoAgencia,
@@ -206,6 +224,11 @@ class _ReservaVistaState extends State<ReservaVista> {
       pagina: _paginaActual,
       tamanoPagina: 10,
     );
+
+    debugPrint('Reservas cargadas: ${reservas.length}');
+    if (reservas.isNotEmpty) {
+      debugPrint('Primera reserva: ${reservas.first.toString()}');
+    }
 
     _reservasPaginadas.value = reservas;
   }
@@ -236,7 +259,9 @@ class _ReservaVistaState extends State<ReservaVista> {
     if (_contactosAgencia.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay contactos disponibles para esta agencia')),
+        const SnackBar(
+          content: Text('No hay contactos disponibles para esta agencia'),
+        ),
       );
       return;
     }
@@ -291,7 +316,9 @@ class _ReservaVistaState extends State<ReservaVista> {
 
     // Intentar como link primero
     if (descripcion.contains('http') || descripcion.contains('www')) {
-      final uri = Uri.parse(descripcion.startsWith('http') ? descripcion : 'https://$descripcion');
+      final uri = Uri.parse(
+        descripcion.startsWith('http') ? descripcion : 'https://$descripcion',
+      );
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
         return;
@@ -625,8 +652,51 @@ class _ReservaVistaState extends State<ReservaVista> {
                   child: const Icon(Icons.auto_awesome),
                   backgroundColor: Colors.purple.shade600,
                   foregroundColor: Colors.white,
-                  onTap: () {
-                    /* … */
+                  onTap: () async {
+          final reservasCtrl = context.read<ControladorDeltaReservas>();
+          final operadoresCtrl = context.read<OperadoresController>();
+          final agenciasCtrl =
+            context.read<legacy_agencias.AgenciasController>();
+
+                    if (_serviciosController.tiposServicios.isEmpty) {
+                      await _serviciosController.cargarTiposServiciosv2();
+                    }
+
+                    final created = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => MultiProvider(
+                          providers: [
+                            ChangeNotifierProvider<ServiciosController>.value(
+                              value: _serviciosController,
+                            ),
+                            ChangeNotifierProvider<ControladorDeltaReservas>.value(
+                              value: reservasCtrl,
+                            ),
+                            ChangeNotifierProvider<OperadoresController>.value(
+                              value: operadoresCtrl,
+                            ),
+                            ChangeNotifierProvider<legacy_agencias.AgenciasController>.value(
+                              value: agenciasCtrl,
+                            ),
+                          ],
+                          child: Scaffold(
+                            appBar: AppBar(title: const Text('Crear Reserva')),
+                            body: const CrearReservasProForm(),
+                          ),
+                        ),
+                      ),
+                    );
+
+                    if (created == true) {
+                      await _cargarReservas();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Reserva creada correctamente'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
               if (puedeAgregarManual)
@@ -744,14 +814,9 @@ class _ReservaVistaState extends State<ReservaVista> {
               context,
               listen: false,
             );
-            final authController = Provider.of<AuthController>(
-              context,
-              listen: false,
-            );
             await controller.actualizarObservaciones(
               reservaId: reserva.reservaCodigo,
               observaciones: obs,
-              usuarioId: authController.appUser?.id as int? ?? 1,
             );
             // Actualizar la lista local para reflejar el cambio en tiempo real
             final reservasActuales = _reservasPaginadas.value;
@@ -770,13 +835,8 @@ class _ReservaVistaState extends State<ReservaVista> {
               context,
               listen: false,
             );
-            final authController = Provider.of<AuthController>(
-              context,
-              listen: false,
-            );
             final result = await controller.procesarPago(
               reserva: reserva,
-              pagadoPor: authController.appUser?.id as int?,
             );
             // Recargar las reservas para actualizar el estado
             await _cargarReservas();
@@ -786,19 +846,15 @@ class _ReservaVistaState extends State<ReservaVista> {
             context,
             listen: false,
           ).obtenerColores(),
-          onActualizarColor: (reservaId, colorCodigo, usuarioId) =>
+          onActualizarColor: (reservaId, colorCodigo) =>
               Provider.of<ControladorDeltaReservas>(
                 context,
                 listen: false,
               ).actualizarColorReserva(
                 reservaId: reservaId,
                 colorCodigo: colorCodigo,
-                usuarioId: usuarioId,
               ),
           onReload: () => _cargarReservas(),
-          usuarioId:
-              Provider.of<AuthController>(context, listen: false).appUser?.id
-                  as int?,
         );
       },
     );

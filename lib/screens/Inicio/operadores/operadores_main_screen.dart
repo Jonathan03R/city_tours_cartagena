@@ -14,6 +14,7 @@ import 'package:citytourscartagena/core/controller/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/agencia.dart';
 import 'package:citytourscartagena/core/models/agencia/agencia.dart';
 import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
+import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/services/reservas/colores_service.dart';
 import 'package:citytourscartagena/core/services/reservas/pagos_service.dart';
@@ -44,10 +45,7 @@ class MainOperadorScreen extends StatelessWidget {
     final auth = context.read<AuthSupabaseController>();
 
     // Providers locales del universo operador (persisten durante todo el universo)
-    return _OperadorScope(
-      auth: auth,
-      child: const _OperadorNavigator(),
-    );
+    return _OperadorScope(auth: auth, child: const _OperadorNavigator());
   }
 }
 
@@ -63,16 +61,46 @@ class _OperadorScope extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // 1️⃣ Primero el OperadoresController
         ChangeNotifierProvider(create: (_) => OperadoresController(auth)),
-        ChangeNotifierProvider(create: (_) => ServiciosController(ServiciosService())),
-        ChangeNotifierProvider(
-          create: (_) => ControladorDeltaReservas(
-            servicio: ReservasSupabaseService(Supabase.instance.client),
-            pagosService: PagosService(Supabase.instance.client),
-            coloresService: ColoresService(Supabase.instance.client),
-            contactosService: ReservasContactosService(Supabase.instance.client),
+
+        // 2️⃣ Luego los que lo dependen
+        ChangeNotifierProxyProvider<OperadoresController, ServiciosController>(
+          create: (_) => ServiciosController(
+            ServiciosService(),
+            OperadoresController(auth), // valor inicial dummy
+            AgenciasService(),
+          ),
+          update: (context, operadores, previous) => ServiciosController(
+            ServiciosService(),
+            operadores,
+            AgenciasService(),
           ),
         ),
+
+        ChangeNotifierProxyProvider<
+          OperadoresController,
+          ControladorDeltaReservas
+        >(
+          create: (_) => ControladorDeltaReservas(
+            ReservasSupabaseService(Supabase.instance.client),
+            PagosService(Supabase.instance.client),
+            ColoresService(Supabase.instance.client),
+            ReservasContactosService(Supabase.instance.client),
+            OperadoresController(auth), 
+            auth, // dummy inicial
+          ),
+          update: (context, operadores, previous) => ControladorDeltaReservas(
+            ReservasSupabaseService(Supabase.instance.client),
+            PagosService(Supabase.instance.client),
+            ColoresService(Supabase.instance.client),
+            ReservasContactosService(Supabase.instance.client),
+            operadores,
+            auth,
+          ),
+        ),
+
+        // 3️⃣ Los independientes
         ChangeNotifierProvider(create: (_) => ReservasController()),
         ChangeNotifierProvider(create: (_) => AgenciasController()),
         ChangeNotifierProvider(create: (_) => AgenciasControllerSupabase()),
@@ -107,7 +135,9 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startGlobalImagePreloading(context));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _startGlobalImagePreloading(context),
+    );
   }
 
   @override
@@ -120,7 +150,8 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
   @override
   Widget build(BuildContext context) {
     return Navigator(
-      onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => _buildMainScaffold(context)),
+      onGenerateRoute: (_) =>
+          MaterialPageRoute(builder: (_) => _buildMainScaffold(context)),
     );
   }
 
@@ -130,7 +161,10 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
 
     final pages = [
       const ReportesView(),
-      AgenciasSeccion(agenciasFuture: _agenciasFuture!, searchTerm: _searchTerm),
+      AgenciasSeccion(
+        agenciasFuture: _agenciasFuture!,
+        searchTerm: _searchTerm,
+      ),
       const UsuariosScreen(),
       ConfigOperadoresScreems(controller: operadoresController),
     ];
@@ -186,11 +220,13 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
         IconButton(
           icon: const Icon(Icons.settings, color: Color(0xFF06142F)),
           onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => ConfigOperadoresScreems(
-                controller: context.read<OperadoresController>(),
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ConfigOperadoresScreems(
+                  controller: context.read<OperadoresController>(),
+                ),
               ),
-            ));
+            );
           },
         ),
       ],
@@ -211,10 +247,18 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
         decoration: InputDecoration(
           hintText: 'Buscar agencia...',
           hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 16.sp),
-          prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20.sp),
+          prefixIcon: Icon(
+            Icons.search,
+            color: Colors.grey.shade500,
+            size: 20.sp,
+          ),
           suffixIcon: _searchTerm.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.clear, color: Colors.grey.shade500, size: 20.sp),
+                  icon: Icon(
+                    Icons.clear,
+                    color: Colors.grey.shade500,
+                    size: 20.sp,
+                  ),
                   onPressed: () {
                     _searchController.clear();
                     setState(() => _searchTerm = '');
@@ -222,7 +266,10 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10,
+          ),
         ),
       ),
     );
@@ -241,7 +288,13 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
               color: const Color(0xFF06142F),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('$count', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           );
         },
       ),
@@ -296,20 +349,28 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Reservas'),
         BottomNavigationBarItem(icon: Icon(Icons.business), label: 'Agencias'),
-        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Colaboradores'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people),
+          label: 'Colaboradores',
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Config'),
       ],
     );
   }
 
   void _startGlobalImagePreloading(BuildContext context) {
-    final agenciasController = Provider.of<AgenciasController>(context, listen: false);
-    _agenciasPreloadSubscription = agenciasController.agenciasConReservasStream.listen(
-      (agencias) => _precacheImages(agencias, context),
+    final agenciasController = Provider.of<AgenciasController>(
+      context,
+      listen: false,
     );
+    _agenciasPreloadSubscription = agenciasController.agenciasConReservasStream
+        .listen((agencias) => _precacheImages(agencias, context));
   }
 
-  void _precacheImages(List<AgenciaConReservas> agencias, BuildContext context) {
+  void _precacheImages(
+    List<AgenciaConReservas> agencias,
+    BuildContext context,
+  ) {
     for (var agencia in agencias) {
       if (agencia.imagenUrl != null && agencia.imagenUrl!.isNotEmpty) {
         precacheImage(NetworkImage(agencia.imagenUrl!), context);

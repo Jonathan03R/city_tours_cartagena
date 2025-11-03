@@ -19,10 +19,8 @@ class TablaReservasWidget extends StatefulWidget {
   onActualizarObservaciones;
   final Future<double> Function(ReservaResumen reserva)? onProcesarPago;
   final Future<List<ColorModel>> Function()? onObtenerColores;
-  final Future<void> Function(int reservaId, int colorCodigo, int usuarioId)?
-  onActualizarColor;
+  final Future<void> Function(int reservaId, int colorCodigo)? onActualizarColor;
   final VoidCallback? onReload;
-  final int? usuarioId;
 
   const TablaReservasWidget({
     super.key,
@@ -36,7 +34,6 @@ class TablaReservasWidget extends StatefulWidget {
     this.onObtenerColores,
     this.onActualizarColor,
     this.onReload,
-    this.usuarioId,
   });
 
   @override
@@ -715,7 +712,6 @@ class _TablaReservasWidgetState extends State<TablaReservasWidget> {
                         await widget.onActualizarColor!(
                           reserva.reservaCodigo,
                           color.codigo,
-                          widget.usuarioId ?? 1,
                         );
                         Navigator.of(context).pop();
                         widget.onReload?.call();

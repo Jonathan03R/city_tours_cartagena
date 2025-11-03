@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:citytourscartagena/core/controller/auth/auth_controller.dart';
+import 'package:citytourscartagena/core/controller/operadores/operadores_controller.dart';
 import 'package:citytourscartagena/core/models/agencia/perfil_agencia.dart';
 import 'package:citytourscartagena/core/models/colores/color_model.dart';
 import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
@@ -20,7 +22,9 @@ class ControladorDeltaReservas extends ChangeNotifier {
   final ReservasContactosService _contactosService;
   final AgenciasService agenciasService = AgenciasService();
   final Duration debounceDuracion;
-
+  final AuthSupabaseController _auth;
+  final OperadoresController _operadoresController;
+  int? get _codigoUsuario => _auth.perfilUsuario?.usuario.codigo;
   // List<ReservaResumen> _reservasActuales = [];
   final StreamController<List<ReservaResumen>> _reservasDeltaController =
       StreamController.broadcast();
@@ -30,75 +34,104 @@ class ControladorDeltaReservas extends ChangeNotifier {
 
   StreamSubscription? _suscripcionStream;
 
-  ControladorDeltaReservas({
-    required ReservasSupabaseService servicio,
-    required PagosService pagosService,
-    required ColoresService coloresService,
-    required ReservasContactosService contactosService,
+  ControladorDeltaReservas(
+    this._servicio,
+    this._pagosService,
+    this._coloresService,
+    this._contactosService,
+    this._operadoresController, 
+    this._auth,
+    [
     Duration? debounce,
-  }) : _servicio = servicio,
-       _pagosService = pagosService,
-       _coloresService = coloresService,
-       _contactosService = contactosService,
-       debounceDuracion = debounce ?? const Duration(milliseconds: 350);
-
-  // Inicia la escucha de cambios en la tabla reservas
-  // void escucharReservas(int agenciaId, int operadorId) {
-  //   _suscripcionStream?.cancel();
-
-  //   _suscripcionStream = _servicio
-  //       .streamEventosReservasAgencia(agenciaId: agenciaId)
-  //       .listen((cambios) async {
-  //         // Solo actualizamos si hay cambios verdaderos
-  //         final nuevasReservas = await _servicio.obtenerResumenReservas(
-  //           agenciaId: agenciaId,
-  //           operadorId: operadorId,
-  //         );
-
-  //         if (!_listasIguales(_reservasActuales, nuevasReservas)) {
-  //           _reservasActuales = nuevasReservas;
-  //           _reservasDeltaController.add(_reservasActuales);
-  //         }
-  //       });
-  // }
+  ]) : debounceDuracion = debounce ?? const Duration(milliseconds: 350);
 
   Future<Agenciaperfil?> cargarAgenciaPorId(int agenciaId) async {
     return await agenciasService.obtenerAgenciaPorId(agenciaId);
   }
 
   Future<List<PrecioServicio>> obtenerPreciosServiciosConFallback({
-    required int operadorCodigo,
     required int agenciaCodigo,
   }) async {
-    final preciosAgencia = await agenciasService.obtenerPreciosServiciosAgencia(
-      operadorCodigo: operadorCodigo,
-      agenciaCodigo: agenciaCodigo,
-    );
+    try {
+      final operador = await _operadoresController.obtenerOperador();
+      if (operador == null) {
+        debugPrint('Error: No se pudo obtener el operador.');
+        return [];
+      }
 
-    final preciosGlobal = await agenciasService.obtenerPreciosServiciosOperador(
-      operadorCodigo: operadorCodigo,
-    );
+      List<Map<String, dynamic>> preciosAgencia = [];
+      try {
+        preciosAgencia = await agenciasService.obtenerPreciosServiciosAgencia(
+          operadorCodigo: operador.id,
+          agenciaCodigo: agenciaCodigo,
+        );
+      } catch (e) {
+        debugPrint('Error al obtener precios de agencia: $e');
+        // Continuar con precios globales
+      }
 
-    final Map<String, PrecioServicio> preciosPorDescripcion = {};
+      List<Map<String, dynamic>> preciosGlobal = [];
+      try {
+        preciosGlobal = await agenciasService.obtenerPreciosServiciosOperador(
+          operadorCodigo: operador.id,
+        );
+      } catch (e) {
+        debugPrint('Error al obtener precios globales: $e');
+        // Si falla global, devolver agencia si hay
+        if (preciosAgencia.isNotEmpty) {
+          return preciosAgencia
+              .map(
+                (item) => PrecioServicio(
+                  codigo: item['codigo'] ?? 0,
+                  precio: (item['precio'] as num?)?.toDouble() ?? 0.0,
+                  descripcion: item['descripcion'] ?? 'Sin descripción',
+                  origen: 'especial',
+                ),
+              )
+              .toList();
+        }
+        return [];
+      }
 
-    for (final item in preciosGlobal) {
-      preciosPorDescripcion[item['descripcion']] = PrecioServicio(
-        codigo: item['codigo'],
-        precio: item['precio'],
-        descripcion: item['descripcion'],
-        origen: 'global',
-      );
+      final Map<String, PrecioServicio> preciosPorDescripcion = {};
+
+      for (final item in preciosGlobal) {
+        try {
+          final descripcion = item['descripcion'] as String?;
+          if (descripcion != null) {
+            preciosPorDescripcion[descripcion] = PrecioServicio(
+              codigo: item['codigo'] ?? 0,
+              precio: (item['precio'] as num?)?.toDouble() ?? 0.0,
+              descripcion: descripcion,
+              origen: 'global',
+            );
+          }
+        } catch (e) {
+          debugPrint('Error procesando precio global: $e');
+        }
+      }
+
+      for (final item in preciosAgencia) {
+        try {
+          final descripcion = item['descripcion'] as String?;
+          if (descripcion != null) {
+            preciosPorDescripcion[descripcion] = PrecioServicio(
+              codigo: item['codigo'] ?? 0,
+              precio: (item['precio'] as num?)?.toDouble() ?? 0.0,
+              descripcion: descripcion,
+              origen: 'especial',
+            );
+          }
+        } catch (e) {
+          debugPrint('Error procesando precio agencia: $e');
+        }
+      }
+
+      return preciosPorDescripcion.values.toList();
+    } catch (e) {
+      debugPrint('Error general en obtenerPreciosServiciosConFallback: $e');
+      return [];
     }
-
-    for (final item in preciosAgencia) {
-      preciosPorDescripcion[item['descripcion']] = PrecioServicio(
-        codigo: item['codigo'],
-        precio: item['precio'],
-        descripcion: item['descripcion'],
-        origen: 'especial',
-      );
-    }
-    return preciosPorDescripcion.values.toList();
   }
 
   int paginaSiguiente(int paginaActual, int totalReservas, int tamanoPagina) {
@@ -160,25 +193,26 @@ class ControladorDeltaReservas extends ChangeNotifier {
   Future<Map<String, dynamic>> actualizarObservaciones({
     required int reservaId,
     required String observaciones,
-    required int usuarioId,
+
   }) async {
+
+    debugPrint('id del usuario en actualizarObservaciones: $_codigoUsuario');
     return await _servicio.actualizarObservacionesReserva(
       reservaId: reservaId,
       observaciones: observaciones,
-      usuarioId: usuarioId,
+      usuarioId: _codigoUsuario!,
     );
   }
 
   Future<double> procesarPago({
     required ReservaResumen reserva,
-    int? pagadoPor,
   }) async {
     if (reserva.estadoNombre.toLowerCase() == 'pendiente') {
       // Pagar reserva
       return await _pagosService.pagarReserva(
         reservaCodigo: reserva.reservaCodigo,
         tipoPagoCodigo: 1, // Siempre 1
-        pagadoPor: pagadoPor,
+        pagadoPor: _codigoUsuario!,
       );
     } else if (reserva.estadoNombre.toLowerCase() == 'pagada') {
       // Revertir pago
@@ -186,7 +220,9 @@ class ControladorDeltaReservas extends ChangeNotifier {
         reservaCodigo: reserva.reservaCodigo,
       );
     } else {
-      throw Exception('Estado de reserva no válido para procesar pago: ${reserva.estadoNombre}');
+      throw Exception(
+        'Estado de reserva no válido para procesar pago: ${reserva.estadoNombre}',
+      );
     }
   }
 
@@ -197,12 +233,11 @@ class ControladorDeltaReservas extends ChangeNotifier {
   Future<Map<String, dynamic>> actualizarColorReserva({
     required int reservaId,
     required int colorCodigo,
-    required int usuarioId,
   }) async {
     return await _servicio.actualizarColorReserva(
       reservaId: reservaId,
       colorCodigo: colorCodigo,
-      usuarioId: usuarioId,
+      usuarioId: _codigoUsuario!,
     );
   }
 
@@ -213,7 +248,6 @@ class ControladorDeltaReservas extends ChangeNotifier {
     String? numeroTickete,
     String? numeroHabitacion,
     String? reservaPuntoEncuentro,
-    required int usuarioId,
   }) async {
     return await _servicio.actualizarReserva(
       reservaId: reservaId,
@@ -222,7 +256,7 @@ class ControladorDeltaReservas extends ChangeNotifier {
       numeroTickete: numeroTickete,
       numeroHabitacion: numeroHabitacion,
       reservaPuntoEncuentro: reservaPuntoEncuentro,
-      usuarioId: usuarioId,
+      usuarioId: _codigoUsuario!,
     );
   }
 
