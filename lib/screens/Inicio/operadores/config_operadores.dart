@@ -258,6 +258,7 @@ class _ConfigOperadoresScreemsState extends State<ConfigOperadoresScreems> {
       ),
       body: _isEditing ? _buildEditView(isDark) : _buildViewMode(isDark),
       floatingActionButton: _isEditing ? null : FloatingActionButton(
+        heroTag: 'config_operadores_fab', // evita colisión con otros FABs
         onPressed: _showAddContactoDialog,
         backgroundColor: AppColors.getAccentColor(isDark),
         child: const Icon(Icons.add),

@@ -10,7 +10,7 @@ class CrearReservaDto {
   final int creadoPor;
   final String? representante;
   final String? numeroTickete;
-  final double pagoMonto;
+  final double? pagoMonto;
   final double? reservaTotal;
   final int colorCodigo;
 
@@ -26,7 +26,7 @@ class CrearReservaDto {
     required this.creadoPor,
     this.representante,
     this.numeroTickete,
-    required this.pagoMonto,
+  this.pagoMonto,
     this.reservaTotal,
     this.colorCodigo = 1,
   });
@@ -44,7 +44,7 @@ class CrearReservaDto {
       'p_reserva_creado_por': creadoPor,
       'p_reserva_representante': representante,
       'p_numero_tickete': numeroTickete,
-      'p_pago_monto': pagoMonto,
+  'p_pago_monto': pagoMonto,
       'p_reserva_total': reservaTotal,
       'p_color_codigo': colorCodigo,
     };

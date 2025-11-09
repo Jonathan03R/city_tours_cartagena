@@ -4,9 +4,13 @@ import 'package:citytourscartagena/core/controller/operadores/operadores_control
 import 'package:citytourscartagena/core/controller/reservas/reservas_controller.dart';
 import 'package:citytourscartagena/core/models/reservas/crear_reserva_dto.dart';
 import 'package:citytourscartagena/core/models/reservas/reserva_contacto.dart';
+import 'package:citytourscartagena/core/models/servicios/servicio.dart';
 import 'package:citytourscartagena/core/models/tipos/tipo_contacto.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
+import 'package:citytourscartagena/core/widgets/agencia_selector.dart';
+import 'package:citytourscartagena/core/widgets/selectores/tipos_servicios_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 class CrearReservasForm extends StatefulWidget {
@@ -31,8 +35,11 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
 
   DateTime? _selectedFecha;
   TimeOfDay? _selectedHora;
-  int? _selectedTipoServicio;
-  int? _selectedAgencia;
+  int? _selectedTipoServicioId;
+  int? _selectedAgenciaId;
+  double? _precioServicio;
+  bool _agenciaError = false;
+  bool _isFetchingPrecio = false;
 
   final List<ReservaContacto> _contactos = [];
 
@@ -43,12 +50,18 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
   @override
   void initState() {
     super.initState();
+    _pasajerosController.addListener(_onPasajerosChanged);
     final operadoresController = context.read<OperadoresController>();
     _tiposContactoFuture = operadoresController.obtenerTiposContactosActivos();
+    // Prefetch servicios para evitar ver el loader del selector
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ServiciosController>().cargarTiposServiciosv2();
+    });
   }
 
   @override
   void dispose() {
+    _pasajerosController.removeListener(_onPasajerosChanged);
     _fechaController.dispose();
     _horaController.dispose();
     _habitacionController.dispose();
@@ -88,6 +101,74 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
         _horaController.text = picked.format(context);
       });
     }
+  }
+
+  double? _tryParseDouble(String value) {
+    final sanitized = value.trim();
+    if (sanitized.isEmpty) return null;
+    return double.tryParse(sanitized.replaceAll(',', '.'));
+  }
+
+  void _onAgenciaSelected(int id) {
+    setState(() {
+      _selectedAgenciaId = id;
+      _agenciaError = false;
+    });
+    _recalcularPrecio();
+  }
+
+  void _onServicioSeleccionado(TipoServicio? servicio) {
+    setState(() {
+      _selectedTipoServicioId = servicio?.codigo;
+    });
+    _recalcularPrecio();
+  }
+
+  void _onPasajerosChanged() {
+    if (_precioServicio == null) return;
+    _actualizarTotalCalculado();
+  }
+
+  Future<void> _recalcularPrecio() async {
+    if (_selectedTipoServicioId == null) {
+      if (_precioServicio != null) {
+        setState(() => _precioServicio = null);
+      }
+      return;
+    }
+
+    setState(() => _isFetchingPrecio = true);
+    try {
+      final serviciosController = context.read<ServiciosController>();
+      final previousPrecio = _precioServicio;
+      final precio = await serviciosController.obtenerPrecioPorServicio(
+        tipoServicioCodigo: _selectedTipoServicioId!,
+        agenciaCodigo: _selectedAgenciaId,
+      );
+      if (!mounted) return;
+      setState(() => _precioServicio = precio);
+      if (_precioServicio != null) {
+        _actualizarTotalCalculado();
+      } else if (previousPrecio != null) {
+        _reservaTotalController.clear();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _precioServicio = null);
+      debugPrint('Error obteniendo precio: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isFetchingPrecio = false);
+      }
+    }
+  }
+
+  void _actualizarTotalCalculado() {
+    if (_precioServicio == null) return;
+    final pax = int.tryParse(_pasajerosController.text);
+    if (pax == null || pax <= 0) return;
+    final total = _precioServicio! * pax;
+    _reservaTotalController.text = total.toStringAsFixed(2);
   }
 
   void _agregarContacto() {
@@ -161,7 +242,15 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
   }
 
   Future<void> _crearReserva() async {
-    if (!_formKey.currentState!.validate()) return;
+    final formValid = _formKey.currentState?.validate() ?? false;
+    bool isValid = formValid;
+
+    if (_selectedAgenciaId == null) {
+      setState(() => _agenciaError = true);
+      isValid = false;
+    }
+
+    if (!isValid) return;
 
     if (_selectedFecha == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,16 +259,24 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
       return;
     }
 
-    if (_selectedTipoServicio == null) {
+    if (_selectedTipoServicioId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un tipo de servicio')),
       );
       return;
     }
 
-    if (_selectedAgencia == null) {
+    if (_selectedAgenciaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona una agencia')),
+      );
+      return;
+    }
+
+    final pasajeros = int.tryParse(_pasajerosController.text) ?? 0;
+    if (pasajeros <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa la cantidad de pasajeros')),
       );
       return;
     }
@@ -202,20 +299,29 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
         _selectedHora?.minute ?? 0,
       );
 
+  final double? pagoMonto = _tryParseDouble(_pagoMontoController.text);
+
+      double? totalReserva;
+      if (_precioServicio != null) {
+        totalReserva = _precioServicio! * pasajeros;
+      } else {
+        totalReserva = _tryParseDouble(_reservaTotalController.text);
+      }
+
       final dto = CrearReservaDto(
         reservaFecha: reservaFechaHora,
         numeroHabitacion: _habitacionController.text.isEmpty ? null : _habitacionController.text,
         puntoEncuentro: _puntoEncuentroController.text.isEmpty ? null : _puntoEncuentroController.text,
         observaciones: _observacionesController.text.isEmpty ? null : _observacionesController.text,
-        pasajeros: int.parse(_pasajerosController.text),
-        tipoServicioCodigo: _selectedTipoServicio!,
-        agenciaCodigo: _selectedAgencia!,
+        pasajeros: pasajeros,
+        tipoServicioCodigo: _selectedTipoServicioId!,
+        agenciaCodigo: _selectedAgenciaId!,
         operadorCodigo: operador.id,
         creadoPor: authController.perfilUsuario!.usuario.codigo,
         representante: _representanteController.text.isEmpty ? null : _representanteController.text,
         numeroTickete: _numeroTicketeController.text.isEmpty ? null : _numeroTicketeController.text,
-        pagoMonto: double.parse(_pagoMontoController.text),
-        reservaTotal: _reservaTotalController.text.isEmpty ? null : double.parse(_reservaTotalController.text),
+  pagoMonto: pagoMonto,
+        reservaTotal: totalReserva,
         colorCodigo: 1,
       );
 
@@ -271,24 +377,32 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                          // Agencia con búsqueda
-                          () {
-                            final operadoresController = context.watch<OperadoresController>();
-                            return DropdownButtonFormField<int>(
-                              value: _selectedAgencia,
-                              items: operadoresController.agencias.map((agencia) => DropdownMenuItem<int>(
-                                value: agencia.codigo,
-                                child: Text(agencia.nombre),
-                              )).toList(),
-                              onChanged: (value) => setState(() => _selectedAgencia = value),
-                              decoration: InputDecoration(
-                                labelText: 'Agencia',
-                                labelStyle: TextStyle(color: AppColors.getSecondaryTextColor(isDark)),
-                                prefixIcon: Icon(Icons.business, color: AppColors.getAccentColor(isDark)),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Agencia *',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.getTextColor(isDark),
                               ),
-                              validator: (value) => value == null ? 'Selecciona agencia' : null,
-                            );
-                          }(),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          AgenciaSelector(
+                            selectedAgenciaId: _selectedAgenciaId,
+                            onAgenciaSelected: _onAgenciaSelected,
+                          ),
+                          if (_agenciaError)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6, left: 4),
+                              child: Text(
+                                'Selecciona una agencia',
+                                style: TextStyle(
+                                  color: Colors.red.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           const SizedBox(height: 16),
                           // Cliente (Representante)
                           TextFormField(
@@ -360,24 +474,44 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                          // Tipo de Servicio
-                          () {
-                            final serviciosController = context.watch<ServiciosController>();
-                            return DropdownButtonFormField<int>(
-                              value: _selectedTipoServicio,
-                              items: serviciosController.tiposServicios.map((tipo) => DropdownMenuItem<int>(
-                                value: tipo.codigo,
-                                child: Text(tipo.descripcion),
-                              )).toList(),
-                              onChanged: (value) => setState(() => _selectedTipoServicio = value),
-                              decoration: InputDecoration(
-                                labelText: 'Tipo de Servicio',
-                                labelStyle: TextStyle(color: AppColors.getSecondaryTextColor(isDark)),
-                                prefixIcon: Icon(Icons.category, color: AppColors.getAccentColor(isDark)),
+                          TipoServicioSelector(
+                            selectedTipoServicioId: _selectedTipoServicioId,
+                            onSelected: _onServicioSeleccionado,
+                          ),
+                          if (_isFetchingPrecio)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 8),
+                              child: LinearProgressIndicator(),
+                            ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _pasajerosController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: InputDecoration(
+                              labelText: 'Pasajeros',
+                              labelStyle: TextStyle(color: AppColors.getSecondaryTextColor(isDark)),
+                              prefixIcon: Icon(Icons.people, color: AppColors.getAccentColor(isDark)),
+                            ),
+                            validator: (value) {
+                              final pax = int.tryParse(value ?? '');
+                              if (pax == null || pax <= 0) return 'Ingresa PAX';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _precioServicio != null
+                                  ? 'Tarifa detectada: \$${_precioServicio!.toStringAsFixed(2)} por persona'
+                                  : 'Sin tarifa guardada, escribe el total a mano (sorry).',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.getSecondaryTextColor(isDark),
                               ),
-                              validator: (value) => value == null ? 'Selecciona tipo' : null,
-                            );
-                          }(),
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           // Fecha
                           TextFormField(
@@ -425,16 +559,17 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
                               Expanded(
                                 child: TextFormField(
                                   controller: _pagoMontoController,
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   decoration: InputDecoration(
                                     labelText: 'Saldo',
                                     labelStyle: TextStyle(color: AppColors.getSecondaryTextColor(isDark)),
                                     prefixIcon: Icon(Icons.attach_money, color: AppColors.getAccentColor(isDark)),
                                   ),
                                   validator: (value) {
-                                    if (value?.isEmpty ?? true) return 'Requerido';
-                                    final num = double.tryParse(value!);
-                                    if (num == null || num < 0) return 'Monto válido';
+                                    final sanitized = value?.trim() ?? '';
+                                    if (sanitized.isEmpty) return null;
+                                    final monto = _tryParseDouble(sanitized);
+                                    if (monto == null || monto < 0) return 'Monto válido';
                                     return null;
                                   },
                                 ),
@@ -443,15 +578,37 @@ class _CrearReservasFormState extends State<CrearReservasForm> {
                               Expanded(
                                 child: TextFormField(
                                   controller: _reservaTotalController,
-                                  keyboardType: TextInputType.number,
+                                  readOnly: _precioServicio != null,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   decoration: InputDecoration(
-                                    labelText: 'Total de Reserva',
+                                    labelText: _precioServicio != null ? 'Total calculado' : 'Total de Reserva',
                                     labelStyle: TextStyle(color: AppColors.getSecondaryTextColor(isDark)),
                                     prefixIcon: Icon(Icons.account_balance_wallet, color: AppColors.getAccentColor(isDark)),
                                   ),
+                                  validator: (value) {
+                                    if (_precioServicio != null) return null;
+                                    final sanitized = value?.trim() ?? '';
+                                    if (sanitized.isEmpty) return 'Requerido';
+                                    final total = _tryParseDouble(sanitized);
+                                    if (total == null || total <= 0) return 'Monto válido';
+                                    return null;
+                                  },
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _precioServicio != null
+                                  ? 'Se calcula solo con los pax ingresados.'
+                                  : 'Como no hay tarifa, valida que el total manual tenga sentido.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.getSecondaryTextColor(isDark),
+                              ),
+                            ),
                           ),
                         ],
                       ),

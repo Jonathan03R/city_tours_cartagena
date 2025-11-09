@@ -13,6 +13,7 @@ import 'package:citytourscartagena/core/services/agencias/agencias_services.dart
 import 'package:citytourscartagena/core/services/filtros/servicios/servicios_service.dart';
 import 'package:citytourscartagena/core/utils/colors.dart';
 import 'package:citytourscartagena/core/widgets/date_filter_buttons.dart';
+import 'package:citytourscartagena/core/widgets/no_laborable_banner.dart';
 import 'package:citytourscartagena/screens/agencias/detalle_agencia.dart';
 import 'package:citytourscartagena/screens/agencias/widget/control_precios_widget.dart';
 import 'package:citytourscartagena/screens/agencias/widget/encabezado_agencia_widget.dart';
@@ -517,6 +518,48 @@ class _ReservaVistaState extends State<ReservaVista> {
                     _cargarReservas(); // Cargar reservas en tiempo real al cambiar estado
                   },
                   estadosReservas: _serviciosController.estadosReservas,
+                ),
+                Builder(
+                  builder: (context) {
+                    DateTime? fechaEspecifica;
+                    final now = DateTime.now();
+                    switch (_selectedFilter) {
+                      case DateFilterType.today:
+                        fechaEspecifica = DateTime(now.year, now.month, now.day);
+                        break;
+                      case DateFilterType.yesterday:
+                        final y = DateTime(now.year, now.month, now.day)
+                            .subtract(const Duration(days: 1));
+                        fechaEspecifica = DateTime(y.year, y.month, y.day);
+                        break;
+                      case DateFilterType.tomorrow:
+                        final t = DateTime(now.year, now.month, now.day)
+                            .add(const Duration(days: 1));
+                        fechaEspecifica = DateTime(t.year, t.month, t.day);
+                        break;
+                      case DateFilterType.custom:
+                        if (_customDate != null) {
+                          fechaEspecifica = DateTime(
+                            _customDate!.year,
+                            _customDate!.month,
+                            _customDate!.day,
+                          );
+                        }
+                        break;
+                      case DateFilterType.lastWeek:
+                      case DateFilterType.all:
+                        fechaEspecifica = null;
+                        break;
+                    }
+                    // Mostrar solo si hay fecha específica Y hay servicio seleccionado
+                    if (fechaEspecifica == null || _selectedTurno == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return NoLaborableBanner(
+                      fecha: fechaEspecifica,
+                      tipoServicioId: _selectedTurno!,
+                    );
+                  },
                 ),
                 if (widget.codigoAgencia != null)
                   FutureBuilder<Agenciaperfil?>(

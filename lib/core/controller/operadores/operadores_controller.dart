@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
 import 'package:citytourscartagena/core/models/tipos/tipo_contacto.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/colaboradores/colaboradores_service.dart';
+import 'package:citytourscartagena/core/services/operadores/calendario_no_laborales.dart';
 import 'package:citytourscartagena/core/services/operadores/contactos_operadores_service.dart';
 import 'package:citytourscartagena/core/services/tipos/tipos_contactos_service.dart';
 import 'package:citytourscartagena/core/services/tipos_documentos_service.dart';
@@ -18,6 +19,7 @@ class OperadoresController extends ChangeNotifier {
   final TiposContactosService _tiposContactosService = TiposContactosService();
   final TiposDocumentosService _tiposDocumentosService = TiposDocumentosService();
   final TiposEmpresasService _tiposEmpresasService = TiposEmpresasService();
+  final CalendarioNoLaboralesService _noLaboralesService = CalendarioNoLaboralesService();
   final AuthSupabaseController auth;
 
   Future<Operadores?>? _operadorFuture;
@@ -252,6 +254,34 @@ class OperadoresController extends ChangeNotifier {
     _tiposContactosFuture = null;
     _agenciasCache = null;
     notifyListeners();
+  }
+
+  // ===== NO LABORABLES =====
+
+  // Eliminado esFechaNoLaborable: simplificamos a un solo método detallado
+
+  /// Obtiene los registros de no laborables para un día específico.
+  /// Útil para mostrar un motivo/descripción si existe.
+  Future<List<Map<String, dynamic>>> obtenerNoLaborablesDelDia({
+    required DateTime fecha,
+    required int tipoServicioId,  // <- ahora obligatorio
+  }) async {
+    final operador = await obtenerOperador();
+    if (operador == null) return [];
+    try {
+      final soloFecha = DateTime(fecha.year, fecha.month, fecha.day);
+
+      final registros = await _noLaboralesService.listarDia(
+        fecha: soloFecha,
+        operadorCodigo: operador.id,
+        tipoServicioId: tipoServicioId,
+        activo: true,
+      );
+      return registros;
+    } catch (e) {
+      debugPrint('Error listando no laborables del día: $e');
+      return [];
+    }
   }
 
   // ===== MÉTODOS PARA TIPOS =====
