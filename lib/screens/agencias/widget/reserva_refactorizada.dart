@@ -65,6 +65,64 @@ class _ReservaVistaState extends State<ReservaVista> {
 
   late ServiciosController _serviciosController;
 
+  // Banner caching to avoid doble carga/flicker
+  Future<List<Map<String, dynamic>>>? _bannerFuture;
+  DateTime? _bannerFecha;
+  int? _bannerTipoServicioId;
+
+  void _updateBannerFuture(DateTime? fecha, int? tipoServicioId) {
+    if (fecha == null || tipoServicioId == null) {
+      _bannerFuture = null;
+      _bannerFecha = null;
+      _bannerTipoServicioId = null;
+      return;
+    }
+    if (_bannerFecha == fecha && _bannerTipoServicioId == tipoServicioId) {
+      return; // ya está cacheado
+    }
+    _bannerFecha = fecha;
+    _bannerTipoServicioId = tipoServicioId;
+    final operadores = context.read<OperadoresController>();
+    _bannerFuture = operadores.obtenerNoLaborablesDelDia(
+      fecha: fecha,
+      tipoServicioId: tipoServicioId,
+    );
+  }
+
+  DateTime? _computeFechaEspecifica() {
+    DateTime? fechaEspecifica;
+    final now = DateTime.now();
+    switch (_selectedFilter) {
+      case DateFilterType.today:
+        fechaEspecifica = DateTime(now.year, now.month, now.day);
+        break;
+      case DateFilterType.yesterday:
+        final y = DateTime(now.year, now.month, now.day)
+            .subtract(const Duration(days: 1));
+        fechaEspecifica = DateTime(y.year, y.month, y.day);
+        break;
+      case DateFilterType.tomorrow:
+        final t = DateTime(now.year, now.month, now.day)
+            .add(const Duration(days: 1));
+        fechaEspecifica = DateTime(t.year, t.month, t.day);
+        break;
+      case DateFilterType.custom:
+        if (_customDate != null) {
+          fechaEspecifica = DateTime(
+            _customDate!.year,
+            _customDate!.month,
+            _customDate!.day,
+          );
+        }
+        break;
+      case DateFilterType.lastWeek:
+      case DateFilterType.all:
+        fechaEspecifica = null;
+        break;
+    }
+    return fechaEspecifica;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -498,6 +556,9 @@ class _ReservaVistaState extends State<ReservaVista> {
                       _customDate = date;
                       _paginaActual = 1; // Resetear página al cambiar filtro
                     });
+                    // actualizar banner future
+                    final fechaEspecifica = _computeFechaEspecifica();
+                    _updateBannerFuture(fechaEspecifica, _selectedTurno);
                     _cargarReservas(); // Cargar reservas en tiempo real al cambiar filtro
                   },
                   selectedTurno: _selectedTurno,
@@ -506,6 +567,8 @@ class _ReservaVistaState extends State<ReservaVista> {
                       _selectedTurno = turno;
                       _paginaActual = 1; // Resetear página al cambiar turno
                     });
+                    final fechaEspecifica = _computeFechaEspecifica();
+                    _updateBannerFuture(fechaEspecifica, _selectedTurno);
                     _cargarReservas(); // Cargar reservas en tiempo real al cambiar turno
                   },
                   tiposServicios: _serviciosController.tiposServicios,
@@ -521,43 +584,14 @@ class _ReservaVistaState extends State<ReservaVista> {
                 ),
                 Builder(
                   builder: (context) {
-                    DateTime? fechaEspecifica;
-                    final now = DateTime.now();
-                    switch (_selectedFilter) {
-                      case DateFilterType.today:
-                        fechaEspecifica = DateTime(now.year, now.month, now.day);
-                        break;
-                      case DateFilterType.yesterday:
-                        final y = DateTime(now.year, now.month, now.day)
-                            .subtract(const Duration(days: 1));
-                        fechaEspecifica = DateTime(y.year, y.month, y.day);
-                        break;
-                      case DateFilterType.tomorrow:
-                        final t = DateTime(now.year, now.month, now.day)
-                            .add(const Duration(days: 1));
-                        fechaEspecifica = DateTime(t.year, t.month, t.day);
-                        break;
-                      case DateFilterType.custom:
-                        if (_customDate != null) {
-                          fechaEspecifica = DateTime(
-                            _customDate!.year,
-                            _customDate!.month,
-                            _customDate!.day,
-                          );
-                        }
-                        break;
-                      case DateFilterType.lastWeek:
-                      case DateFilterType.all:
-                        fechaEspecifica = null;
-                        break;
-                    }
-                    // Mostrar solo si hay fecha específica Y hay servicio seleccionado
-                    if (fechaEspecifica == null || _selectedTurno == null) {
+                    final fechaEspecifica = _computeFechaEspecifica();
+                    if (fechaEspecifica == null || _selectedTurno == null || _bannerFuture == null) {
                       return const SizedBox.shrink();
                     }
                     return NoLaborableBanner(
                       fecha: fechaEspecifica,
                       tipoServicioId: _selectedTurno!,
+                      registrosFuture: _bannerFuture!,
                     );
                   },
                 ),
