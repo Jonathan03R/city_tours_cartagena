@@ -55,7 +55,6 @@ class FinanzasService {
       final incluida =
           !fechaReserva.isBefore(inicioDia) && !fechaReserva.isAfter(finDia);
       final turnoCoincide = turno == null || reserva.reserva.turno == turno;
-     
       if (incluida && turnoCoincide) {
         totalPasajeros += reserva.reserva.pax;
         

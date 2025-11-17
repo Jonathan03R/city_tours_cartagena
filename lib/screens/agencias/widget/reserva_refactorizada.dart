@@ -592,6 +592,12 @@ class _ReservaVistaState extends State<ReservaVista> {
                       fecha: fechaEspecifica,
                       tipoServicioId: _selectedTurno!,
                       registrosFuture: _bannerFuture!,
+                      onAgendaCerrada: () {
+                        // refrescar futuro cacheado tras cerrar
+                        final f = _computeFechaEspecifica();
+                        _updateBannerFuture(f, _selectedTurno);
+                        setState(() {});
+                      },
                     );
                   },
                 ),

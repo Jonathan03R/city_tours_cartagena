@@ -3,44 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CalendarioNoLaboralesService {
   final SupabaseClient _client = Supabase.instance.client;
-
-  /// Listar días no laborables.
-  /// - Puedes filtrar por [operadorCodigo], [activo] y por rango de fechas.
-  Future<List<Map<String, dynamic>>> listar({
-    int? operadorCodigo,
-    bool? activo,
-    DateTime? desde,
-    DateTime? hasta,
-    int? tipoServicioId,
-  }) async {
-    final query = _client.from('calendarios_no_laborables').select('*');
-
-    if (operadorCodigo != null) {
-      query.eq('operador_codigo', operadorCodigo);
-    }
-    if (activo != null) {
-      query.eq('calendario_no_laborable_activo', activo);
-    }
-    if (tipoServicioId != null) {
-      query.eq('tipo_servicio_id', tipoServicioId);
-    }
-    if (desde != null) {
-      query.gte(
-        'calendario_no_laborable_fecha',
-        desde.toIso8601String(),
-      );
-    }
-    if (hasta != null) {
-      query.lte(
-        'calendario_no_laborable_fecha',
-        hasta.toIso8601String(),
-      );
-    }
-
-    final res = await query.order('calendario_no_laborable_fecha');
-    return (res as List).cast<Map<String, dynamic>>();
-  }
-
   /// Listar por un día específico [fecha] usando comparación exacta de fecha (sin horas)
   Future<List<Map<String, dynamic>>> listarDia({
     required DateTime fecha,
@@ -53,12 +15,15 @@ class CalendarioNoLaboralesService {
     debugPrint('Fecha enviada: $fechaString, OperadorCodigo: $operadorCodigo, TipoServicioId: $tipoServicioId');
 
     // Usar función RPC para filtrar correctamente por fecha
-    final params = {
+    final Map<String, dynamic> params = {
       'p_fecha': fechaString,
       'p_operador_codigo': operadorCodigo,
       'p_tipo_servicio_id': tipoServicioId,
-      'p_activo': activo ?? true,
+      // solo enviar p_activo si viene especificado; si es null, el RPC devolverá todos
     };
+    if (activo != null) {
+      params['p_activo'] = activo;
+    }
 
     final res = await _client.rpc('obtener_no_laborables_por_fecha', params: params);
     final rows = (res as List).cast<Map<String, dynamic>>();

@@ -284,6 +284,55 @@ class OperadoresController extends ChangeNotifier {
     }
   }
 
+  /// Cierra la agenda para un día y tipo de servicio concretos.
+  /// Si no existe el registro, lo crea activo=true. Si existe y estaba inactivo, lo activa.
+  /// Retorna true si la operación fue exitosa.
+  Future<bool> cerrarAgendaDelDia({
+    required DateTime fecha,
+    required int tipoServicioId,
+  }) async {
+    final operador = await obtenerOperador();
+    if (operador == null) return false;
+    try {
+      final soloFecha = DateTime(fecha.year, fecha.month, fecha.day);
+      // Traer TODOS (activos/inactivos) para ver si existe
+      final existentes = await _noLaboralesService.listarDia(
+        fecha: soloFecha,
+        operadorCodigo: operador.id,
+        tipoServicioId: tipoServicioId,
+        activo: null,
+      );
+      if (existentes.isEmpty) {
+        // Crear nuevo activo
+        await _noLaboralesService.crear(
+          fecha: soloFecha,
+          operadorCodigo: operador.id,
+          creadoPor: codigoUsuario,
+          tipoServicioId: tipoServicioId,
+          activo: true,
+        );
+        return true;
+      } else {
+        final registro = existentes.first;
+        final yaActivo = registro['calendario_no_laborable_activo'] == true;
+        if (yaActivo) {
+          // Ya está cerrado, nada que hacer (igual return true)
+          return true;
+        }
+        // Activar
+        await _noLaboralesService.actualizar(
+          codigo: registro['calendario_no_laborable_codigo'] as int,
+          activo: true,
+          actualizadoPor: codigoUsuario,
+        );
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error al cerrar agenda del día: $e');
+      return false;
+    }
+  }
+
   // ===== MÉTODOS PARA TIPOS =====
 
   /// Obtiene todos los tipos de documento activos
