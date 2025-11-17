@@ -166,7 +166,7 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
         searchTerm: _searchTerm,
       ),
       const UsuariosScreen(),
-      ConfigOperadoresScreems(controller: operadoresController),
+      // ConfigOperadoresScreems(controller: operadoresController),
     ];
 
     return Scaffold(
@@ -353,7 +353,7 @@ class _OperadorNavigatorState extends State<_OperadorNavigator> {
           icon: Icon(Icons.people),
           label: 'Colaboradores',
         ),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Config'),
+        // BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Config'),
       ],
     );
   }

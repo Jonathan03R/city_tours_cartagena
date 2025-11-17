@@ -28,15 +28,6 @@ class _TipoServicioSelectorState extends State<TipoServicioSelector> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ServiciosController>().cargarTiposServiciosv2();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-    final existe = Provider.of<ServiciosController?>(context, listen: false);
-    debugPrint('🔍 Provider ServiciosController encontrado: ${existe != null}');
-    if (existe != null) {
-      existe.cargarTiposServiciosv2();
-    } else {
-      debugPrint('⚠️ No se encontró el provider de ServiciosController');
-    }
-  });
   }
 
   @override
@@ -64,8 +55,16 @@ class _TipoServicioSelectorState extends State<TipoServicioSelector> {
           ),
         ),
         const SizedBox(height: 8),
-        isLoading
-            ? const Center(child: CircularProgressIndicator())
+        (isLoading && servicios.isEmpty)
+            ? DropdownButtonFormField<TipoServicio>(
+                items: const [],
+                onChanged: null,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text('Cargando servicios...'),
+                validator: (_) => 'Cargando...'
+              )
             : DropdownButtonFormField<TipoServicio>(
                 initialValue: initialValue,
                 decoration: const InputDecoration(

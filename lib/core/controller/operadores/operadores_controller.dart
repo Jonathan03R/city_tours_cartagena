@@ -5,6 +5,7 @@ import 'package:citytourscartagena/core/models/operadores/operdadores.dart';
 import 'package:citytourscartagena/core/models/tipos/tipo_contacto.dart';
 import 'package:citytourscartagena/core/services/agencias/agencias_services.dart';
 import 'package:citytourscartagena/core/services/colaboradores/colaboradores_service.dart';
+import 'package:citytourscartagena/core/services/operadores/calendario_no_laborales.dart';
 import 'package:citytourscartagena/core/services/operadores/contactos_operadores_service.dart';
 import 'package:citytourscartagena/core/services/tipos/tipos_contactos_service.dart';
 import 'package:citytourscartagena/core/services/tipos_documentos_service.dart';
@@ -18,6 +19,7 @@ class OperadoresController extends ChangeNotifier {
   final TiposContactosService _tiposContactosService = TiposContactosService();
   final TiposDocumentosService _tiposDocumentosService = TiposDocumentosService();
   final TiposEmpresasService _tiposEmpresasService = TiposEmpresasService();
+  final CalendarioNoLaboralesService _noLaboralesService = CalendarioNoLaboralesService();
   final AuthSupabaseController auth;
 
   Future<Operadores?>? _operadorFuture;
@@ -252,6 +254,83 @@ class OperadoresController extends ChangeNotifier {
     _tiposContactosFuture = null;
     _agenciasCache = null;
     notifyListeners();
+  }
+
+  // ===== NO LABORABLES =====
+
+  // Eliminado esFechaNoLaborable: simplificamos a un solo método detallado
+
+  /// Obtiene los registros de no laborables para un día específico.
+  /// Útil para mostrar un motivo/descripción si existe.
+  Future<List<Map<String, dynamic>>> obtenerNoLaborablesDelDia({
+    required DateTime fecha,
+    required int tipoServicioId,  // <- ahora obligatorio
+  }) async {
+    final operador = await obtenerOperador();
+    if (operador == null) return [];
+    try {
+      final soloFecha = DateTime(fecha.year, fecha.month, fecha.day);
+
+      final registros = await _noLaboralesService.listarDia(
+        fecha: soloFecha,
+        operadorCodigo: operador.id,
+        tipoServicioId: tipoServicioId,
+        activo: true,
+      );
+      return registros;
+    } catch (e) {
+      debugPrint('Error listando no laborables del día: $e');
+      return [];
+    }
+  }
+
+  /// Cierra la agenda para un día y tipo de servicio concretos.
+  /// Si no existe el registro, lo crea activo=true. Si existe y estaba inactivo, lo activa.
+  /// Retorna true si la operación fue exitosa.
+  Future<bool> cerrarAgendaDelDia({
+    required DateTime fecha,
+    required int tipoServicioId,
+  }) async {
+    final operador = await obtenerOperador();
+    if (operador == null) return false;
+    try {
+      final soloFecha = DateTime(fecha.year, fecha.month, fecha.day);
+      // Traer TODOS (activos/inactivos) para ver si existe
+      final existentes = await _noLaboralesService.listarDia(
+        fecha: soloFecha,
+        operadorCodigo: operador.id,
+        tipoServicioId: tipoServicioId,
+        activo: null,
+      );
+      if (existentes.isEmpty) {
+        // Crear nuevo activo
+        await _noLaboralesService.crear(
+          fecha: soloFecha,
+          operadorCodigo: operador.id,
+          creadoPor: codigoUsuario,
+          tipoServicioId: tipoServicioId,
+          activo: true,
+        );
+        return true;
+      } else {
+        final registro = existentes.first;
+        final yaActivo = registro['calendario_no_laborable_activo'] == true;
+        if (yaActivo) {
+          // Ya está cerrado, nada que hacer (igual return true)
+          return true;
+        }
+        // Activar
+        await _noLaboralesService.actualizar(
+          codigo: registro['calendario_no_laborable_codigo'] as int,
+          activo: true,
+          actualizadoPor: codigoUsuario,
+        );
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error al cerrar agenda del día: $e');
+      return false;
+    }
   }
 
   // ===== MÉTODOS PARA TIPOS =====
