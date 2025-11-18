@@ -265,6 +265,19 @@ class ControladorDeltaReservas extends ChangeNotifier {
     required List<ReservaContacto> contactos,
   }) async {
     try {
+      // Validación previa: bloquear si la agenda está cerrada para la fecha/servicio
+      final fechaReserva = dto.reservaFecha;
+      final tipoServicioId = dto.tipoServicioCodigo;
+      final cerrada = await _operadoresController.esAgendaCerradaDia(
+        fecha: fechaReserva,
+        tipoServicioId: tipoServicioId,
+      );
+      if (cerrada) {
+        throw Exception(
+          'La agenda está cerrada para ese servicio en la fecha seleccionada.',
+        );
+      }
+
       // Crear la reserva
       final reservaId = await _servicio.crearReserva(dto);
 
