@@ -65,52 +65,134 @@ class NoLaborableBanner extends StatelessWidget {
           child: InkWell(
             key: ValueKey(cerrada),
             onTap: () async {
-              // Siempre ofrecer cerrar agenda (incluso si ya está cerrada se avisa)
-              final confirmado = await showDialog<bool>(
-                context: context,
-                builder: (ctx) {
-                  return AlertDialog(
-                    title: const Text('¿Cerrar agenda?'),
-                    content: Text(
-                      cerrada
-                          ? 'La agenda de ${_formatFecha(fecha)} ya está cerrada para este servicio. ¿Quieres forzar el bloqueo nuevamente?'
-                          : 'Cerrar agenda impedirá nuevas reservas para ${_formatFecha(fecha)} en este servicio. ¿Confirmas?',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancelar'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Cerrar'),
-                      ),
-                    ],
-                  );
-                },
-              );
-              if (confirmado != true) return;
-
               final operadores = context.read<OperadoresController>();
-              final ok = await operadores.cerrarAgendaDelDia(
-                fecha: fecha,
-                tipoServicioId: tipoServicioId,
-              );
-              if (ok) {
+              if (!cerrada) {
+                // Dialogo para cerrar con motivo
+                final controllerTexto = TextEditingController();
+                final resultado = await showDialog<Map<String, dynamic>?>(
+                  context: context,
+                  builder: (ctx) {
+                    return AlertDialog(
+                      title: Text('Cerrar ${_formatFecha(fecha)}'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Opcional: escribe un motivo.'),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: controllerTexto,
+                            maxLines: 2,
+                            decoration: const InputDecoration(
+                              labelText: 'Motivo',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, null),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(ctx, {
+                            'motivo': controllerTexto.text.trim(),
+                          }),
+                          child: const Text('Cerrar'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+                if (resultado == null) return;
+                final ok = await operadores.cerrarAgendaDelDia(
+                  fecha: fecha,
+                  tipoServicioId: tipoServicioId,
+                  descripcion: resultado['motivo'] as String?,
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Agenda cerrada para ${_formatFecha(fecha)}'),
-                    backgroundColor: Colors.amber.shade700,
+                    content: Text(ok
+                        ? 'Cerrado ${_formatFecha(fecha)}'
+                        : 'Error cerrando'),
+                    backgroundColor:
+                        ok ? Colors.amber.shade700 : Colors.red.shade600,
                   ),
                 );
-                onAgendaCerrada?.call();
+                if (ok) onAgendaCerrada?.call();
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Error cerrando agenda'),
-                    backgroundColor: Colors.red.shade600,
-                  ),
+                // Cerrada: opciones para reabrir o actualizar motivo
+                final controllerTexto = TextEditingController(text: descripcion);
+                final accion = await showDialog<String?>(
+                  context: context,
+                  builder: (ctx) {
+                    return AlertDialog(
+                      title: Text('Agenda cerrada ${_formatFecha(fecha)}'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Actualizar motivo o reabrir.'),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: controllerTexto,
+                            maxLines: 2,
+                            decoration: const InputDecoration(
+                              labelText: 'Motivo',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, null),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, 'reabrir'),
+                          child: const Text('Reabrir'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(ctx, 'actualizar'),
+                          child: const Text('Guardar motivo'),
+                        ),
+                      ],
+                    );
+                  },
                 );
+                if (accion == null) return;
+                if (accion == 'reabrir') {
+                  final ok = await operadores.abrirAgendaDelDia(
+                    fecha: fecha,
+                    tipoServicioId: tipoServicioId,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok
+                          ? 'Reabierta ${_formatFecha(fecha)}'
+                          : 'Error reabriendo'),
+                      backgroundColor:
+                          ok ? Colors.green.shade700 : Colors.red.shade600,
+                    ),
+                  );
+                  if (ok) onAgendaCerrada?.call();
+                } else if (accion == 'actualizar') {
+                  final ok = await operadores.cerrarAgendaDelDia(
+                    fecha: fecha,
+                    tipoServicioId: tipoServicioId,
+                    descripcion: controllerTexto.text.trim(),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok
+                          ? 'Motivo actualizado'
+                          : 'Error actualizando motivo'),
+                      backgroundColor:
+                          ok ? Colors.amber.shade700 : Colors.red.shade600,
+                    ),
+                  );
+                  if (ok) onAgendaCerrada?.call();
+                }
               }
             },
             child: Container(

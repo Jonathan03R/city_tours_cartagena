@@ -44,6 +44,7 @@ class CalendarioNoLaboralesService {
     required int operadorCodigo,
     required int creadoPor,
     required int tipoServicioId,
+    String? descripcion,
     bool? activo, // si viene null, no se envía
   }) async {
     final payload = <String, dynamic>{
@@ -56,6 +57,9 @@ class CalendarioNoLaboralesService {
     // Solo enviar activo si el caller lo especifica explícitamente
     if (activo != null) {
       payload['calendario_no_laborable_activo'] = activo;
+    }
+    if (descripcion != null && descripcion.trim().isNotEmpty) {
+      payload['calendarios_descripcion'] = descripcion.trim();
     }
 
   final res = await _client
@@ -73,6 +77,7 @@ class CalendarioNoLaboralesService {
     DateTime? fecha,
     bool? activo,
     int? tipoServicioId,
+    String? descripcion,
     required int actualizadoPor,
   }) async {
     if (fecha == null && activo == null) {
@@ -92,6 +97,9 @@ class CalendarioNoLaboralesService {
     if (tipoServicioId != null) {
       payload['tipo_servicio_id'] = tipoServicioId;
     }
+    if (descripcion != null && descripcion.trim().isNotEmpty) {
+      payload['calendarios_descripcion'] = descripcion.trim();
+    }
 
   final res = await _client
         .from('calendarios_no_laborables')
@@ -110,6 +118,7 @@ class CalendarioNoLaboralesService {
     required int usuarioId,
     required int tipoServicioId,
     bool? activo,
+    String? descripcion,
   }) async {
     final payload = <String, dynamic>{
       'calendario_no_laborable_fecha': fecha.toIso8601String(),
@@ -122,6 +131,9 @@ class CalendarioNoLaboralesService {
     if (activo != null) {
       payload['calendario_no_laborable_activo'] = activo;
     }
+    if (descripcion != null && descripcion.trim().isNotEmpty) {
+      payload['calendarios_descripcion'] = descripcion.trim();
+    }
 
   final res = await _client
         .from('calendarios_no_laborables')
@@ -129,6 +141,29 @@ class CalendarioNoLaboralesService {
         .select()
         .single();
   return res;
+  }
+
+  /// Verifica directamente en la tabla si existe un cierre ACTIVO
+  /// para el día (rango [00:00, 24:00)) del operador y tipo de servicio dados.
+  Future<bool> existeCierreActivoDia({
+    required DateTime fecha,
+    required int operadorCodigo,
+    required int tipoServicioId,
+  }) async {
+    final inicio = DateTime(fecha.year, fecha.month, fecha.day);
+    final fin = inicio.add(const Duration(days: 1));
+
+    final res = await _client
+        .from('calendarios_no_laborables')
+        .select('calendario_no_laborable_codigo')
+        .eq('operador_codigo', operadorCodigo)
+        .eq('tipo_servicio_id', tipoServicioId)
+        .eq('calendario_no_laborable_activo', true)
+        .gte('calendario_no_laborable_fecha', inicio.toIso8601String())
+        .lt('calendario_no_laborable_fecha', fin.toIso8601String());
+
+    final rows = (res as List).cast<Map<String, dynamic>>();
+    return rows.isNotEmpty;
   }
 }
 

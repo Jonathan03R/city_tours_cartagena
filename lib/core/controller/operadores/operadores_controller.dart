@@ -284,12 +284,33 @@ class OperadoresController extends ChangeNotifier {
     }
   }
 
+  /// Devuelve true si hay un cierre ACTIVO para ese día y servicio.
+  Future<bool> esAgendaCerradaDia({
+    required DateTime fecha,
+    required int tipoServicioId,
+  }) async {
+    final operador = await obtenerOperador();
+    if (operador == null) return false;
+    try {
+      final soloFecha = DateTime(fecha.year, fecha.month, fecha.day);
+      return await _noLaboralesService.existeCierreActivoDia(
+        fecha: soloFecha,
+        operadorCodigo: operador.id,
+        tipoServicioId: tipoServicioId,
+      );
+    } catch (e) {
+      debugPrint('Error verificando cierre activo: $e');
+      return false;
+    }
+  }
+
   /// Cierra la agenda para un día y tipo de servicio concretos.
   /// Si no existe el registro, lo crea activo=true. Si existe y estaba inactivo, lo activa.
   /// Retorna true si la operación fue exitosa.
   Future<bool> cerrarAgendaDelDia({
     required DateTime fecha,
     required int tipoServicioId,
+    String? descripcion,
   }) async {
     final operador = await obtenerOperador();
     if (operador == null) return false;
@@ -310,19 +331,29 @@ class OperadoresController extends ChangeNotifier {
           creadoPor: codigoUsuario,
           tipoServicioId: tipoServicioId,
           activo: true,
+          descripcion: descripcion,
         );
         return true;
       } else {
         final registro = existentes.first;
         final yaActivo = registro['calendario_no_laborable_activo'] == true;
         if (yaActivo) {
-          // Ya está cerrado, nada que hacer (igual return true)
-          return true;
+          // Si ya está activo pero se pasa nueva descripción, actualizarla
+          if (descripcion != null && descripcion.trim().isNotEmpty) {
+            await _noLaboralesService.actualizar(
+              codigo: registro['calendario_no_laborable_codigo'] as int,
+              activo: true,
+              descripcion: descripcion,
+              actualizadoPor: codigoUsuario,
+            );
+          }
+          return true; // mantiene cerrado
         }
         // Activar
         await _noLaboralesService.actualizar(
           codigo: registro['calendario_no_laborable_codigo'] as int,
           activo: true,
+          descripcion: descripcion,
           actualizadoPor: codigoUsuario,
         );
         return true;
@@ -330,6 +361,67 @@ class OperadoresController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error al cerrar agenda del día: $e');
       return false;
+    }
+  }
+
+  /// Abre (habilita) la agenda para un día y servicio concretos.
+  /// Si existe registro y está activo, lo pone inactivo. Si no existe, no hace nada.
+  /// Retorna true si cambió algo o si ya estaba abierta.
+  Future<bool> abrirAgendaDelDia({
+    required DateTime fecha,
+    required int tipoServicioId,
+  }) async {
+    final operador = await obtenerOperador();
+    if (operador == null) return false;
+    try {
+      final soloFecha = DateTime(fecha.year, fecha.month, fecha.day);
+      final existentes = await _noLaboralesService.listarDia(
+        fecha: soloFecha,
+        operadorCodigo: operador.id,
+        tipoServicioId: tipoServicioId,
+        activo: null,
+      );
+      if (existentes.isEmpty) {
+        // No hay registro: ya está abierta implicitamente
+        return true;
+      }
+      final registro = existentes.first;
+      final activo = registro['calendario_no_laborable_activo'] == true;
+      if (!activo) {
+        return true; // ya estaba abierta
+      }
+      await _noLaboralesService.actualizar(
+        codigo: registro['calendario_no_laborable_codigo'] as int,
+        activo: false,
+        actualizadoPor: codigoUsuario,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Error al abrir agenda del día: $e');
+      return false;
+    }
+  }
+
+  /// Establece el estado de la agenda en un único flujo.
+  /// - Si `activo=true`: crea si no existe o activa/actualiza si existe.
+  /// - Si `activo=false`: reabre (desactiva) si existe; si no existe, ya está abierta.
+  Future<bool> setEstadoAgendaDelDia({
+    required DateTime fecha,
+    required int tipoServicioId,
+    required bool activo,
+    String? descripcion,
+  }) async {
+    if (activo) {
+      return cerrarAgendaDelDia(
+        fecha: fecha,
+        tipoServicioId: tipoServicioId,
+        descripcion: descripcion,
+      );
+    } else {
+      return abrirAgendaDelDia(
+        fecha: fecha,
+        tipoServicioId: tipoServicioId,
+      );
     }
   }
 
